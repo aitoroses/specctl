@@ -6,7 +6,7 @@ rev: 6
 created: "2026-04-01"
 updated: "2026-04-17"
 last_verified_at: "2026-04-17"
-checkpoint: bd1c68fb5c4fba3dc6b4490e519dad9f56644bc8
+checkpoint: fed55dae21105b484c8233422f6bff18273ba37a
 tags: []
 documents:
     primary: SPEC.md

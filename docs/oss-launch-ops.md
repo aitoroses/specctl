@@ -27,7 +27,8 @@ This file records the repository settings required for the public launch bar.
 - Branch deletion disabled: yes
 - Conversation resolution required: yes
 - Linear history required: yes
-- Release/tag restriction evidence: operationally restricted to the human maintainer account controlling releases for this repository
+- Direct collaborators evidence: `gh api 'repos/aitoroses/specctl/collaborators?affiliation=direct'` shows only `aitoroses`
+- Release/tag restriction evidence: operationally restricted to the human maintainer account controlling releases for this repository, and the current direct collaborator/admin set contains only `aitoroses`
 
 ## Approval statement
 
