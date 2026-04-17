@@ -2,6 +2,8 @@
 
 Specification governance for agent workflows.
 
+**Keep agents aligned with intended behavior, not just current code.**
+
 If `git` helps teams track the history of source code, `specctl` helps agent
 workflows track the history of **intent**.
 
@@ -45,6 +47,22 @@ context -> delta -> requirement -> verify -> close -> bump/sync
 ```
 
 At each step, `specctl` returns explicit `next` guidance so the agent does not have to invent process on the fly.
+
+## Without vs with specctl
+
+### Without specctl
+
+- the agent edits code directly
+- intent stays implicit
+- verification is ad hoc
+- partial work can look complete
+
+### With specctl
+
+- intent is tracked
+- change is explicit
+- verification is recorded
+- the next legal step is constrained
 
 ## What ships
 
@@ -153,6 +171,11 @@ specctl context specctl:mcp
 specctl context specctl:dashboard
 specctl context specctl:skill
 ```
+
+If you only remember one idea, remember this:
+
+> Git tracks how code changed.  
+> specctl tracks how intended behavior changes.
 
 ## Core workflow
 
