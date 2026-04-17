@@ -1,0 +1,16 @@
+{
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "diff requires either \u003ccharter:slug\u003e or --charter \u003ccharter\u003e"
+  },
+  "focus": {
+    "input": {
+      "expected": "\u003ccharter:slug\u003e or --charter \u003ccharter\u003e",
+      "reason": "missing_target"
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "state": {}
+}

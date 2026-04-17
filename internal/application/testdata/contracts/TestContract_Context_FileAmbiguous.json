@@ -1,0 +1,54 @@
+{
+  "focus": {
+    "ownership": {
+      "matches": [
+        {
+          "charter": "runtime",
+          "match_source": "scope",
+          "scope_prefix": "runtime/src/domain/shared/",
+          "slug": "first-owner"
+        },
+        {
+          "charter": "runtime",
+          "match_source": "scope",
+          "scope_prefix": "runtime/src/domain/shared/",
+          "slug": "second-owner"
+        }
+      ]
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "file": "runtime/src/domain/shared/transport.py",
+    "governing_spec": null,
+    "match_source": "scope",
+    "matches": [
+      {
+        "charter": "runtime",
+        "match_source": "scope",
+        "scope_prefix": "runtime/src/domain/shared/",
+        "slug": "first-owner"
+      },
+      {
+        "charter": "runtime",
+        "match_source": "scope",
+        "scope_prefix": "runtime/src/domain/shared/",
+        "slug": "second-owner"
+      }
+    ],
+    "resolution": "ambiguous",
+    "validation": {
+      "findings": [
+        {
+          "code": "AMBIGUOUS_FILE_OWNERSHIP",
+          "message": "runtime/src/domain/shared/transport.py matches more than one declared spec scope",
+          "path": "runtime/src/domain/shared/transport.py",
+          "severity": "error"
+        }
+      ],
+      "valid": false
+    }
+  }
+}

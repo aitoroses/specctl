@@ -1,0 +1,18 @@
+{
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "context target must be \u003ccharter\u003e or \u003ccharter:slug\u003e"
+  },
+  "focus": {
+    "input": {
+      "expected": "\u003ccharter\u003e or \u003ccharter:slug\u003e",
+      "reason": "invalid_target"
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "target": "runtime/session-lifecycle"
+  }
+}

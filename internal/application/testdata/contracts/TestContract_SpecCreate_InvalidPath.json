@@ -1,0 +1,19 @@
+{
+  "error": {
+    "code": "INVALID_PATH",
+    "message": "scope: path must not escape the repository: ../outside/"
+  },
+  "focus": {
+    "invalid_paths": [
+      "../outside/"
+    ]
+  },
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "charter_exists": true,
+    "target": "runtime:drain-controller",
+    "tracking_file": ".specs/runtime/drain-controller.yaml"
+  }
+}

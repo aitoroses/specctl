@@ -1,0 +1,28 @@
+name: runtime
+title: Runtime System
+description: Specs for runtime control-plane and data-plane behavior
+groups:
+  - key: execution
+    title: Execution Engine
+    order: 10
+  - key: recovery
+    title: Recovery and Cleanup
+    order: 20
+specs:
+  - slug: redis-state
+    group: execution
+    order: 10
+    depends_on: []
+    notes: Storage and CAS guarantees
+  - slug: session-lifecycle
+    group: recovery
+    order: 20
+    depends_on:
+      - redis-state
+    notes: Session FSM and cleanup behavior
+  - slug: recovery-projection
+    group: recovery
+    order: 10
+    depends_on:
+      - redis-state
+    notes: Recovery planning order

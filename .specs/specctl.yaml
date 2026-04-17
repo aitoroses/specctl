@@ -1,0 +1,21 @@
+gherkin_tags:
+    - contract
+    - dashboard
+    - domain
+    - integration
+    - lifecycle
+    - mcp
+    - read
+    - runtime
+    - specctl
+    - ui
+    - workflow
+    - write
+source_prefixes:
+    - cmd/
+    - internal/
+formats:
+    behavioral-spec:
+        template: SPEC_FORMAT.md
+        recommended_for: '**'
+        description: Five-layer behavioral specification with data model, contracts, invariants, and Gherkin tracking

@@ -1,0 +1,53 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "none"
+  },
+  "result": {
+    "created_group": null,
+    "entry": {
+      "depends_on": [],
+      "group": "recovery",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 30,
+      "slug": "session-lifecycle"
+    },
+    "kind": "charter_entry"
+  },
+  "state": {
+    "description": "Specs for runtime control-plane and data-plane behavior",
+    "groups": [
+      {
+        "key": "recovery",
+        "order": 20,
+        "title": "Recovery and Cleanup"
+      }
+    ],
+    "name": "runtime",
+    "ordered_specs": [
+      {
+        "depends_on": [],
+        "group": {
+          "key": "recovery",
+          "order": 20,
+          "title": "Recovery and Cleanup"
+        },
+        "notes": "Session FSM and cleanup behavior",
+        "order": 30,
+        "slug": "session-lifecycle",
+        "status": "ready",
+        "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+        "validation": {
+          "findings": [],
+          "valid": true
+        }
+      }
+    ],
+    "title": "Runtime System",
+    "tracking_file": ".specs/runtime/CHARTER.yaml",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

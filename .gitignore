@@ -1,0 +1,14 @@
+# Build artifacts
+/specctl
+/application.test
+/coverage.out
+
+# Local agent/runtime state
+/.omc/
+
+# Frontend artifacts
+/dashboard/node_modules/
+/dashboard/dist/
+
+# OS/editor noise
+.DS_Store

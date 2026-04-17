@@ -1,0 +1,101 @@
+{
+  "focus": {
+    "spec": {
+      "target": "runtime:session-lifecycle"
+    }
+  },
+  "next": {
+    "mode": "sequence",
+    "steps": [
+      {
+        "action": "create_format_template",
+        "context": {
+          "after_interview": "Based on the answers, create a markdown format template adapted to this system. Recommended five-layer structure per behavioral surface: (1) Prose — what the surface does, why it exists, when it's used. Write from the external surface, not the implementation. (2) Data Model — schema fields, types, relationships the surface reads or writes. (3) Contracts — exact response shapes for success and each error code, with concrete field names and realistic values. (4) Invariants — declarative rules that must always hold, stated as constraints not descriptions. (5) Gherkin tracking — '## Requirement:' heading (h2) with ```gherkin requirement``` and ```gherkin scenario``` blocks for specctl governance. The spec is the source of truth for the system's behavior. specctl tracks requirements via Gherkin for navigation and governance, but the spec itself must be complete enough that an agent could reimplement the system from it alone. Include HTML guidance comments in each section explaining what to write.",
+          "config_schema": {
+            "example": "formats:\n  behavioral-spec:\n    template: internal/SPEC-FORMAT.md\n    recommended_for: \"internal/**\"\n    description: Five-layer behavioral specification",
+            "fields": {
+              "description": "Human-readable description of what this format covers",
+              "recommended_for": "Glob pattern for auto-selecting this format during spec create when the design doc path matches (e.g., 'internal/**', 'runtime/src/**')",
+              "template": "Path to the format template file, relative to the repo root (e.g., internal/SPEC-FORMAT.md)"
+            },
+            "file": ".specs/\u003ccharter\u003e.yaml",
+            "frontmatter": "After configuring, set 'format: \u003ckey\u003e' in the design doc YAML frontmatter to bind the spec to this format",
+            "location": "formats.\u003ckey\u003e"
+          },
+          "interview": [
+            "What kind of system is this spec governing? (e.g., CLI tool with JSON responses, REST API, UI component library, event-driven pipeline, infrastructure service)",
+            "What are the distinct behavioral surfaces a caller or user observes? (e.g., commands, endpoints, screens, event handlers, lifecycle hooks)",
+            "How do callers interact with each surface — what do they send and what do they receive? (e.g., JSON envelopes, file mutations, rendered output, events)",
+            "Does the system have meaningful state transitions or lifecycle stages? (e.g., draft→active→closed, request→processing→complete)",
+            "What should this spec enable — could someone reimplement the system from the spec alone, or is it primarily for tracking requirements?"
+          ]
+        },
+        "kind": "ask_user_then_edit",
+        "priority": 1,
+        "why": "Before creating the format template, interview the user about the system being specified. The answers shape the template structure and the spec's quality bar."
+      }
+    ]
+  },
+  "result": {
+    "design_doc": "runtime/src/domain/session_execution/SPEC.md",
+    "design_doc_action": "bootstrapped",
+    "kind": "spec",
+    "selected_format": null,
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml"
+  },
+  "state": {
+    "changelog": [],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "b43940741a3b86af1b39ac8f4bd19ca9750b890a",
+    "created": "__TODAY__",
+    "deltas": {
+      "closed": 0,
+      "deferred": 0,
+      "in_progress": 0,
+      "items": [],
+      "open": 0
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "last_verified_at": "__TODAY__",
+    "open_deltas": [],
+    "requirements": [],
+    "rev": 1,
+    "scope": [
+      "runtime/src/domain/session_execution/"
+    ],
+    "scope_drift": {
+      "checkpoint": "b43940741a3b86af1b39ac8f4bd19ca9750b890a",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "__TODAY__",
+      "status": "clean",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "draft",
+    "tags": [],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [
+      "runtime/src/domain/session_execution/SPEC.md"
+    ],
+    "unverified_requirements": [],
+    "updated": "__TODAY__",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

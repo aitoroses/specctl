@@ -1,0 +1,379 @@
+{
+  "focus": {
+    "review_surface": {
+      "classification": {
+        "correctness_blocker": false,
+        "housekeeping_candidate": true,
+        "review_required": true
+      },
+      "changed_requirement_blocks": [
+        {
+          "heading": "Requirement: Tracked drift review",
+          "lines": [
+            7,
+            13
+          ],
+          "type": "added"
+        }
+      ],
+      "scope_code": {
+        "changed_files": [
+          "runtime/src/application/commands/handler.py"
+        ]
+      },
+      "sections_changed": [
+        {
+          "heading": "Requirement: Tracked drift review",
+          "lines": [
+            7,
+            13
+          ],
+          "type": "added"
+        },
+        {
+          "heading": "Scenarios",
+          "lines": [
+            14,
+            22
+          ],
+          "type": "modified"
+        },
+        {
+          "heading": "Drift Review",
+          "lines": [
+            23,
+            26
+          ],
+          "type": "added"
+        },
+        {
+          "heading": "Scenarios",
+          "lines": [
+            34,
+            41
+          ],
+          "type": "added"
+        }
+      ]
+    }
+  },
+  "next": {
+    "mode": "choose_then_sequence",
+    "options": [
+      {
+        "action": "delta_add_add",
+        "choose_when": "Choose this when the diff introduces net-new observable behavior.",
+        "kind": "run_command",
+        "priority": 1,
+        "template": {
+          "argv": [
+            "specctl",
+            "delta",
+            "add",
+            "runtime:session-lifecycle",
+            "--intent",
+            "add",
+            "--area",
+            "\u003carea\u003e"
+          ],
+          "required_fields": [
+            {
+              "description": "Short delta area label",
+              "name": "area"
+            },
+            {
+              "description": "Current state",
+              "name": "current"
+            },
+            {
+              "description": "Target state",
+              "name": "target"
+            },
+            {
+              "description": "Why this delta exists",
+              "name": "notes"
+            }
+          ],
+          "stdin_format": "yaml",
+          "stdin_template": "current: \u003ccurrent\u003e\ntarget: \u003ctarget\u003e\nnotes: \u003cnotes\u003e\n"
+        },
+        "why": "The committed drift spans design-doc and code changes. Review the changed sections and choose the correct workflow branch."
+      },
+      {
+        "action": "delta_add_change",
+        "choose_when": "Choose this when an active requirement is no longer the correct statement of truth.",
+        "kind": "run_command",
+        "priority": 2,
+        "template": {
+          "argv": [
+            "specctl",
+            "delta",
+            "add",
+            "runtime:session-lifecycle",
+            "--intent",
+            "change",
+            "--area",
+            "\u003carea\u003e"
+          ],
+          "required_fields": [
+            {
+              "description": "Short delta area label",
+              "name": "area"
+            },
+            {
+              "description": "Current state",
+              "name": "current"
+            },
+            {
+              "description": "Target state",
+              "name": "target"
+            },
+            {
+              "description": "Why this delta exists",
+              "name": "notes"
+            },
+            {
+              "description": "Active requirement IDs affected by this workflow branch",
+              "name": "affects_requirements"
+            }
+          ],
+          "stdin_format": "yaml",
+          "stdin_template": "current: \u003ccurrent\u003e\ntarget: \u003ctarget\u003e\nnotes: \u003cnotes\u003e\naffects_requirements:\n  - \u003crequirement-id\u003e\n"
+        },
+        "why": "The committed drift spans design-doc and code changes. Review the changed sections and choose the correct workflow branch."
+      },
+      {
+        "action": "delta_add_remove",
+        "choose_when": "Choose this when observable behavior was intentionally removed.",
+        "kind": "run_command",
+        "priority": 3,
+        "template": {
+          "argv": [
+            "specctl",
+            "delta",
+            "add",
+            "runtime:session-lifecycle",
+            "--intent",
+            "remove",
+            "--area",
+            "\u003carea\u003e"
+          ],
+          "required_fields": [
+            {
+              "description": "Short delta area label",
+              "name": "area"
+            },
+            {
+              "description": "Current state",
+              "name": "current"
+            },
+            {
+              "description": "Target state",
+              "name": "target"
+            },
+            {
+              "description": "Why this delta exists",
+              "name": "notes"
+            },
+            {
+              "description": "Active requirement IDs affected by this workflow branch",
+              "name": "affects_requirements"
+            }
+          ],
+          "stdin_format": "yaml",
+          "stdin_template": "current: \u003ccurrent\u003e\ntarget: \u003ctarget\u003e\nnotes: \u003cnotes\u003e\naffects_requirements:\n  - \u003crequirement-id\u003e\n"
+        },
+        "why": "The committed drift spans design-doc and code changes. Review the changed sections and choose the correct workflow branch."
+      },
+      {
+        "action": "delta_add_repair",
+        "choose_when": "Choose this when behavior remains true but its evidence or tracked wording needs repair.",
+        "kind": "run_command",
+        "priority": 4,
+        "template": {
+          "argv": [
+            "specctl",
+            "delta",
+            "add",
+            "runtime:session-lifecycle",
+            "--intent",
+            "repair",
+            "--area",
+            "\u003carea\u003e"
+          ],
+          "required_fields": [
+            {
+              "description": "Short delta area label",
+              "name": "area"
+            },
+            {
+              "description": "Current state",
+              "name": "current"
+            },
+            {
+              "description": "Target state",
+              "name": "target"
+            },
+            {
+              "description": "Why this delta exists",
+              "name": "notes"
+            },
+            {
+              "description": "Active requirement IDs affected by this workflow branch",
+              "name": "affects_requirements"
+            }
+          ],
+          "stdin_format": "yaml",
+          "stdin_template": "current: \u003ccurrent\u003e\ntarget: \u003ctarget\u003e\nnotes: \u003cnotes\u003e\naffects_requirements:\n  - \u003crequirement-id\u003e\n"
+        },
+        "why": "The committed drift spans design-doc and code changes. Review the changed sections and choose the correct workflow branch."
+      },
+      {
+        "action": "refresh_requirement",
+        "choose_when": "Same requirement identity; only match text changes.",
+        "kind": "run_command",
+        "priority": 5,
+        "template": {
+          "argv": [
+            "specctl",
+            "req",
+            "refresh",
+            "runtime:session-lifecycle",
+            "\u003crequirement-id\u003e"
+          ],
+          "required_fields": [
+            {
+              "description": "Tracked requirement to refresh",
+              "name": "requirement_id"
+            },
+            {
+              "description": "Requirement-level Gherkin block from SPEC.md",
+              "name": "gherkin_requirement"
+            }
+          ],
+          "stdin_format": "gherkin",
+          "stdin_template": "@tag\nFeature: \u003cfeature\u003e\n"
+        },
+        "why": "Choose this when requirement identity is unchanged and only the exact tracked block needs refreshing."
+      },
+      {
+        "action": "sync",
+        "choose_when": "Review confirms the code and design-doc edits are clarification-only and the checkpoint just needs re-anchoring.",
+        "kind": "run_command",
+        "priority": 6,
+        "template": {
+          "argv": [
+            "specctl",
+            "sync",
+            "runtime:session-lifecycle",
+            "--checkpoint",
+            "HEAD"
+          ],
+          "required_fields": [
+            {
+              "description": "One-line reason the checkpoint is being re-anchored",
+              "name": "summary"
+            }
+          ],
+          "stdin_format": "text",
+          "stdin_template": "\u003csummary\u003e\n"
+        },
+        "why": "Choose this only when review confirms the drift is clarification-only and does not require semantic spec work."
+      }
+    ]
+  },
+  "state": {
+    "baseline": "checkpoint",
+    "comparison": "151fab7af14cd163a5da5e60fca7cb8891b08d6a..HEAD",
+    "design_doc": {
+      "changed": true,
+      "path": "runtime/src/domain/session_execution/SPEC.md",
+      "sections_changed": [
+        {
+          "heading": "Requirement: Tracked drift review",
+          "lines": [
+            7,
+            13
+          ],
+          "type": "added"
+        },
+        {
+          "heading": "Scenarios",
+          "lines": [
+            14,
+            22
+          ],
+          "type": "modified"
+        },
+        {
+          "heading": "Drift Review",
+          "lines": [
+            23,
+            26
+          ],
+          "type": "added"
+        },
+        {
+          "heading": "Scenarios",
+          "lines": [
+            34,
+            41
+          ],
+          "type": "added"
+        }
+      ]
+    },
+    "drift_source": "both",
+    "from": {
+      "checkpoint": "a1b2c3f",
+      "rev": 3,
+      "status": "verified"
+    },
+    "model": {
+      "deltas": {
+        "closed": [],
+        "deferred": [],
+        "opened": [],
+        "resumed": []
+      },
+      "documents": {
+        "primary_from": "runtime/src/domain/session_execution/SPEC.md",
+        "primary_to": "runtime/src/domain/session_execution/SPEC.md"
+      },
+      "requirements": {
+        "added": [],
+        "verified": []
+      },
+      "scope": {
+        "added": [],
+        "removed": []
+      },
+      "spec_tags": {
+        "added": [],
+        "removed": []
+      },
+      "status": {
+        "from": "verified",
+        "to": "verified"
+      }
+    },
+    "requirements": {
+      "match_issues": []
+    },
+    "scope_code": {
+      "changed_files": [
+        "runtime/src/application/commands/handler.py"
+      ]
+    },
+    "target": "runtime:session-lifecycle",
+    "to": {
+      "checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
+      "rev": 3,
+      "status": "verified"
+    },
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

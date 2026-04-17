@@ -1,0 +1,24 @@
+slug: session-lifecycle
+charter: runtime
+title: Session Lifecycle
+status: ready
+rev: 1
+created: 2026-03-05
+updated: 2026-03-30
+last_verified_at: 2026-03-28
+checkpoint: a1b2c3f
+tags:
+  - runtime
+documents:
+  primary: runtime/src/domain/session_execution/SPEC.md
+scope:
+  - runtime/src/domain/session_execution/
+deltas:
+  - id: D-001
+    area: Missing notes field
+    status: open
+    origin_checkpoint: a1b2c3f
+    current: Current state
+    target: Target state
+requirements: []
+changelog: []

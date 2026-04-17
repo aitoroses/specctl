@@ -1,0 +1,32 @@
+{
+  "focus": {
+    "config_mutation": {
+      "kind": "remove_prefix",
+      "value": "runtime/src/"
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "result": {
+    "kind": "config",
+    "mutation": "remove-prefix",
+    "prefix": "runtime/src/"
+  },
+  "state": {
+    "formats": {},
+    "gherkin_tags": [
+      "runtime",
+      "domain"
+    ],
+    "semantic_tags": [
+      "e2e",
+      "manual"
+    ],
+    "source_prefixes": [],
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

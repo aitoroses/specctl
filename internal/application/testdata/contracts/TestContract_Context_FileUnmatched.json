@@ -1,0 +1,72 @@
+{
+  "focus": {
+    "ownership": {
+      "reason": "no_governing_spec"
+    }
+  },
+  "next": {
+    "mode": "choose_one",
+    "options": [
+      {
+        "action": "create_spec",
+        "choose_when": "No existing governing spec owns this file path, so establish ownership with a new spec.",
+        "kind": "run_command",
+        "priority": 1,
+        "template": {
+          "argv": [
+            "specctl",
+            "spec",
+            "create",
+            "adapters:http",
+            "--title",
+            "\u003ctitle\u003e",
+            "--doc",
+            "\u003cdesign_doc\u003e",
+            "--scope",
+            "adapters/src/http/",
+            "--group",
+            "\u003cgroup\u003e",
+            "--order",
+            "\u003corder\u003e",
+            "--charter-notes",
+            "\u003ccharter_notes\u003e"
+          ],
+          "required_fields": [
+            {
+              "description": "Human-readable spec title",
+              "name": "title"
+            },
+            {
+              "description": "Repo-relative markdown path",
+              "name": "design_doc"
+            },
+            {
+              "description": "Existing charter group key",
+              "name": "group"
+            },
+            {
+              "description": "Integer order inside the group",
+              "name": "order"
+            },
+            {
+              "description": "Short planning note",
+              "name": "charter_notes"
+            }
+          ]
+        },
+        "why": "No governing spec owns this path. Create a spec to establish ownership."
+      }
+    ]
+  },
+  "state": {
+    "file": "adapters/src/http/client.py",
+    "governing_spec": null,
+    "match_source": null,
+    "matches": [],
+    "resolution": "unmatched",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

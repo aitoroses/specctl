@@ -1,0 +1,304 @@
+{
+  "focus": {
+    "requirement": {
+      "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+      "id": "REQ-002",
+      "introduced_by": "D-001",
+      "lifecycle": "active",
+      "match": {
+        "heading": "Requirement: Compensation stage 4 failure cleanup",
+        "status": "matched"
+      },
+      "spec_context": {
+        "scenarios": [
+          "Cleanup runs after stage 4 failure"
+        ]
+      },
+      "superseded_by": null,
+      "supersedes": null,
+      "tags": [
+        "runtime",
+        "e2e"
+      ],
+      "test_files": [],
+      "title": "Compensation stage 4 failure cleanup",
+      "verification": "unverified"
+    }
+  },
+  "next": {
+    "mode": "sequence",
+    "steps": [
+      {
+        "action": "implement_and_test",
+        "context": {
+          "guidance": "Each scenario maps to a test case. Implementation goes in the scope directories.",
+          "requirement": "REQ-002",
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ],
+          "scope": [
+            "runtime/src/domain/session_execution/",
+            "runtime/src/application/commands/"
+          ],
+          "tags": [
+            "runtime",
+            "e2e"
+          ],
+          "title": "Compensation stage 4 failure cleanup",
+          "verification_level": "e2e"
+        },
+        "kind": "edit_file",
+        "priority": 1,
+        "template": {
+          "action": "edit_file",
+          "description": "Implement the observable behavior and write test files"
+        },
+        "why": "Requirement is registered but not yet verified. Implement the behavior and write tests before verifying."
+      },
+      {
+        "action": "verify_requirement",
+        "kind": "run_command",
+        "priority": 2,
+        "template": {
+          "argv": [
+            "specctl",
+            "req",
+            "verify",
+            "runtime:session-lifecycle",
+            "REQ-002",
+            "--test-file",
+            "runtime/tests/e2e/journeys/test_compensation_stage_4_failure_cleanup.py"
+          ],
+          "required_fields": []
+        },
+        "why": "Write an E2E journey test from the Gherkin scenarios and then verify the requirement."
+      }
+    ]
+  },
+  "result": {
+    "allocation": {
+      "allocated": "REQ-002",
+      "previous_max": 1
+    },
+    "kind": "requirement",
+    "requirement": {
+      "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+      "id": "REQ-002",
+      "introduced_by": "D-001",
+      "lifecycle": "active",
+      "match": {
+        "heading": "Requirement: Compensation stage 4 failure cleanup",
+        "status": "matched"
+      },
+      "spec_context": {
+        "scenarios": [
+          "Cleanup runs after stage 4 failure"
+        ]
+      },
+      "superseded_by": null,
+      "supersedes": null,
+      "tags": [
+        "runtime",
+        "e2e"
+      ],
+      "test_files": [],
+      "title": "Compensation stage 4 failure cleanup",
+      "verification": "unverified"
+    }
+  },
+  "state": {
+    "changelog": [
+      {
+        "date": "2026-03-28",
+        "deltas_closed": [],
+        "deltas_opened": [
+          "D-001"
+        ],
+        "reqs_added": [
+          "REQ-001"
+        ],
+        "reqs_verified": [],
+        "rev": 1,
+        "summary": "Opened the compensation cleanup work"
+      }
+    ],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "a1b2c3f",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 0,
+      "deferred": 0,
+      "in_progress": 1,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Multi-agent implementation split between runtime and workflow work",
+          "origin_checkpoint": "a1b2c3f",
+          "status": "in-progress",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ]
+        },
+        {
+          "affects_requirements": [
+            "REQ-001"
+          ],
+          "area": "Compensation cleanup removal",
+          "current": "Cleanup is still part of the contract",
+          "id": "D-002",
+          "intent": "remove",
+          "notes": "The behavior is being retired",
+          "origin_checkpoint": "a1b2c3f",
+          "status": "open",
+          "target": "Remove the cleanup behavior from the contract",
+          "updates": [
+            "withdraw_requirement"
+          ]
+        }
+      ],
+      "open": 1
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "last_verified_at": "2026-03-28",
+    "open_deltas": [
+      {
+        "area": "Compensation stage 4",
+        "id": "D-001",
+        "status": "in-progress"
+      },
+      {
+        "area": "Compensation cleanup removal",
+        "id": "D-002",
+        "status": "open"
+      }
+    ],
+    "requirements": [
+      {
+        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "withdrawn",
+        "match": {
+          "heading": "Requirement: Compensation stage 4 failure cleanup",
+          "status": "matched"
+        },
+        "spec_context": {
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ]
+        },
+        "superseded_by": null,
+        "supersedes": null,
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      },
+      {
+        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+        "id": "REQ-002",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "match": {
+          "heading": "Requirement: Compensation stage 4 failure cleanup",
+          "status": "matched"
+        },
+        "spec_context": {
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ]
+        },
+        "superseded_by": null,
+        "supersedes": null,
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      }
+    ],
+    "rev": 2,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "a1b2c3f",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "2026-03-28",
+      "status": "unavailable",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "active",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "unverified_requirements": [
+      {
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "withdrawn",
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      },
+      {
+        "id": "REQ-002",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      }
+    ],
+    "updated": "__TODAY__",
+    "validation": {
+      "findings": [
+        {
+          "code": "CHECKPOINT_UNAVAILABLE",
+          "message": "git metadata is unavailable for scope drift detection",
+          "path": ".specs/runtime/session-lifecycle.yaml",
+          "severity": "warning",
+          "target": "checkpoint"
+        }
+      ],
+      "valid": false
+    }
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "summary is required"
+  },
+  "focus": {
+    "sync": {
+      "reason": "missing_summary"
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "changelog": [
+      {
+        "date": "2026-03-28",
+        "deltas_closed": [
+          "D-001"
+        ],
+        "deltas_opened": [
+          "D-001"
+        ],
+        "reqs_added": [
+          "REQ-001"
+        ],
+        "reqs_verified": [
+          "REQ-001"
+        ],
+        "rev": 2,
+        "summary": "Closed the compensation cleanup work"
+      }
+    ],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 1,
+      "deferred": 0,
+      "in_progress": 0,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Multi-agent implementation split between runtime and workflow work",
+          "origin_checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
+          "status": "closed",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ]
+        }
+      ],
+      "open": 0
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "last_verified_at": "2026-03-28",
+    "open_deltas": [],
+    "requirements": [
+      {
+        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "match": {
+          "heading": "Requirement: Compensation stage 4 failure cleanup",
+          "status": "matched"
+        },
+        "spec_context": {
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ]
+        },
+        "superseded_by": null,
+        "supersedes": null,
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [
+          "runtime/tests/domain/test_compensation_cleanup.py"
+        ],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "verified"
+      }
+    ],
+    "rev": 3,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
+      "drift_source": "scope_code",
+      "files_changed_since_checkpoint": [
+        "runtime/src/application/commands/handler.py"
+      ],
+      "last_verified_at": "2026-03-28",
+      "status": "drifted",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "verified",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "unverified_requirements": [],
+    "updated": "2026-03-30",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

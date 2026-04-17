@@ -1,0 +1,74 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "affected_specs": [
+      {
+        "charter": "runtime",
+        "design_doc": "runtime/src/domain/recovery_projection/SPEC.md",
+        "design_doc_staged": false,
+        "matched_files": [],
+        "slug": "recovery-projection",
+        "status": "draft",
+        "tracking_file": ".specs/runtime/recovery-projection.yaml",
+        "tracking_file_staged": false
+      },
+      {
+        "charter": "runtime",
+        "design_doc": "runtime/src/domain/redis_state/SPEC.md",
+        "design_doc_staged": false,
+        "matched_files": [],
+        "slug": "redis-state",
+        "status": "draft",
+        "tracking_file": ".specs/runtime/redis-state.yaml",
+        "tracking_file_staged": false
+      },
+      {
+        "charter": "runtime",
+        "design_doc": "runtime/src/domain/session_execution/SPEC.md",
+        "design_doc_staged": false,
+        "matched_files": [
+          "runtime/src/domain/session_execution/services.py"
+        ],
+        "slug": "session-lifecycle",
+        "status": "draft",
+        "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+        "tracking_file_staged": true
+      }
+    ],
+    "considered_files": [
+      ".specs/runtime/CHARTER.yaml",
+      ".specs/runtime/session-lifecycle.yaml",
+      ".specs/specctl.yaml",
+      "runtime/src/domain/session_execution/services.py",
+      "runtime/src/orphan/worker.py"
+    ],
+    "ignored_files": [
+      "docs/notes.md"
+    ],
+    "input_files": [
+      ".specs/runtime/CHARTER.yaml",
+      ".specs/runtime/session-lifecycle.yaml",
+      ".specs/specctl.yaml",
+      "runtime/src/domain/session_execution/services.py",
+      "runtime/src/orphan/worker.py",
+      "docs/notes.md"
+    ],
+    "unmatched_files": [
+      "runtime/src/orphan/worker.py"
+    ],
+    "validation": {
+      "findings": [
+        {
+          "code": "UNOWNED_SOURCE_FILE",
+          "message": "no governing spec owns runtime/src/orphan/worker.py",
+          "path": "runtime/src/orphan/worker.py",
+          "severity": "error"
+        }
+      ],
+      "valid": false
+    }
+  }
+}

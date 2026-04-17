@@ -1,0 +1,28 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "none"
+  },
+  "result": {
+    "kind": "charter_entry",
+    "removed_slug": "session-lifecycle"
+  },
+  "state": {
+    "description": "Specs for runtime control-plane and data-plane behavior",
+    "groups": [
+      {
+        "key": "recovery",
+        "order": 20,
+        "title": "Recovery and Cleanup"
+      }
+    ],
+    "name": "runtime",
+    "ordered_specs": [],
+    "title": "Runtime System",
+    "tracking_file": ".specs/runtime/CHARTER.yaml",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

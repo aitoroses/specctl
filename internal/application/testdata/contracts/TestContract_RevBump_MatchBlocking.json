@@ -1,0 +1,258 @@
+{
+  "error": {
+    "code": "REQUIREMENT_MATCH_BLOCKING",
+    "message": "rev bump is blocked by requirement match issues"
+  },
+  "focus": {
+    "requirement_match_issues": [
+      {
+        "heading": "Requirement: Compensation stage 4 failure cleanup",
+        "id": "REQ-001",
+        "status": "no_exact_match"
+      }
+    ],
+    "rev_bump": {
+      "reason": "match_blocking"
+    }
+  },
+  "next": {
+    "mode": "choose_one",
+    "options": [
+      {
+        "action": "refresh_requirement",
+        "choose_when": "Same requirement identity; only match text changes.",
+        "kind": "run_command",
+        "priority": 1,
+        "template": {
+          "argv": [
+            "specctl",
+            "req",
+            "refresh",
+            "runtime:session-lifecycle",
+            "REQ-001"
+          ],
+          "required_fields": [
+            {
+              "description": "Requirement-level Gherkin block from SPEC.md",
+              "name": "gherkin_requirement"
+            }
+          ],
+          "stdin_format": "gherkin",
+          "stdin_template": "@tag\nFeature: \u003cfeature\u003e\n"
+        },
+        "why": "Choose this when the requirement identity is unchanged and only the exact tracked block needs refresh."
+      },
+      {
+        "action": "delta_add_change",
+        "choose_when": "Existing requirement is no longer the correct statement of truth.",
+        "kind": "run_command",
+        "priority": 2,
+        "template": {
+          "argv": [
+            "specctl",
+            "delta",
+            "add",
+            "runtime:session-lifecycle",
+            "--intent",
+            "change",
+            "--area",
+            "\u003carea\u003e"
+          ],
+          "required_fields": [
+            {
+              "description": "Short delta area label",
+              "name": "area"
+            },
+            {
+              "description": "Current state",
+              "name": "current"
+            },
+            {
+              "description": "Target state",
+              "name": "target"
+            },
+            {
+              "description": "Why this delta exists",
+              "name": "notes"
+            },
+            {
+              "description": "Active requirement IDs affected by this workflow branch",
+              "name": "affects_requirements"
+            }
+          ],
+          "stdin_format": "yaml",
+          "stdin_template": "current: \u003ccurrent\u003e\ntarget: \u003ctarget\u003e\nnotes: \u003cnotes\u003e\naffects_requirements:\n  - \u003crequirement-id\u003e\n"
+        },
+        "why": "Choose this when the current requirement is no longer the correct statement of truth."
+      },
+      {
+        "action": "delta_add_remove",
+        "choose_when": "Observable behavior is intentionally removed.",
+        "kind": "run_command",
+        "priority": 3,
+        "template": {
+          "argv": [
+            "specctl",
+            "delta",
+            "add",
+            "runtime:session-lifecycle",
+            "--intent",
+            "remove",
+            "--area",
+            "\u003carea\u003e"
+          ],
+          "required_fields": [
+            {
+              "description": "Short delta area label",
+              "name": "area"
+            },
+            {
+              "description": "Current state",
+              "name": "current"
+            },
+            {
+              "description": "Target state",
+              "name": "target"
+            },
+            {
+              "description": "Why this delta exists",
+              "name": "notes"
+            },
+            {
+              "description": "Active requirement IDs affected by this workflow branch",
+              "name": "affects_requirements"
+            }
+          ],
+          "stdin_format": "yaml",
+          "stdin_template": "current: \u003ccurrent\u003e\ntarget: \u003ctarget\u003e\nnotes: \u003cnotes\u003e\naffects_requirements:\n  - \u003crequirement-id\u003e\n"
+        },
+        "why": "Choose this when the observable behavior was intentionally removed."
+      }
+    ]
+  },
+  "state": {
+    "changelog": [
+      {
+        "date": "2026-03-28",
+        "deltas_closed": [
+          "D-001"
+        ],
+        "deltas_opened": [
+          "D-001"
+        ],
+        "reqs_added": [
+          "REQ-001"
+        ],
+        "reqs_verified": [
+          "REQ-001"
+        ],
+        "rev": 2,
+        "summary": "Closed the compensation cleanup work"
+      }
+    ],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "a1b2c3f",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 1,
+      "deferred": 0,
+      "in_progress": 0,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Multi-agent implementation split between runtime and workflow work",
+          "origin_checkpoint": "a1b2c3f",
+          "status": "closed",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ]
+        }
+      ],
+      "open": 0
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "last_verified_at": "2026-03-28",
+    "open_deltas": [],
+    "requirements": [
+      {
+        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "match": {
+          "heading": "Requirement: Compensation stage 4 failure cleanup",
+          "status": "no_exact_match"
+        },
+        "spec_context": {
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ]
+        },
+        "superseded_by": null,
+        "supersedes": null,
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [
+          "runtime/tests/domain/test_compensation_cleanup.py"
+        ],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "verified"
+      }
+    ],
+    "rev": 3,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "a1b2c3f",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "2026-03-28",
+      "status": "unavailable",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "verified",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "unverified_requirements": [],
+    "updated": "2026-03-30",
+    "validation": {
+      "findings": [
+        {
+          "code": "CHECKPOINT_UNAVAILABLE",
+          "message": "git metadata is unavailable for scope drift detection",
+          "path": ".specs/runtime/session-lifecycle.yaml",
+          "severity": "warning",
+          "target": "checkpoint"
+        }
+      ],
+      "valid": false
+    }
+  }
+}

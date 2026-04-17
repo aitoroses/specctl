@@ -1,0 +1,100 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "sequence",
+    "steps": [
+      {
+        "action": "sync",
+        "kind": "run_command",
+        "priority": 1,
+        "template": {
+          "argv": [
+            "specctl",
+            "sync",
+            "runtime:session-lifecycle",
+            "--checkpoint",
+            "HEAD"
+          ],
+          "required_fields": [
+            {
+              "description": "One-line reason the checkpoint is being repaired",
+              "name": "summary"
+            }
+          ],
+          "stdin_format": "text",
+          "stdin_template": "\u003csummary\u003e\n"
+        },
+        "why": "Repair the missing checkpoint by re-anchoring to a resolvable commit."
+      }
+    ]
+  },
+  "state": {
+    "baseline": "checkpoint",
+    "comparison": "deadbee..HEAD",
+    "design_doc": {
+      "changed": false,
+      "path": "runtime/src/domain/session_execution/SPEC.md",
+      "sections_changed": []
+    },
+    "drift_source": null,
+    "from": null,
+    "model": {
+      "deltas": {
+        "closed": [],
+        "deferred": [],
+        "opened": [],
+        "resumed": []
+      },
+      "documents": {
+        "primary_from": null,
+        "primary_to": "runtime/src/domain/session_execution/SPEC.md"
+      },
+      "requirements": {
+        "added": [],
+        "verified": []
+      },
+      "scope": {
+        "added": [
+          "runtime/src/domain/session_execution/",
+          "runtime/src/application/commands/"
+        ],
+        "removed": []
+      },
+      "spec_tags": {
+        "added": [
+          "runtime",
+          "domain"
+        ],
+        "removed": []
+      },
+      "status": {
+        "from": null,
+        "to": "verified"
+      }
+    },
+    "requirements": {
+      "match_issues": []
+    },
+    "scope_code": {
+      "changed_files": []
+    },
+    "target": "runtime:session-lifecycle",
+    "to": {
+      "checkpoint": "deadbee",
+      "rev": 3,
+      "status": "verified"
+    },
+    "validation": {
+      "findings": [
+        {
+          "code": "CHECKPOINT_UNAVAILABLE",
+          "message": "read .specs/runtime/session-lifecycle.yaml at deadbee: fatal: invalid object name 'deadbee'.",
+          "path": ".specs/runtime/session-lifecycle.yaml",
+          "severity": "error",
+          "target": "checkpoint"
+        }
+      ],
+      "valid": false
+    }
+  }
+}

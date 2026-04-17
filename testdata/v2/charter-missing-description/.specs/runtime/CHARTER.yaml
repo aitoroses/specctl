@@ -1,0 +1,12 @@
+name: runtime
+title: Runtime System
+groups:
+  - key: execution
+    title: Execution Engine
+    order: 10
+specs:
+  - slug: redis-state
+    group: execution
+    order: 10
+    depends_on: []
+    notes: Storage and CAS guarantees

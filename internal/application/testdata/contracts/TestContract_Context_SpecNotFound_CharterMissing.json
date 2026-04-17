@@ -1,0 +1,107 @@
+{
+  "focus": {
+    "lookup": {
+      "reason": "spec_not_found"
+    }
+  },
+  "next": {
+    "mode": "sequence",
+    "steps": [
+      {
+        "action": "create_charter",
+        "kind": "run_command",
+        "priority": 1,
+        "template": {
+          "argv": [
+            "specctl",
+            "charter",
+            "create",
+            "missing"
+          ],
+          "required_fields": [
+            {
+              "description": "Human-readable charter title",
+              "name": "title"
+            },
+            {
+              "description": "One-paragraph charter description",
+              "name": "description"
+            },
+            {
+              "description": "Initial group key",
+              "name": "group_key"
+            },
+            {
+              "description": "Initial group title",
+              "name": "group_title"
+            },
+            {
+              "description": "Integer group order",
+              "name": "group_order"
+            }
+          ],
+          "stdin_format": "yaml",
+          "stdin_template": "title: \u003ctitle\u003e\ndescription: \u003cdescription\u003e\ngroups:\n  - key: \u003cgroup_key\u003e\n    title: \u003cgroup_title\u003e\n    order: \u003cgroup_order\u003e\n"
+        },
+        "why": "Create the charter first; spec creation has no standalone fallback."
+      },
+      {
+        "action": "create_spec",
+        "kind": "run_command",
+        "priority": 2,
+        "template": {
+          "argv": [
+            "specctl",
+            "spec",
+            "create",
+            "missing:missing-spec",
+            "--title",
+            "\u003ctitle\u003e",
+            "--doc",
+            "\u003cdesign_doc\u003e",
+            "--scope",
+            "\u003cscope_dir_1\u003e/",
+            "--group",
+            "\u003cgroup\u003e",
+            "--order",
+            "\u003corder\u003e",
+            "--charter-notes",
+            "\u003ccharter_notes\u003e"
+          ],
+          "required_fields": [
+            {
+              "description": "Human-readable spec title",
+              "name": "title"
+            },
+            {
+              "description": "Repo-relative markdown path",
+              "name": "design_doc"
+            },
+            {
+              "description": "Governed directory ending in /",
+              "name": "scope_dir_1"
+            },
+            {
+              "description": "Existing charter group key",
+              "name": "group"
+            },
+            {
+              "description": "Integer order inside the group",
+              "name": "order"
+            },
+            {
+              "description": "Short planning note",
+              "name": "charter_notes"
+            }
+          ]
+        },
+        "why": "After the charter exists, run spec create with membership flags."
+      }
+    ]
+  },
+  "state": {
+    "charter_exists": false,
+    "target": "missing:missing-spec",
+    "tracking_file": null
+  }
+}

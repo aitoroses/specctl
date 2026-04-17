@@ -1,0 +1,6 @@
+gherkin_tags:
+  - runtime
+  - domain
+source_prefixes:
+  - runtime/src/
+formats: {}

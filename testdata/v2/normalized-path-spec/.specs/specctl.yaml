@@ -1,0 +1,9 @@
+gherkin_tags:
+  - runtime
+source_prefixes:
+  - runtime/src/
+formats:
+  runtime-spec:
+    template: docs/templates/runtime-spec.md
+    recommended_for: runtime/src/**
+    description: Runtime design specification

@@ -1,0 +1,136 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "sequence",
+    "steps": [
+      {
+        "action": "verify_requirement",
+        "kind": "run_command",
+        "priority": 1,
+        "template": {
+          "argv": [
+            "specctl",
+            "req",
+            "verify",
+            "runtime:session-lifecycle",
+            "REQ-002",
+            "--test-file",
+            "runtime/tests/e2e/journeys/test_tracked_drift_review.py"
+          ],
+          "required_fields": []
+        },
+        "why": "Verify the last tracing requirement before closing the delta."
+      }
+    ]
+  },
+  "state": {
+    "baseline": "checkpoint",
+    "comparison": "151fab7af14cd163a5da5e60fca7cb8891b08d6a..HEAD",
+    "design_doc": {
+      "changed": true,
+      "path": "runtime/src/domain/session_execution/SPEC.md",
+      "sections_changed": [
+        {
+          "heading": "Scenarios",
+          "lines": [
+            14,
+            22
+          ],
+          "type": "modified"
+        },
+        {
+          "heading": "Requirement: Tracked drift review",
+          "lines": [
+            23,
+            29
+          ],
+          "type": "added"
+        },
+        {
+          "heading": "Scenarios",
+          "lines": [
+            30,
+            38
+          ],
+          "type": "added"
+        },
+        {
+          "heading": "Drift Review",
+          "lines": [
+            39,
+            41
+          ],
+          "type": "added"
+        }
+      ]
+    },
+    "drift_source": "design_doc",
+    "from": {
+      "checkpoint": "a1b2c3f",
+      "rev": 3,
+      "status": "verified"
+    },
+    "model": {
+      "deltas": {
+        "closed": [],
+        "deferred": [],
+        "opened": [
+          {
+            "area": "Tracked drift review",
+            "current": "The committed drift is not yet tracked",
+            "id": "D-002",
+            "origin_checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
+            "status": "open",
+            "target": "Track the committed design-doc change"
+          }
+        ],
+        "resumed": []
+      },
+      "documents": {
+        "primary_from": "runtime/src/domain/session_execution/SPEC.md",
+        "primary_to": "runtime/src/domain/session_execution/SPEC.md"
+      },
+      "requirements": {
+        "added": [
+          {
+            "id": "REQ-002",
+            "tags": [
+              "runtime",
+              "e2e"
+            ],
+            "title": "Tracked drift review"
+          }
+        ],
+        "verified": []
+      },
+      "scope": {
+        "added": [],
+        "removed": []
+      },
+      "spec_tags": {
+        "added": [],
+        "removed": []
+      },
+      "status": {
+        "from": "verified",
+        "to": "active"
+      }
+    },
+    "requirements": {
+      "match_issues": []
+    },
+    "scope_code": {
+      "changed_files": []
+    },
+    "target": "runtime:session-lifecycle",
+    "to": {
+      "checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
+      "rev": 3,
+      "status": "active"
+    },
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

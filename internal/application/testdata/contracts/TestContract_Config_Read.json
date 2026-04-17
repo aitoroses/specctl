@@ -1,0 +1,24 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "formats": {},
+    "gherkin_tags": [
+      "runtime",
+      "domain"
+    ],
+    "semantic_tags": [
+      "e2e",
+      "manual"
+    ],
+    "source_prefixes": [
+      "runtime/src/"
+    ],
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

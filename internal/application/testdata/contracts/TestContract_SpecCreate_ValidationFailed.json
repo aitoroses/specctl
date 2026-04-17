@@ -1,0 +1,85 @@
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Cannot create the spec because the initial tracking state is invalid"
+  },
+  "focus": {
+    "validation": {
+      "findings": [
+        {
+          "code": "SPEC_TAG_INVALID",
+          "message": "tag \"Invalid-Tag\" must match ^[a-z0-9][a-z0-9-]*$",
+          "path": ".specs/runtime/new-protocol.yaml",
+          "severity": "error",
+          "target": "tags"
+        }
+      ]
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "changelog": [],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Protocol planning",
+      "order": 30
+    },
+    "checkpoint": "08224a44bf00420bb71a3396c64530a7eae20ef5",
+    "created": "__TODAY__",
+    "deltas": {
+      "closed": 0,
+      "deferred": 0,
+      "in_progress": 0,
+      "items": [],
+      "open": 0
+    },
+    "documents": {
+      "primary": "runtime/src/domain/new_protocol/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "last_verified_at": "__TODAY__",
+    "open_deltas": [],
+    "requirements": [],
+    "rev": 1,
+    "scope": [
+      "runtime/src/domain/new_protocol/"
+    ],
+    "scope_drift": {
+      "checkpoint": "08224a44bf00420bb71a3396c64530a7eae20ef5",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "__TODAY__",
+      "status": "clean",
+      "tracked_by": []
+    },
+    "slug": "new-protocol",
+    "status": "draft",
+    "tags": [
+      "Invalid-Tag"
+    ],
+    "title": "New Protocol",
+    "tracking_file": ".specs/runtime/new-protocol.yaml",
+    "uncommitted_changes": [],
+    "unverified_requirements": [],
+    "updated": "__TODAY__",
+    "validation": {
+      "findings": [
+        {
+          "code": "SPEC_TAG_INVALID",
+          "message": "tag \"Invalid-Tag\" must match ^[a-z0-9][a-z0-9-]*$",
+          "path": ".specs/runtime/new-protocol.yaml",
+          "severity": "error",
+          "target": "tags"
+        }
+      ],
+      "valid": false
+    }
+  }
+}

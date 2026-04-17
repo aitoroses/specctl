@@ -1,0 +1,33 @@
+{
+  "focus": {
+    "config_mutation": {
+      "kind": "remove_tag",
+      "value": "domain"
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "result": {
+    "kind": "config",
+    "mutation": "remove-tag",
+    "tag": "domain"
+  },
+  "state": {
+    "formats": {},
+    "gherkin_tags": [
+      "runtime"
+    ],
+    "semantic_tags": [
+      "e2e",
+      "manual"
+    ],
+    "source_prefixes": [
+      "runtime/src/"
+    ],
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

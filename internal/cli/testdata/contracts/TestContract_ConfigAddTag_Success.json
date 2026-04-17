@@ -1,0 +1,35 @@
+{
+  "focus": {
+    "config_mutation": {
+      "kind": "add_tag",
+      "value": "adapter"
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "result": {
+    "kind": "config",
+    "mutation": "add-tag",
+    "tag": "adapter"
+  },
+  "state": {
+    "formats": {},
+    "gherkin_tags": [
+      "adapter",
+      "domain",
+      "runtime"
+    ],
+    "semantic_tags": [
+      "e2e",
+      "manual"
+    ],
+    "source_prefixes": [
+      "runtime/src/"
+    ],
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "error": {
+    "code": "FORMAT_AMBIGUOUS",
+    "message": "multiple configured formats match runtime/src/domain/tests/e2e/session_execution/CONTEXT.md"
+  },
+  "focus": {
+    "design_doc": {
+      "path": "runtime/src/domain/tests/e2e/session_execution/CONTEXT.md"
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "charter_exists": true,
+    "target": "runtime:session-e2e-context",
+    "tracking_file": ".specs/runtime/session-e2e-context.yaml"
+  }
+}

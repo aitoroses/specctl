@@ -1,0 +1,22 @@
+{
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "accepts 0 arg(s), received 1"
+  },
+  "focus": {
+    "input": {
+      "max_args": 0,
+      "reason": "too_many_args",
+      "received": 1
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "args": [
+      "unexpected"
+    ],
+    "command": "config"
+  }
+}

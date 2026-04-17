@@ -1,0 +1,48 @@
+slug: session-lifecycle
+charter: runtime
+title: Session Lifecycle
+status: active
+rev: 2
+created: 2026-03-05
+updated: 2026-03-30
+last_verified_at: 2026-03-28
+checkpoint: a1b2c3f
+tags:
+  - runtime
+  - domain
+documents:
+  primary: runtime/src/domain/session_execution/SPEC.md
+scope:
+  - runtime/src/domain/session_execution/
+  - runtime/src/application/commands/
+deltas:
+  - id: D-001
+    area: Compensation stage 4
+    status: in-progress
+    origin_checkpoint: a1b2c3f
+    current: Stage 4 compensation exists in code but failure ordering is unclear
+    target: Document ordering and verify failure cleanup
+    notes: Multi-agent implementation split between runtime and workflow work
+requirements:
+  - id: REQ-001
+    title: Compensation stage 4 failure cleanup
+    tags:
+      - runtime
+      - e2e
+    test_files: []
+    gherkin: |
+      @runtime @e2e
+      Feature: Compensation stage 4 failure cleanup
+    lifecycle: active
+    verification: unverified
+    introduced_by: D-001
+changelog:
+  - rev: 1
+    date: 2026-03-28
+    deltas_opened:
+      - D-001
+    deltas_closed: []
+    reqs_added:
+      - REQ-001
+    reqs_verified: []
+    summary: Opened the compensation cleanup work

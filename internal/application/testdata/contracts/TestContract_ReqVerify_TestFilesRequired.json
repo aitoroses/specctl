@@ -1,0 +1,206 @@
+{
+  "error": {
+    "code": "TEST_FILES_REQUIRED",
+    "message": "--test-file is required for non-manual requirements"
+  },
+  "focus": {
+    "input": {
+      "missing_fields": [
+        "test_file"
+      ]
+    },
+    "requirement": {
+      "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+      "id": "REQ-001",
+      "introduced_by": "D-001",
+      "lifecycle": "active",
+      "tags": [
+        "runtime",
+        "e2e"
+      ],
+      "test_files": [],
+      "title": "Compensation stage 4 failure cleanup",
+      "verification": "unverified"
+    }
+  },
+  "next": {
+    "mode": "choose_one",
+    "options": [
+      {
+        "action": "provide_test_file",
+        "kind": "run_command",
+        "priority": 1,
+        "template": {
+          "argv": [
+            "specctl",
+            "req",
+            "verify",
+            "runtime:session-lifecycle",
+            "REQ-001",
+            "--test-file",
+            "<path>"
+          ],
+          "required_fields": [
+            {
+              "description": "Repo-relative path to the test file that verifies this requirement",
+              "name": "path"
+            }
+          ]
+        },
+        "why": "Provide the test file that exercises the behavior described by this requirement."
+      },
+      {
+        "action": "mark_as_manual",
+        "choose_when": "The requirement describes behavior that is proven by infrastructure operation (e.g., process isolation, boot sequences), by code inspection (e.g., architectural import boundaries), or by integration evidence that cannot be captured in a unit test. Add @manual to the requirement's Gherkin tag line in SPEC.md, then run req refresh to sync, then retry req verify without --test-file.",
+        "kind": "guidance",
+        "priority": 2,
+        "template": {
+          "steps": [
+            "Add @manual to the requirement's @tag line in SPEC.md (e.g., '@e2e @testing @manual')",
+            "specctl req refresh runtime:session-lifecycle REQ-001  (pipe updated Gherkin on stdin)",
+            "specctl req verify runtime:session-lifecycle REQ-001  (no --test-file needed for @manual)"
+          ]
+        },
+        "why": "Requirements tagged @manual can be verified without test files. Use this for behaviors proven by infrastructure operation, architectural inspection, or integration evidence that cannot be captured in an isolated test."
+      }
+    ]
+  },
+  "state": {
+    "changelog": [
+      {
+        "date": "2026-03-28",
+        "deltas_closed": [],
+        "deltas_opened": [
+          "D-001"
+        ],
+        "reqs_added": [
+          "REQ-001"
+        ],
+        "reqs_verified": [],
+        "rev": 1,
+        "summary": "Opened the compensation cleanup work"
+      }
+    ],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "a1b2c3f",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 0,
+      "deferred": 0,
+      "in_progress": 1,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Multi-agent implementation split between runtime and workflow work",
+          "origin_checkpoint": "a1b2c3f",
+          "status": "in-progress",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ]
+        }
+      ],
+      "open": 0
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "last_verified_at": "2026-03-28",
+    "open_deltas": [
+      {
+        "area": "Compensation stage 4",
+        "id": "D-001",
+        "status": "in-progress"
+      }
+    ],
+    "requirements": [
+      {
+        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "match": {
+          "heading": "Requirement: Compensation stage 4 failure cleanup",
+          "status": "matched"
+        },
+        "spec_context": {
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ]
+        },
+        "superseded_by": null,
+        "supersedes": null,
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      }
+    ],
+    "rev": 2,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "a1b2c3f",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "2026-03-28",
+      "status": "unavailable",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "active",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "unverified_requirements": [
+      {
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      }
+    ],
+    "updated": "2026-03-30",
+    "validation": {
+      "findings": [
+        {
+          "code": "CHECKPOINT_UNAVAILABLE",
+          "message": "git metadata is unavailable for scope drift detection",
+          "path": ".specs/runtime/session-lifecycle.yaml",
+          "severity": "warning",
+          "target": "checkpoint"
+        }
+      ],
+      "valid": false
+    }
+  }
+}

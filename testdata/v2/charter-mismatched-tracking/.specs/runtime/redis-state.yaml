@@ -1,0 +1,18 @@
+slug: other-state
+charter: runtime
+title: Redis State
+status: draft
+rev: 1
+created: 2026-03-05
+updated: 2026-03-30
+last_verified_at: 2026-03-28
+checkpoint: a1b2c3f
+tags:
+  - runtime
+documents:
+  primary: runtime/src/domain/redis_state/SPEC.md
+scope:
+  - runtime/src/domain/redis_state/
+deltas: []
+requirements: []
+changelog: []

@@ -1,0 +1,15 @@
+{
+  "error": {
+    "code": "SPEC_NOT_FOUND",
+    "message": "spec \"runtime:missing-spec\" does not exist"
+  },
+  "focus": {},
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "charter_exists": true,
+    "target": "runtime:missing-spec",
+    "tracking_file": ".specs/runtime/missing-spec.yaml"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "file": "runtime/src/domain/session_execution/SPEC.md",
+    "governing_spec": {
+      "charter": "runtime",
+      "documents": {
+        "primary": "runtime/src/domain/session_execution/SPEC.md"
+      },
+      "slug": "session-lifecycle",
+      "tracking_file": ".specs/runtime/session-lifecycle.yaml"
+    },
+    "match_source": "design_doc",
+    "matches": [
+      {
+        "charter": "runtime",
+        "match_source": "design_doc",
+        "slug": "session-lifecycle"
+      }
+    ],
+    "resolution": "matched",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

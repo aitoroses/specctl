@@ -1,0 +1,65 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "baseline": "checkpoint",
+    "comparison": "151fab7af14cd163a5da5e60fca7cb8891b08d6a..HEAD",
+    "design_doc": {
+      "changed": false,
+      "path": "runtime/src/domain/session_execution/SPEC.md",
+      "sections_changed": []
+    },
+    "drift_source": null,
+    "from": {
+      "checkpoint": "a1b2c3f",
+      "rev": 3,
+      "status": "verified"
+    },
+    "model": {
+      "deltas": {
+        "closed": [],
+        "deferred": [],
+        "opened": [],
+        "resumed": []
+      },
+      "documents": {
+        "primary_from": "runtime/src/domain/session_execution/SPEC.md",
+        "primary_to": "runtime/src/domain/session_execution/SPEC.md"
+      },
+      "requirements": {
+        "added": [],
+        "verified": []
+      },
+      "scope": {
+        "added": [],
+        "removed": []
+      },
+      "spec_tags": {
+        "added": [],
+        "removed": []
+      },
+      "status": {
+        "from": "verified",
+        "to": "verified"
+      }
+    },
+    "requirements": {
+      "match_issues": []
+    },
+    "scope_code": {
+      "changed_files": []
+    },
+    "target": "runtime:session-lifecycle",
+    "to": {
+      "checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
+      "rev": 3,
+      "status": "verified"
+    },
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

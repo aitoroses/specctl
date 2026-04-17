@@ -1,0 +1,70 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "charter": "runtime",
+    "ordered_specs": [
+      {
+        "changed": false,
+        "depends_on": [],
+        "from": {
+          "checkpoint": "a1b2c3f",
+          "rev": 1
+        },
+        "slug": "redis-state",
+        "to": {
+          "checkpoint": "1a4e2b8c24df58bd0ae33514f7bf61643efd5c28",
+          "rev": 1
+        },
+        "validation": {
+          "findings": [],
+          "valid": true
+        }
+      },
+      {
+        "changed": false,
+        "depends_on": [
+          "redis-state"
+        ],
+        "from": {
+          "checkpoint": "a1b2c3f",
+          "rev": 1
+        },
+        "slug": "recovery-projection",
+        "to": {
+          "checkpoint": "1a4e2b8c24df58bd0ae33514f7bf61643efd5c28",
+          "rev": 1
+        },
+        "validation": {
+          "findings": [],
+          "valid": true
+        }
+      },
+      {
+        "changed": false,
+        "depends_on": [
+          "redis-state"
+        ],
+        "from": {
+          "checkpoint": "a1b2c3f",
+          "rev": 1
+        },
+        "slug": "session-lifecycle",
+        "to": {
+          "checkpoint": "1a4e2b8c24df58bd0ae33514f7bf61643efd5c28",
+          "rev": 1
+        },
+        "validation": {
+          "findings": [],
+          "valid": true
+        }
+      }
+    ],
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

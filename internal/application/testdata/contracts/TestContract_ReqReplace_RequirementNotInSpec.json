@@ -1,0 +1,199 @@
+{
+  "error": {
+    "code": "REQUIREMENT_NOT_IN_SPEC",
+    "message": "requirement block was not found in SPEC.md"
+  },
+  "focus": {
+    "req_replace": {
+      "reason": "requirement_not_in_spec"
+    },
+    "requirement_match_issues": [
+      {
+        "status": "missing_in_spec"
+      }
+    ]
+  },
+  "next": {
+    "mode": "choose_one",
+    "options": [
+      {
+        "action": "write_requirement_block",
+        "choose_when": "The replacement requirement should be tracked, but SPEC.md does not yet contain its parseable requirement block.",
+        "context": {
+          "design_doc": "runtime/src/domain/session_execution/SPEC.md",
+          "gherkin_requirement": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup replacement",
+          "guidance": "No format template is configured. Consider creating one for consistent section structure. The design doc is the source of truth — specctl tracks requirements via Gherkin for navigation, but the spec must fully define the behavior with five layers: (1) Prose — what/why/when from the external surface; (2) Data Model — schema fields, types, relationships; (3) Contracts — exact JSON response shapes for success and each error code; (4) Invariants — rules that must always hold; (5) Gherkin — '## Requirement: \u003ctitle\u003e' heading (h2) with ```gherkin requirement``` and ```gherkin scenario``` blocks for tracking. Then retry the command.",
+          "retry": "retry req replace"
+        },
+        "create_if_missing": false,
+        "kind": "edit_file",
+        "path": "runtime/src/domain/session_execution/SPEC.md",
+        "priority": 1,
+        "template": {
+          "action": "edit_file",
+          "description": "Add a requirement heading, a ```gherkin requirement``` block, and scenario blocks to the primary design doc"
+        },
+        "why": "Write the parseable requirement block into SPEC.md, then retry the command."
+      }
+    ]
+  },
+  "state": {
+    "changelog": [
+      {
+        "date": "2026-03-28",
+        "deltas_closed": [],
+        "deltas_opened": [
+          "D-001"
+        ],
+        "reqs_added": [
+          "REQ-001"
+        ],
+        "reqs_verified": [],
+        "rev": 1,
+        "summary": "Opened the compensation cleanup work"
+      }
+    ],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "a1b2c3f",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 0,
+      "deferred": 0,
+      "in_progress": 1,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Multi-agent implementation split between runtime and workflow work",
+          "origin_checkpoint": "a1b2c3f",
+          "status": "in-progress",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ]
+        },
+        {
+          "affects_requirements": [
+            "REQ-001"
+          ],
+          "area": "Compensation cleanup rewrite",
+          "current": "Cleanup wording is outdated",
+          "id": "D-002",
+          "intent": "change",
+          "notes": "Match the new requirement block exactly",
+          "origin_checkpoint": "a1b2c3f",
+          "status": "open",
+          "target": "Replace the tracked cleanup contract",
+          "updates": [
+            "replace_requirement"
+          ]
+        }
+      ],
+      "open": 1
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "last_verified_at": "2026-03-28",
+    "open_deltas": [
+      {
+        "area": "Compensation stage 4",
+        "id": "D-001",
+        "status": "in-progress"
+      },
+      {
+        "area": "Compensation cleanup rewrite",
+        "id": "D-002",
+        "status": "open"
+      }
+    ],
+    "requirements": [
+      {
+        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "match": {
+          "heading": "Requirement: Compensation stage 4 failure cleanup",
+          "status": "matched"
+        },
+        "spec_context": {
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ]
+        },
+        "superseded_by": null,
+        "supersedes": null,
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      }
+    ],
+    "rev": 2,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "a1b2c3f",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "2026-03-28",
+      "status": "unavailable",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "ready",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "unverified_requirements": [
+      {
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      }
+    ],
+    "updated": "2026-03-30",
+    "validation": {
+      "findings": [
+        {
+          "code": "CHECKPOINT_UNAVAILABLE",
+          "message": "git metadata is unavailable for scope drift detection",
+          "path": ".specs/runtime/session-lifecycle.yaml",
+          "severity": "warning",
+          "target": "checkpoint"
+        }
+      ],
+      "valid": false
+    }
+  }
+}

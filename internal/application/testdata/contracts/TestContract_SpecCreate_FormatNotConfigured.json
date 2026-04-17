@@ -1,0 +1,19 @@
+{
+  "error": {
+    "code": "FORMAT_NOT_CONFIGURED",
+    "message": "primary design document frontmatter references unknown format \"runtime-spec\""
+  },
+  "focus": {
+    "design_doc": {
+      "path": "runtime/src/domain/drain_controller/SPEC.md"
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "charter_exists": true,
+    "target": "runtime:drain-controller",
+    "tracking_file": ".specs/runtime/drain-controller.yaml"
+  }
+}

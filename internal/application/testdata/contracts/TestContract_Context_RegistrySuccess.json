@@ -1,0 +1,55 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "audit": {
+      "findings": [],
+      "valid": true
+    },
+    "charters": [
+      {
+        "name": "runtime",
+        "spec_count": 1,
+        "title": "Runtime System",
+        "validation": {
+          "findings": [],
+          "valid": true
+        }
+      }
+    ],
+    "config": {
+      "validation": {
+        "findings": [],
+        "valid": true
+      }
+    },
+    "specs": [
+      {
+        "charter": "runtime",
+        "deltas": {
+          "closed": 0,
+          "deferred": 0,
+          "in_progress": 0,
+          "open": 1
+        },
+        "documents": {
+          "primary": "runtime/src/domain/session_execution/SPEC.md"
+        },
+        "scope": [
+          "runtime/src/domain/session_execution/",
+          "runtime/src/application/commands/"
+        ],
+        "slug": "session-lifecycle",
+        "status": "ready",
+        "title": "Session Lifecycle",
+        "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+        "validation": {
+          "findings": [],
+          "valid": true
+        }
+      }
+    ]
+  }
+}

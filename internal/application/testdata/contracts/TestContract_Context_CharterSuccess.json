@@ -1,0 +1,85 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "description": "Specs for runtime control-plane and data-plane behavior",
+    "groups": [
+      {
+        "key": "execution",
+        "order": 10,
+        "title": "Execution Engine"
+      },
+      {
+        "key": "recovery",
+        "order": 20,
+        "title": "Recovery and Cleanup"
+      }
+    ],
+    "name": "runtime",
+    "ordered_specs": [
+      {
+        "depends_on": [],
+        "group": {
+          "key": "execution",
+          "order": 10,
+          "title": "Execution Engine"
+        },
+        "notes": "Storage and CAS guarantees",
+        "order": 10,
+        "slug": "redis-state",
+        "status": "draft",
+        "tracking_file": ".specs/runtime/redis-state.yaml",
+        "validation": {
+          "findings": [],
+          "valid": true
+        }
+      },
+      {
+        "depends_on": [
+          "redis-state"
+        ],
+        "group": {
+          "key": "recovery",
+          "order": 20,
+          "title": "Recovery and Cleanup"
+        },
+        "notes": "Recovery planning order",
+        "order": 10,
+        "slug": "recovery-projection",
+        "status": "draft",
+        "tracking_file": ".specs/runtime/recovery-projection.yaml",
+        "validation": {
+          "findings": [],
+          "valid": true
+        }
+      },
+      {
+        "depends_on": [
+          "redis-state"
+        ],
+        "group": {
+          "key": "recovery",
+          "order": 20,
+          "title": "Recovery and Cleanup"
+        },
+        "notes": "Session FSM and cleanup behavior",
+        "order": 20,
+        "slug": "session-lifecycle",
+        "status": "draft",
+        "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+        "validation": {
+          "findings": [],
+          "valid": true
+        }
+      }
+    ],
+    "title": "Runtime System",
+    "tracking_file": ".specs/runtime/CHARTER.yaml",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

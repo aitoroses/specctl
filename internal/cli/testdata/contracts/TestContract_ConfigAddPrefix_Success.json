@@ -1,0 +1,35 @@
+{
+  "focus": {
+    "config_mutation": {
+      "kind": "add_prefix",
+      "value": "runtime/src/application/"
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "result": {
+    "kind": "config",
+    "mutation": "add-prefix",
+    "prefix": "runtime/src/application/"
+  },
+  "state": {
+    "formats": {},
+    "gherkin_tags": [
+      "runtime",
+      "domain"
+    ],
+    "semantic_tags": [
+      "e2e",
+      "manual"
+    ],
+    "source_prefixes": [
+      "runtime/src/",
+      "runtime/src/application/"
+    ],
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

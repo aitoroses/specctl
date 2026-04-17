@@ -1,0 +1,182 @@
+{
+  "focus": {
+    "delta": {
+      "affects_requirements": [],
+      "area": "Heartbeat timeout",
+      "current": "Current gap",
+      "id": "D-002",
+      "intent": "add",
+      "notes": "Explicitly tracked",
+      "origin_checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+      "status": "open",
+      "target": "Target gap",
+      "updates": [
+        "add_requirement"
+      ]
+    }
+  },
+  "next": {
+    "mode": "sequence",
+    "steps": [
+      {
+        "action": "write_spec_section",
+        "context": {
+          "area": "Heartbeat timeout",
+          "current": "Current gap",
+          "delta_id": "D-002",
+          "design_doc": "runtime/src/domain/session_execution/SPEC.md",
+          "format_template": null,
+          "guidance": "No format template is configured for this spec. Consider creating one: add a file with the section structure (Prose, Data Model, Contracts, Invariants, Gherkin) and guidance comments explaining what to write in each layer. Then configure it in .specs/specctl.yaml under formats with template (file path), recommended_for (glob pattern), and description. Set format: \u003ckey\u003e in the design doc frontmatter. A format template ensures every spec section follows the same structure and quality bar. The design doc is the source of truth for the system's behavior. specctl tracks requirements via Gherkin blocks for navigation and governance, but the SPEC itself must be complete enough that an agent could reimplement the system from it alone. Ask the user what observable behavior this delta introduces and why it matters. Write a specification section with five layers: (1) Prose — explain WHAT this behavioral surface does, WHY it exists, and WHEN it's used. Write from the external surface — what a caller or user observes; (2) Data Model — define schema fields this surface reads or writes, with types and relationships; (3) Contracts — show exact JSON response shapes for success and each error code, with concrete field names and realistic values. Do not leave response formats ambiguous; (4) Invariants — list rules that must always hold as declarative statements; (5) Gherkin tracking — a '## Requirement: \u003ctitle\u003e' heading (h2) with a ```gherkin requirement``` block and ```gherkin scenario``` blocks. The Gherkin is for specctl tracking and quick navigation, not the full specification. Adapt the depth to the system being specified — a CLI needs command contracts with JSON shapes, an API needs endpoint schemas, a UI needs component behavior and state transitions. Optionally include a Journey subsection showing the surface's role in multi-step workflows.",
+          "intent": "add",
+          "target": "Target gap"
+        },
+        "kind": "edit_file",
+        "path": "runtime/src/domain/session_execution/SPEC.md",
+        "priority": 1,
+        "why": "Write the specification section in the design doc before formalizing the requirement. Ask the user about the behavior first."
+      },
+      {
+        "action": "add_requirement",
+        "kind": "run_command",
+        "priority": 2,
+        "template": {
+          "argv": [
+            "specctl",
+            "req",
+            "add",
+            "runtime:session-lifecycle",
+            "--delta",
+            "D-002"
+          ],
+          "required_fields": [
+            {
+              "description": "Requirement-level Gherkin block from SPEC.md",
+              "name": "gherkin_requirement"
+            }
+          ],
+          "stdin_format": "gherkin",
+          "stdin_template": "@runtime\nFeature: \u003cfeature\u003e\n"
+        },
+        "why": "Record a net-new requirement for this delta."
+      }
+    ]
+  },
+  "result": {
+    "allocation": {
+      "allocated": "D-002",
+      "previous_max": 1
+    },
+    "delta": {
+      "affects_requirements": [],
+      "area": "Heartbeat timeout",
+      "current": "Current gap",
+      "id": "D-002",
+      "intent": "add",
+      "notes": "Explicitly tracked",
+      "origin_checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+      "status": "open",
+      "target": "Target gap",
+      "updates": [
+        "add_requirement"
+      ]
+    },
+    "kind": "delta"
+  },
+  "state": {
+    "changelog": [],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 0,
+      "deferred": 0,
+      "in_progress": 0,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Needs explicit acceptance criteria",
+          "origin_checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+          "status": "open",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ]
+        },
+        {
+          "affects_requirements": [],
+          "area": "Heartbeat timeout",
+          "current": "Current gap",
+          "id": "D-002",
+          "intent": "add",
+          "notes": "Explicitly tracked",
+          "origin_checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+          "status": "open",
+          "target": "Target gap",
+          "updates": [
+            "add_requirement"
+          ]
+        }
+      ],
+      "open": 2
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "last_verified_at": "2026-03-28",
+    "open_deltas": [
+      {
+        "area": "Compensation stage 4",
+        "id": "D-001",
+        "status": "open"
+      },
+      {
+        "area": "Heartbeat timeout",
+        "id": "D-002",
+        "status": "open"
+      }
+    ],
+    "requirements": [],
+    "rev": 1,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "2026-03-28",
+      "status": "clean",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "ready",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "unverified_requirements": [],
+    "updated": "__TODAY__",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

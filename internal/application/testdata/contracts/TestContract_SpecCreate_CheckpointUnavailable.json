@@ -1,0 +1,19 @@
+{
+  "error": {
+    "code": "CHECKPOINT_UNAVAILABLE",
+    "message": "resolve checkpoint \"HEAD\": fatal: not a git repository (or any of the parent directories): .git"
+  },
+  "focus": {
+    "spec_create": {
+      "checkpoint": "HEAD"
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "charter_exists": true,
+    "target": "runtime:drain-controller",
+    "tracking_file": ".specs/runtime/drain-controller.yaml"
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "focus": {
+    "lookup": {
+      "reason": "spec_not_found"
+    }
+  },
+  "next": {
+    "mode": "choose_one",
+    "options": [
+      {
+        "action": "create_spec",
+        "choose_when": "The charter already exists and the missing spec should be created inside it.",
+        "kind": "run_command",
+        "priority": 1,
+        "template": {
+          "argv": [
+            "specctl",
+            "spec",
+            "create",
+            "runtime:missing-spec",
+            "--title",
+            "\u003ctitle\u003e",
+            "--doc",
+            "\u003cdesign_doc\u003e",
+            "--scope",
+            "\u003cscope_dir_1\u003e/",
+            "--group",
+            "\u003cgroup\u003e",
+            "--group-title",
+            "\u003cgroup_title\u003e",
+            "--group-order",
+            "\u003cgroup_order\u003e",
+            "--order",
+            "\u003corder\u003e",
+            "--charter-notes",
+            "\u003ccharter_notes\u003e"
+          ],
+          "required_fields": [
+            {
+              "description": "Human-readable spec title",
+              "name": "title"
+            },
+            {
+              "description": "Repo-relative markdown path",
+              "name": "design_doc"
+            },
+            {
+              "description": "First repo-relative governed directory ending in /",
+              "name": "scope_dir_1"
+            },
+            {
+              "description": "Charter group key",
+              "name": "group"
+            },
+            {
+              "description": "Required only when creating a new group",
+              "name": "group_title"
+            },
+            {
+              "description": "Integer order for a newly created group",
+              "name": "group_order"
+            },
+            {
+              "description": "Integer order for the spec inside its group",
+              "name": "order"
+            },
+            {
+              "description": "Short planning note for the charter entry",
+              "name": "charter_notes"
+            }
+          ]
+        },
+        "why": "Create the tracking file first, then expand the design doc."
+      }
+    ]
+  },
+  "state": {
+    "charter_exists": true,
+    "target": "runtime:missing-spec",
+    "tracking_file": null
+  }
+}

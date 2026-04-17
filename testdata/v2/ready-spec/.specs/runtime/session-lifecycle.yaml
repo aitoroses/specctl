@@ -1,0 +1,27 @@
+slug: session-lifecycle
+charter: runtime
+title: Session Lifecycle
+status: ready
+rev: 1
+created: 2026-03-05
+updated: 2026-03-30
+last_verified_at: 2026-03-28
+checkpoint: a1b2c3f
+tags:
+  - runtime
+  - domain
+documents:
+  primary: runtime/src/domain/session_execution/SPEC.md
+scope:
+  - runtime/src/domain/session_execution/
+  - runtime/src/application/commands/
+deltas:
+  - id: D-001
+    area: Compensation stage 4
+    status: open
+    origin_checkpoint: a1b2c3f
+    current: Stage 4 compensation exists in code but failure ordering is unclear
+    target: Document ordering and verify failure cleanup
+    notes: Needs explicit acceptance criteria
+requirements: []
+changelog: []

@@ -1,0 +1,13 @@
+name: runtime
+title: Runtime System
+description: Specs for runtime control-plane and data-plane behavior
+groups:
+  - key: recovery
+    title: Recovery and Cleanup
+    order: 20
+specs:
+  - slug: session-lifecycle
+    group: recovery
+    order: 20
+    depends_on: []
+    notes: Session FSM and cleanup behavior

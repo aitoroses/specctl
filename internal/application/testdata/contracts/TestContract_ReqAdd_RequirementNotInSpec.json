@@ -1,0 +1,126 @@
+{
+  "error": {
+    "code": "REQUIREMENT_NOT_IN_SPEC",
+    "message": "requirement block was not found in SPEC.md"
+  },
+  "focus": {
+    "req_add": {
+      "reason": "requirement_not_in_spec"
+    },
+    "requirement_match_issues": [
+      {
+        "status": "missing_in_spec"
+      }
+    ]
+  },
+  "next": {
+    "mode": "choose_one",
+    "options": [
+      {
+        "action": "write_requirement_block",
+        "choose_when": "The requirement should be tracked, but SPEC.md does not yet contain its parseable requirement block.",
+        "context": {
+          "design_doc": "runtime/src/domain/session_execution/SPEC.md",
+          "gherkin_requirement": "@runtime @e2e\nFeature: Undocumented cleanup branch",
+          "guidance": "No format template is configured. Consider creating one for consistent section structure. The design doc is the source of truth — specctl tracks requirements via Gherkin for navigation, but the spec must fully define the behavior with five layers: (1) Prose — what/why/when from the external surface; (2) Data Model — schema fields, types, relationships; (3) Contracts — exact JSON response shapes for success and each error code; (4) Invariants — rules that must always hold; (5) Gherkin — '## Requirement: \u003ctitle\u003e' heading (h2) with ```gherkin requirement``` and ```gherkin scenario``` blocks for tracking. Then retry the command.",
+          "retry": "retry req add"
+        },
+        "create_if_missing": false,
+        "kind": "edit_file",
+        "path": "runtime/src/domain/session_execution/SPEC.md",
+        "priority": 1,
+        "template": {
+          "action": "edit_file",
+          "description": "Add a requirement heading, a ```gherkin requirement``` block, and scenario blocks to the primary design doc"
+        },
+        "why": "Write the parseable requirement block into SPEC.md, then retry the command."
+      }
+    ]
+  },
+  "state": {
+    "changelog": [],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "a1b2c3f",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 0,
+      "deferred": 0,
+      "in_progress": 0,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Needs explicit acceptance criteria",
+          "origin_checkpoint": "a1b2c3f",
+          "status": "open",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ]
+        }
+      ],
+      "open": 1
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "last_verified_at": "2026-03-28",
+    "open_deltas": [
+      {
+        "area": "Compensation stage 4",
+        "id": "D-001",
+        "status": "open"
+      }
+    ],
+    "requirements": [],
+    "rev": 1,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "a1b2c3f",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "2026-03-28",
+      "status": "unavailable",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "ready",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "unverified_requirements": [],
+    "updated": "2026-03-30",
+    "validation": {
+      "findings": [
+        {
+          "code": "CHECKPOINT_UNAVAILABLE",
+          "message": "git metadata is unavailable for scope drift detection",
+          "path": ".specs/runtime/session-lifecycle.yaml",
+          "severity": "warning",
+          "target": "checkpoint"
+        }
+      ],
+      "valid": false
+    }
+  }
+}

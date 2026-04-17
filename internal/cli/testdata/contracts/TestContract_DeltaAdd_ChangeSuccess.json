@@ -1,0 +1,241 @@
+{
+  "focus": {
+    "delta": {
+      "affects_requirements": [
+        "REQ-001"
+      ],
+      "area": "Compensation cleanup rewrite",
+      "current": "Current cleanup wording is outdated",
+      "id": "D-002",
+      "intent": "change",
+      "notes": "Behavior shifted during rollout",
+      "origin_checkpoint": "c2a70bd4d2d946994a849548b71e20e5eade1ae7",
+      "status": "open",
+      "target": "Replace the tracked cleanup contract",
+      "updates": [
+        "replace_requirement"
+      ]
+    }
+  },
+  "next": {
+    "mode": "sequence",
+    "steps": [
+      {
+        "action": "write_spec_section",
+        "context": {
+          "area": "Compensation cleanup rewrite",
+          "current": "Current cleanup wording is outdated",
+          "delta_id": "D-002",
+          "design_doc": "runtime/src/domain/session_execution/SPEC.md",
+          "format_template": null,
+          "guidance": "No format template is configured for this spec. Consider creating one: add a file with the section structure (Prose, Data Model, Contracts, Invariants, Gherkin) and guidance comments explaining what to write in each layer. Then configure it in .specs/specctl.yaml under formats with template (file path), recommended_for (glob pattern), and description. Set format: \u003ckey\u003e in the design doc frontmatter. A format template ensures every spec section follows the same structure and quality bar. The design doc is the source of truth for the system's behavior. specctl tracks requirements via Gherkin blocks for navigation and governance, but the SPEC itself must be complete enough that an agent could reimplement the system from it alone. Ask the user what observable behavior this delta introduces and why it matters. Write a specification section with five layers: (1) Prose — explain WHAT this behavioral surface does, WHY it exists, and WHEN it's used. Write from the external surface — what a caller or user observes; (2) Data Model — define schema fields this surface reads or writes, with types and relationships; (3) Contracts — show exact JSON response shapes for success and each error code, with concrete field names and realistic values. Do not leave response formats ambiguous; (4) Invariants — list rules that must always hold as declarative statements; (5) Gherkin tracking — a '## Requirement: \u003ctitle\u003e' heading (h2) with a ```gherkin requirement``` block and ```gherkin scenario``` blocks. The Gherkin is for specctl tracking and quick navigation, not the full specification. Adapt the depth to the system being specified — a CLI needs command contracts with JSON shapes, an API needs endpoint schemas, a UI needs component behavior and state transitions. Optionally include a Journey subsection showing the surface's role in multi-step workflows.",
+          "intent": "change",
+          "target": "Replace the tracked cleanup contract"
+        },
+        "kind": "edit_file",
+        "path": "runtime/src/domain/session_execution/SPEC.md",
+        "priority": 1,
+        "why": "Write the specification section in the design doc before formalizing the requirement. Ask the user about the behavior first."
+      },
+      {
+        "action": "replace_requirement",
+        "kind": "run_command",
+        "priority": 2,
+        "template": {
+          "argv": [
+            "specctl",
+            "req",
+            "replace",
+            "runtime:session-lifecycle",
+            "REQ-001",
+            "--delta",
+            "D-002"
+          ],
+          "required_fields": [
+            {
+              "description": "Requirement-level Gherkin block from SPEC.md",
+              "name": "gherkin_requirement"
+            }
+          ],
+          "stdin_format": "gherkin",
+          "stdin_template": "@runtime\nFeature: \u003cfeature\u003e\n"
+        },
+        "why": "Replace the active requirement that this change supersedes."
+      }
+    ]
+  },
+  "result": {
+    "allocation": {
+      "allocated": "D-002",
+      "previous_max": 1
+    },
+    "delta": {
+      "affects_requirements": [
+        "REQ-001"
+      ],
+      "area": "Compensation cleanup rewrite",
+      "current": "Current cleanup wording is outdated",
+      "id": "D-002",
+      "intent": "change",
+      "notes": "Behavior shifted during rollout",
+      "origin_checkpoint": "c2a70bd4d2d946994a849548b71e20e5eade1ae7",
+      "status": "open",
+      "target": "Replace the tracked cleanup contract",
+      "updates": [
+        "replace_requirement"
+      ]
+    },
+    "kind": "delta"
+  },
+  "state": {
+    "changelog": [
+      {
+        "date": "2026-03-28",
+        "deltas_closed": [],
+        "deltas_opened": [
+          "D-001"
+        ],
+        "reqs_added": [
+          "REQ-001"
+        ],
+        "reqs_verified": [],
+        "rev": 1,
+        "summary": "Opened the compensation cleanup work"
+      }
+    ],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "c2a70bd4d2d946994a849548b71e20e5eade1ae7",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 0,
+      "deferred": 0,
+      "in_progress": 1,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Multi-agent implementation split between runtime and workflow work",
+          "origin_checkpoint": "c2a70bd4d2d946994a849548b71e20e5eade1ae7",
+          "status": "in-progress",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ]
+        },
+        {
+          "affects_requirements": [
+            "REQ-001"
+          ],
+          "area": "Compensation cleanup rewrite",
+          "current": "Current cleanup wording is outdated",
+          "id": "D-002",
+          "intent": "change",
+          "notes": "Behavior shifted during rollout",
+          "origin_checkpoint": "c2a70bd4d2d946994a849548b71e20e5eade1ae7",
+          "status": "open",
+          "target": "Replace the tracked cleanup contract",
+          "updates": [
+            "replace_requirement"
+          ]
+        }
+      ],
+      "open": 1
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "last_verified_at": "2026-03-28",
+    "open_deltas": [
+      {
+        "area": "Compensation stage 4",
+        "id": "D-001",
+        "status": "in-progress"
+      },
+      {
+        "area": "Compensation cleanup rewrite",
+        "id": "D-002",
+        "status": "open"
+      }
+    ],
+    "requirements": [
+      {
+        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "match": {
+          "heading": "Requirement: Compensation stage 4 failure cleanup",
+          "status": "matched"
+        },
+        "spec_context": {
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ]
+        },
+        "superseded_by": null,
+        "supersedes": null,
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      }
+    ],
+    "rev": 2,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "c2a70bd4d2d946994a849548b71e20e5eade1ae7",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "2026-03-28",
+      "status": "clean",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "ready",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "unverified_requirements": [
+      {
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      }
+    ],
+    "updated": "__TODAY__",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}
