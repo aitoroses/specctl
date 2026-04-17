@@ -6,7 +6,7 @@ rev: 2
 created: "2026-04-17"
 updated: "2026-04-17"
 last_verified_at: "2026-04-17"
-checkpoint: d91beb2baf6e34432665bd6d3b6031951d7861e5
+checkpoint: 7012af709cf0a1bacf6dfa2e1f9c75892ea5066a
 tags: []
 documents:
     primary: skills/specctl/SPEC.md

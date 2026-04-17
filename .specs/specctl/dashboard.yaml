@@ -5,8 +5,8 @@ status: verified
 rev: 1
 created: "2026-04-16"
 updated: "2026-04-17"
-last_verified_at: "2026-04-16"
-checkpoint: 28411f7c0e74209beb201e051cf4f7c16ede7c3d
+last_verified_at: "2026-04-17"
+checkpoint: 7012af709cf0a1bacf6dfa2e1f9c75892ea5066a
 tags:
     - dashboard
 documents:
