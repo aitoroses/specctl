@@ -23,6 +23,28 @@ deltas:
       notes: The OSS launch contract treats the skill as a primary public entrypoint for agents
       updates:
         - add_requirement
+    - id: D-002
+      area: Cross-client setup path
+      intent: change
+      status: deferred
+      origin_checkpoint: 7012af709cf0a1bacf6dfa2e1f9c75892ea5066a
+      current: The packaged setup path only handled Claude-style JSON config and was not truly idempotent on rerun
+      target: The packaged setup path supports Claude Code JSON config, Codex TOML config, and converges stale entries idempotently
+      notes: The public skill workflow should configure the shipped agent tool coherently across supported clients
+      affects_requirements:
+        - REQ-002
+      updates:
+        - replace_requirement
+    - id: D-003
+      area: Cross-client setup path
+      intent: change
+      status: closed
+      origin_checkpoint: 7012af709cf0a1bacf6dfa2e1f9c75892ea5066a
+      current: The packaged setup path only handled Claude-style JSON config and was not truly idempotent on rerun
+      target: The packaged setup path supports Claude Code JSON config, Codex TOML config, and converges stale entries idempotently
+      notes: The public skill workflow should configure the shipped agent tool coherently across supported clients
+      affects_requirements:
+        - REQ-002
 requirements:
     - id: REQ-001
       title: Packaged skill teaches the agent-first governance workflow
@@ -45,9 +67,23 @@ requirements:
       gherkin: |-
         @specctl @manual
         Feature: Packaged skill setup path installs and configures specctl
-      lifecycle: active
+      lifecycle: superseded
       verification: verified
       introduced_by: D-001
+      superseded_by: REQ-003
+    - id: REQ-003
+      title: Packaged skill setup path installs and configures specctl for Claude Code and Codex
+      tags:
+        - specctl
+        - manual
+      test_files: []
+      gherkin: |-
+        @specctl @manual
+        Feature: Packaged skill setup path installs and configures specctl for Claude Code and Codex
+      lifecycle: active
+      verification: verified
+      introduced_by: D-003
+      supersedes: REQ-002
 changelog:
     - rev: 2
       date: "2026-04-17"

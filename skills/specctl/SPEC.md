@@ -67,11 +67,11 @@ The packaged setup path should install the binary and configure the MCP server f
 - Re-running setup converges the `specctl` entry instead of duplicating or silently preserving stale values
 - The packaged-skill install instructions stay placeholder-free in public docs
 
-## Requirement: Packaged skill setup path installs and configures specctl
+## Requirement: Packaged skill setup path installs and configures specctl for Claude Code and Codex
 
 ```gherkin requirement
 @specctl @manual
-Feature: Packaged skill setup path installs and configures specctl
+Feature: Packaged skill setup path installs and configures specctl for Claude Code and Codex
 ```
 
 ### Scenarios
