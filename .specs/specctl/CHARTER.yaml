@@ -1,0 +1,28 @@
+name: specctl
+title: specctl CLI
+description: Behavioral specification for the specctl v2 agent-facing specification engine
+groups:
+    - key: core
+      title: Core Behavior
+      order: 10
+    - key: dashboard
+      title: Dashboard
+      order: 10
+specs:
+    - slug: cli
+      group: core
+      order: 10
+      depends_on: []
+      notes: Self-governed behavioral specification
+    - slug: dashboard
+      group: dashboard
+      order: 10
+      depends_on:
+        - cli
+      notes: Rich HTML governance portal — Vite+React SPA embedded in Go binary, 4 views, dark-first Vercel/Linear aesthetic, open-source release
+    - slug: mcp
+      group: core
+      order: 20
+      depends_on:
+        - cli
+      notes: MCP stdio transport and tool-exposure adapter over core specctl behavior

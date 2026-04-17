@@ -23,6 +23,20 @@ make build
 make install
 ```
 
+### Public install surfaces
+
+Binary:
+
+```bash
+go install github.com/aitoroses/specctl/cmd/specctl@latest
+```
+
+Packaged skill:
+
+```bash
+npx skills add https://github.com/aitoroses/specctl --skill specctl --global
+```
+
 ### Run tests
 
 ```bash
@@ -99,6 +113,7 @@ Before committing:
 - generated artifacts not committed
 - binaries not committed
 - runtime state under `.omc/` not committed
+- public skill install docs remain placeholder-free
 
 ## Commit quality
 

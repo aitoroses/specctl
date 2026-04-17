@@ -1,0 +1,713 @@
+slug: cli
+charter: specctl
+title: specctl CLI Behavioral Spec
+status: active
+rev: 5
+created: "2026-04-01"
+updated: "2026-04-17"
+last_verified_at: "2026-04-02"
+checkpoint: 6441fc99221af9b63012ec73d17643ade619cd9d
+tags: []
+documents:
+    primary: SPEC.md
+scope:
+    - internal/
+    - cmd/
+deltas:
+    - id: D-001
+      area: Context read surface
+      intent: add
+      status: closed
+      origin_checkpoint: 5152795b934c60d9d8c165bd64c122a96e579def
+      current: No tracked requirements exist
+      target: Add observable behavior requirements for the context read surface
+      notes: First dogfood delta — bootstrapping self-governance
+      updates:
+        - add_requirement
+    - id: D-002
+      area: Write spec section guidance
+      intent: add
+      status: closed
+      origin_checkpoint: 6bcdf29f2bddbdfcb4175f366510238fc00de632
+      current: delta add next jumps straight to req add without writing the spec section
+      target: delta add next includes write_spec_section step before req add
+      notes: Dogfood-discovered gap in agent workflow
+      updates:
+        - add_requirement
+    - id: D-003
+      area: Full behavioral coverage
+      intent: add
+      status: closed
+      origin_checkpoint: 306afa4854ef3ab7c0f57aa264d57fcda8ef597b
+      current: 66 of 139 golden tests are tracked by requirements
+      target: All 139 observable behaviors represented in the spec
+      notes: Expanding coverage to error paths, validation, choosers, and preconditions
+      updates:
+        - add_requirement
+    - id: D-004
+      area: Duplicate requirement guard
+      intent: add
+      status: closed
+      origin_checkpoint: 7ba37307c794346f5c35cec7cfdd32ab8f04d947
+      current: req add allows duplicate Feature titles — two REQ IDs can point at the same heading
+      target: req add rejects with REQUIREMENT_ALREADY_TRACKED when a non-withdrawn requirement shares the Feature title
+      notes: Dogfood-discovered bug — REQ-015 and REQ-021 both tracked 'Context produces chooser flows' simultaneously
+      updates:
+        - add_requirement
+    - id: D-005
+      area: Example subcommand
+      intent: add
+      status: open
+      origin_checkpoint: 6441fc99221af9b63012ec73d17643ade619cd9d
+      current: Agents must read external files to understand specctl's own spec format and tracking structure
+      target: specctl example packs SPEC.md, SPEC_FORMAT.md, and .specs/ into a single CLI output the agent can observe directly
+      notes: Full ouroboros — the tool's own spec becomes the built-in example. Agent sees a real governed spec without leaving the CLI.
+      updates:
+        - add_requirement
+    - id: D-006
+      area: Gherkin tag management
+      intent: add
+      status: closed
+      origin_checkpoint: 6441fc99221af9b63012ec73d17643ade619cd9d
+      current: No CLI command to add gherkin tags — agent must hand-edit specctl.yaml mid-workflow
+      target: INVALID_GHERKIN_TAG error guides the agent to register missing tags via config add-tag then retry
+      notes: Dogfood-discovered friction — agent context-switches to manual YAML editing during req add flow
+      updates:
+        - add_requirement
+    - id: D-007
+      area: Design-doc drift guidance
+      intent: change
+      status: closed
+      origin_checkpoint: 6441fc99221af9b63012ec73d17643ade619cd9d
+      current: Design-doc drift guidance treats all document drift as semantic until the agent infers otherwise, so checkpoint-only housekeeping is underexplained
+      target: Context, diff, and sync guidance explicitly distinguish review-only drift from editorial checkpoint repair, with non-blocking classification and a deliberate re-anchor path
+      notes: Dogfood feedback showed agents conflating tool-reported design-doc drift with real semantic divergence and over-escalating optional cleanup as required work
+      affects_requirements:
+        - REQ-001
+        - REQ-002
+        - REQ-007
+        - REQ-015
+        - REQ-020
+requirements:
+    - id: REQ-001
+      title: Context reports spec status and drift state
+      tags:
+        - specctl
+        - read
+      test_files:
+        - internal/cli/testdata/contracts/TestContract_Context_SpecNotFound.json
+        - internal/cli/testdata/contracts/TestContract_Context_InvalidInput.json
+        - internal/application/testdata/contracts/TestContract_Context_CleanNone.json
+        - internal/application/testdata/contracts/TestContract_Context_DriftedScopeCode.json
+        - internal/application/testdata/contracts/TestContract_Context_UncommittedGovernedChanges.json
+      gherkin: |-
+        @specctl @read
+        Feature: Context reports spec status and drift state
+      lifecycle: superseded
+      verification: verified
+      introduced_by: D-001
+      superseded_by: REQ-024
+    - id: REQ-002
+      title: Diff reports semantic changes with actionable branches
+      tags:
+        - specctl
+        - read
+      test_files:
+        - internal/application/testdata/contracts/TestContract_Diff_SemanticReview_ScopeCode.json
+        - internal/application/testdata/contracts/TestContract_Diff_SemanticReview_Both.json
+        - internal/application/testdata/contracts/TestContract_Diff_NoChanges.json
+        - internal/application/testdata/contracts/TestContract_Diff_TrackedDriftContinuation.json
+        - internal/application/testdata/contracts/TestContract_Diff_CharterSuccess.json
+        - internal/application/testdata/contracts/TestContract_Diff_CheckpointUnavailable.json
+        - internal/cli/testdata/contracts/TestContract_Diff_SemanticReview.json
+        - internal/cli/testdata/contracts/TestContract_Diff_InvalidInput.json
+      gherkin: |-
+        @specctl @read
+        Feature: Diff reports semantic changes with actionable branches
+      lifecycle: superseded
+      verification: verified
+      introduced_by: D-001
+      superseded_by: REQ-025
+    - id: REQ-003
+      title: Delta lifecycle governs units of change
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_AddSuccess.json
+        - internal/cli/testdata/contracts/TestContract_DeltaAdd_Success.json
+        - internal/cli/testdata/contracts/TestContract_DeltaClose_Success.json
+        - internal/cli/testdata/contracts/TestContract_DeltaResume_Success.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta lifecycle governs units of change
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-004
+      title: Requirement add and replace track observable behaviors
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/cli/testdata/contracts/TestContract_ReqAdd_Success.json
+        - internal/cli/testdata/contracts/TestContract_ReqAdd_RequirementNotInSpec.json
+        - internal/cli/testdata/contracts/TestContract_ReqReplace_Success.json
+        - internal/cli/testdata/contracts/TestContract_ReqReplace_RequirementNotInSpec.json
+        - internal/application/testdata/contracts/TestContract_ReqAdd_RequirementNotInSpec.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_RequirementNotInSpec.json
+      gherkin: |-
+        @specctl @write
+        Feature: Requirement add and replace track observable behaviors
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-005
+      title: Requirement withdraw stale and refresh mutate state
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/cli/testdata/contracts/TestContract_ReqWithdraw_Success.json
+        - internal/cli/testdata/contracts/TestContract_ReqStale_Success.json
+        - internal/cli/testdata/contracts/TestContract_ReqRefresh_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqWithdraw_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqRefresh_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqRefresh_MatchRefreshNotNeeded.json
+        - internal/application/testdata/contracts/TestContract_ReqRefresh_RecordedWorkflowConflict.json
+      gherkin: |-
+        @specctl @write
+        Feature: Requirement withdraw stale and refresh mutate state
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-006
+      title: Verification enforces lifecycle and match integrity
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/cli/testdata/contracts/TestContract_ReqVerify_Success.json
+        - internal/cli/testdata/contracts/TestContract_ReqVerify_Superseded.json
+        - internal/cli/testdata/contracts/TestContract_ReqVerify_Withdrawn.json
+        - internal/cli/testdata/contracts/TestContract_ReqVerify_MatchBlocking.json
+        - internal/application/testdata/contracts/TestContract_ReqVerify_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqVerify_InactiveLifecycle.json
+        - internal/application/testdata/contracts/TestContract_ReqVerify_TestFileNotFound.json
+        - internal/application/testdata/contracts/TestContract_ReqVerify_TestFilesRequired.json
+        - internal/application/testdata/contracts/TestContract_ReqVerify_MatchBlocking.json
+      gherkin: |-
+        @specctl @write
+        Feature: Verification enforces lifecycle and match integrity
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-007
+      title: Revision management governs spec versioning
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/cli/testdata/contracts/TestContract_RevBump_Success.json
+        - internal/cli/testdata/contracts/TestContract_Sync_Success.json
+        - internal/cli/testdata/contracts/TestContract_Sync_SemanticWorkRequired.json
+        - internal/cli/testdata/contracts/TestContract_Sync_LiveDeltasPresent.json
+        - internal/application/testdata/contracts/TestContract_RevBump_Success.json
+        - internal/application/testdata/contracts/TestContract_Sync_Success.json
+        - internal/application/testdata/contracts/TestContract_Sync_SemanticWorkRequired.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Revision management governs spec versioning
+      lifecycle: superseded
+      verification: verified
+      introduced_by: D-001
+      superseded_by: REQ-026
+    - id: REQ-008
+      title: Configuration manages project-level settings
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/cli/testdata/contracts/TestContract_Config_Read.json
+        - internal/cli/testdata/contracts/TestContract_ConfigAddTag_Success.json
+        - internal/cli/testdata/contracts/TestContract_ConfigRemoveTag_Success.json
+        - internal/cli/testdata/contracts/TestContract_ConfigAddPrefix_Success.json
+        - internal/cli/testdata/contracts/TestContract_ConfigRemovePrefix_Success.json
+        - internal/cli/testdata/contracts/TestContract_Config_InvalidInput.json
+        - internal/application/testdata/contracts/TestContract_Config_Read.json
+      gherkin: |-
+        @specctl @write
+        Feature: Configuration manages project-level settings
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-009
+      title: Charter commands manage the spec registry
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/cli/testdata/contracts/TestContract_CharterCreate_Success.json
+        - internal/cli/testdata/contracts/TestContract_CharterAddSpec_Success.json
+        - internal/cli/testdata/contracts/TestContract_CharterRemoveSpec_Success.json
+      gherkin: |-
+        @specctl @write
+        Feature: Charter commands manage the spec registry
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-010
+      title: Hook reports affected specs from staged files
+      tags:
+        - specctl
+        - read
+      test_files:
+        - internal/cli/testdata/contracts/TestContract_Hook_Integration.json
+        - internal/cli/testdata/contracts/TestContract_Hook_InvalidInput.json
+        - internal/application/testdata/contracts/TestContract_Hook_Integration.json
+      gherkin: |-
+        @specctl @read
+        Feature: Hook reports affected specs from staged files
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-011
+      title: File ownership resolution maps files to specs
+      tags:
+        - specctl
+        - read
+      test_files:
+        - internal/application/testdata/contracts/TestContract_Context_FileMatched.json
+        - internal/application/testdata/contracts/TestContract_Context_FileAmbiguous.json
+        - internal/application/testdata/contracts/TestContract_Context_FileUnmatched.json
+        - internal/cli/testdata/contracts/TestContract_Context_FileAmbiguous.json
+        - internal/cli/testdata/contracts/TestContract_Context_FileNoMatch.json
+      gherkin: |-
+        @specctl @read
+        Feature: File ownership resolution maps files to specs
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-012
+      title: Match integrity blocks operations on mismatch
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/cli/testdata/contracts/TestContract_ReqVerify_MatchBlocking.json
+        - internal/cli/testdata/contracts/TestContract_DeltaClose_MatchBlocking.json
+        - internal/cli/testdata/contracts/TestContract_Context_ExactMatchDriftRefreshChooser.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Match integrity blocks operations on mismatch
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-013
+      title: Spec creation registers and validates new specs
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/cli/testdata/contracts/TestContract_SpecCreate_Success.json
+        - internal/application/testdata/contracts/TestContract_SpecCreate_ValidationFailed.json
+        - internal/application/testdata/contracts/TestContract_SpecCreate_InvalidPath.json
+        - internal/application/testdata/contracts/TestContract_SpecCreate_CheckpointUnavailable.json
+        - internal/application/testdata/contracts/TestContract_SpecCreate_FormatAmbiguous.json
+        - internal/application/testdata/contracts/TestContract_SpecCreate_FormatNotConfigured.json
+        - internal/application/testdata/contracts/TestContract_SpecCreate_PrimaryDocFrontmatterInvalid.json
+        - internal/application/testdata/contracts/TestContract_SpecCreate_PrimaryDocFrontmatterMismatch.json
+      gherkin: |-
+        @specctl @write
+        Feature: Spec creation registers and validates new specs
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-014
+      title: Delta add guides spec section writing before formalization
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_AddSuccess.json
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_ChangeSuccess.json
+        - internal/cli/testdata/contracts/TestContract_DeltaAdd_Success.json
+        - internal/cli/testdata/contracts/TestContract_DeltaAdd_ChangeSuccess.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta add guides spec section writing before formalization
+      lifecycle: active
+      verification: verified
+      introduced_by: D-002
+    - id: REQ-015
+      title: Context produces chooser flows for complex situations
+      tags:
+        - specctl
+        - read
+      test_files:
+        - internal/application/testdata/contracts/TestContract_Context_RefreshChooser.json
+        - internal/application/testdata/contracts/TestContract_Context_RepairChooser.json
+        - internal/application/testdata/contracts/TestContract_Context_SpecNotFound_CharterExists.json
+        - internal/application/testdata/contracts/TestContract_Context_SpecNotFound_CharterMissing.json
+        - internal/application/testdata/contracts/TestContract_Context_CharterSuccess.json
+        - internal/application/testdata/contracts/TestContract_Context_CharterNotFound.json
+        - internal/application/testdata/contracts/TestContract_Context_RegistrySuccess.json
+        - internal/application/testdata/contracts/TestContract_Context_CheckpointUnavailable.json
+        - internal/application/testdata/contracts/TestContract_Context_DriftedDesignDoc.json
+        - internal/application/testdata/contracts/TestContract_Context_TrackedDriftContinuation.json
+        - internal/cli/testdata/contracts/TestContract_Context_SpecClean.json
+        - internal/cli/testdata/contracts/TestContract_Context_StaleActiveRequirementRepairChooser.json
+      gherkin: |-
+        @specctl @read
+        Feature: Context produces chooser flows for complex situations
+      lifecycle: superseded
+      verification: verified
+      introduced_by: D-003
+      superseded_by: REQ-027
+    - id: REQ-016
+      title: Delta add validates intent and affected requirements
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_MissingIntent.json
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_AffectedRequirementsRequired.json
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_InvalidRequirementState.json
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_RemoveSuccess.json
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_RepairSuccess.json
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_SpecNotFound.json
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_ValidationFailed.json
+        - internal/cli/testdata/contracts/TestContract_DeltaAdd_ChangeMissingAffects.json
+      gherkin: |-
+        @specctl @write
+        Feature: Delta add validates intent and affected requirements
+      lifecycle: active
+      verification: verified
+      introduced_by: D-003
+    - id: REQ-017
+      title: Delta close enforces all obligations before sealing
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaClose_UnverifiedRequirements.json
+        - internal/application/testdata/contracts/TestContract_DeltaClose_UpdatesUnresolved.json
+        - internal/application/testdata/contracts/TestContract_DeltaClose_MatchBlocking.json
+        - internal/application/testdata/contracts/TestContract_DeltaClose_InvalidState.json
+        - internal/application/testdata/contracts/TestContract_DeltaClose_DeltaNotFound.json
+        - internal/application/testdata/contracts/TestContract_DeltaClose_RepairTerminal.json
+        - internal/application/testdata/contracts/TestContract_DeltaClose_RevisionBumpTerminal.json
+        - internal/application/testdata/contracts/TestContract_DeltaClose_SpecNotFound.json
+        - internal/application/testdata/contracts/TestContract_DeltaClose_ValidationFailed.json
+        - internal/cli/testdata/contracts/TestContract_DeltaClose_RepairTerminal.json
+        - internal/cli/testdata/contracts/TestContract_DeltaClose_UpdatesUnresolved.json
+        - internal/cli/testdata/contracts/TestContract_DeltaClose_MatchBlocking.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta close enforces all obligations before sealing
+      lifecycle: active
+      verification: verified
+      introduced_by: D-003
+    - id: REQ-018
+      title: Delta transitions reject invalid states and missing targets
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_DeltaNotFound__Start.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_DeltaNotFound__Defer.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_DeltaNotFound__Resume.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_InvalidState__Start.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_InvalidState__Defer.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_InvalidState__Resume.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_SpecNotFound__Start.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_SpecNotFound__Defer.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_SpecNotFound__Resume.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_ValidationFailed__Start.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_ValidationFailed__Defer.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_ValidationFailed__Resume.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_Success__Start.json
+        - internal/application/testdata/contracts/TestContract_DeltaTransitions_Success__Defer.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta transitions reject invalid states and missing targets
+      lifecycle: active
+      verification: verified
+      introduced_by: D-003
+    - id: REQ-019
+      title: Write commands reject invalid tracking state uniformly
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/application/testdata/contracts/TestContract_WriteValidationFailed_CommonSurface__ReqRefresh.json
+        - internal/application/testdata/contracts/TestContract_WriteValidationFailed_CommonSurface__ReqVerify.json
+        - internal/application/testdata/contracts/TestContract_WriteValidationFailed_CommonSurface__ReqWithdraw.json
+        - internal/application/testdata/contracts/TestContract_WriteValidationFailed_CommonSurface__RevBump.json
+        - internal/application/testdata/contracts/TestContract_WriteValidationFailed_CommonSurface__Sync.json
+      gherkin: |-
+        @specctl @write
+        Feature: Write commands reject invalid tracking state uniformly
+      lifecycle: active
+      verification: verified
+      introduced_by: D-003
+    - id: REQ-020
+      title: Rev bump and sync enforce specific preconditions
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_RevBump_StatusNotVerified.json
+        - internal/application/testdata/contracts/TestContract_RevBump_NoSemanticChanges.json
+        - internal/application/testdata/contracts/TestContract_RevBump_MissingCheckpoint.json
+        - internal/application/testdata/contracts/TestContract_RevBump_MissingSummary.json
+        - internal/application/testdata/contracts/TestContract_RevBump_CheckpointUnavailable.json
+        - internal/application/testdata/contracts/TestContract_RevBump_MatchBlocking.json
+        - internal/application/testdata/contracts/TestContract_Sync_LiveDeltasPresent.json
+        - internal/application/testdata/contracts/TestContract_Sync_MissingCheckpoint.json
+        - internal/application/testdata/contracts/TestContract_Sync_MissingSummary.json
+        - internal/application/testdata/contracts/TestContract_Sync_CheckpointUnavailable.json
+        - internal/application/testdata/contracts/TestContract_Sync_MatchBlocking.json
+        - internal/cli/testdata/contracts/TestContract_RevBump_MatchBlocking.json
+        - internal/cli/testdata/contracts/TestContract_Sync_MatchBlocking.json
+        - internal/cli/testdata/contracts/TestContract_Sync_LiveDeltasPresent.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Rev bump and sync enforce specific preconditions
+      lifecycle: superseded
+      verification: verified
+      introduced_by: D-003
+      superseded_by: REQ-028
+    - id: REQ-021
+      title: Duplicate requirement guard rejects already-tracked Feature titles
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/application/contract_writes_test.go
+        - internal/application/testdata/contracts/TestContract_ReqAdd_AlreadyTracked.json
+        - internal/application/testdata/contracts/TestContract_ReqAdd_WithdrawnAllowsReuse.json
+      gherkin: |-
+        @specctl @write
+        Feature: Duplicate requirement guard rejects already-tracked Feature titles
+      lifecycle: active
+      verification: verified
+      introduced_by: D-004
+    - id: REQ-022
+      title: Example subcommand returns the embedded governed spec
+      tags:
+        - specctl
+        - read
+      test_files: []
+      gherkin: |-
+        @specctl @read
+        Feature: Example subcommand returns the embedded governed spec
+      lifecycle: active
+      verification: unverified
+      introduced_by: D-005
+    - id: REQ-023
+      title: INVALID_GHERKIN_TAG guides the agent to register missing tags then retry
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/cli/read_write_test.go
+      gherkin: |-
+        @specctl @write
+        Feature: INVALID_GHERKIN_TAG guides the agent to register missing tags then retry
+      lifecycle: active
+      verification: verified
+      introduced_by: D-006
+    - id: REQ-024
+      title: Context classifies committed drift before checkpoint cleanup
+      tags:
+        - specctl
+        - read
+      test_files:
+        - internal/application/testdata/contracts/TestContract_Context_CleanNone.json
+        - internal/application/testdata/contracts/TestContract_Context_DriftedDesignDoc.json
+        - internal/application/testdata/contracts/TestContract_Context_DriftedScopeCode.json
+        - internal/application/testdata/contracts/TestContract_Context_UncommittedGovernedChanges.json
+        - internal/cli/testdata/contracts/TestContract_Context_InvalidInput.json
+        - internal/cli/testdata/contracts/TestContract_Context_SpecNotFound.json
+      gherkin: |-
+        @specctl @read
+        Feature: Context classifies committed drift before checkpoint cleanup
+      lifecycle: active
+      verification: verified
+      introduced_by: D-007
+      supersedes: REQ-001
+    - id: REQ-025
+      title: Diff guides semantic changes and housekeeping re-anchors
+      tags:
+        - specctl
+        - read
+      test_files:
+        - internal/application/testdata/contracts/TestContract_Diff_CharterSuccess.json
+        - internal/application/testdata/contracts/TestContract_Diff_CheckpointUnavailable.json
+        - internal/application/testdata/contracts/TestContract_Diff_NoChanges.json
+        - internal/application/testdata/contracts/TestContract_Diff_SemanticReview_Both.json
+        - internal/application/testdata/contracts/TestContract_Diff_SemanticReview_ScopeCode.json
+        - internal/application/testdata/contracts/TestContract_Diff_TrackedDriftContinuation.json
+        - internal/cli/testdata/contracts/TestContract_Diff_InvalidInput.json
+        - internal/cli/testdata/contracts/TestContract_Diff_SemanticReview.json
+      gherkin: |-
+        @specctl @read
+        Feature: Diff guides semantic changes and housekeeping re-anchors
+      lifecycle: active
+      verification: verified
+      introduced_by: D-007
+      supersedes: REQ-002
+    - id: REQ-026
+      title: Revision management re-anchors reviewed housekeeping drift
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_RevBump_Success.json
+        - internal/application/testdata/contracts/TestContract_Sync_SemanticWorkRequired.json
+        - internal/application/testdata/contracts/TestContract_Sync_Success.json
+        - internal/cli/testdata/contracts/TestContract_RevBump_Success.json
+        - internal/cli/testdata/contracts/TestContract_Sync_LiveDeltasPresent.json
+        - internal/cli/testdata/contracts/TestContract_Sync_SemanticWorkRequired.json
+        - internal/cli/testdata/contracts/TestContract_Sync_Success.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Revision management re-anchors reviewed housekeeping drift
+      lifecycle: active
+      verification: verified
+      introduced_by: D-007
+      supersedes: REQ-007
+    - id: REQ-027
+      title: Context chooser flows surface review-first drift guidance
+      tags:
+        - specctl
+        - read
+      test_files:
+        - internal/application/testdata/contracts/TestContract_Context_CharterNotFound.json
+        - internal/application/testdata/contracts/TestContract_Context_CharterSuccess.json
+        - internal/application/testdata/contracts/TestContract_Context_CheckpointUnavailable.json
+        - internal/application/testdata/contracts/TestContract_Context_DriftedDesignDoc.json
+        - internal/application/testdata/contracts/TestContract_Context_RefreshChooser.json
+        - internal/application/testdata/contracts/TestContract_Context_RegistrySuccess.json
+        - internal/application/testdata/contracts/TestContract_Context_RepairChooser.json
+        - internal/application/testdata/contracts/TestContract_Context_SpecNotFound_CharterExists.json
+        - internal/application/testdata/contracts/TestContract_Context_SpecNotFound_CharterMissing.json
+        - internal/application/testdata/contracts/TestContract_Context_TrackedDriftContinuation.json
+        - internal/cli/testdata/contracts/TestContract_Context_SpecClean.json
+        - internal/cli/testdata/contracts/TestContract_Context_StaleActiveRequirementRepairChooser.json
+      gherkin: |-
+        @specctl @read
+        Feature: Context chooser flows surface review-first drift guidance
+      lifecycle: active
+      verification: verified
+      introduced_by: D-007
+      supersedes: REQ-015
+    - id: REQ-028
+      title: Rev bump and sync enforce reviewed re-anchor preconditions
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_RevBump_CheckpointUnavailable.json
+        - internal/application/testdata/contracts/TestContract_RevBump_MatchBlocking.json
+        - internal/application/testdata/contracts/TestContract_RevBump_MissingCheckpoint.json
+        - internal/application/testdata/contracts/TestContract_RevBump_MissingSummary.json
+        - internal/application/testdata/contracts/TestContract_RevBump_NoSemanticChanges.json
+        - internal/application/testdata/contracts/TestContract_RevBump_StatusNotVerified.json
+        - internal/application/testdata/contracts/TestContract_Sync_CheckpointUnavailable.json
+        - internal/application/testdata/contracts/TestContract_Sync_LiveDeltasPresent.json
+        - internal/application/testdata/contracts/TestContract_Sync_MatchBlocking.json
+        - internal/application/testdata/contracts/TestContract_Sync_MissingCheckpoint.json
+        - internal/application/testdata/contracts/TestContract_Sync_MissingSummary.json
+        - internal/application/testdata/contracts/TestContract_Sync_SemanticWorkRequired.json
+        - internal/cli/testdata/contracts/TestContract_RevBump_MatchBlocking.json
+        - internal/cli/testdata/contracts/TestContract_Sync_LiveDeltasPresent.json
+        - internal/cli/testdata/contracts/TestContract_Sync_MatchBlocking.json
+        - internal/cli/testdata/contracts/TestContract_Sync_SemanticWorkRequired.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Rev bump and sync enforce reviewed re-anchor preconditions
+      lifecycle: active
+      verification: verified
+      introduced_by: D-007
+      supersedes: REQ-020
+changelog:
+    - rev: 2
+      date: "2026-04-02"
+      deltas_opened: []
+      deltas_closed: []
+      reqs_added: []
+      reqs_verified: []
+      summary: Initial behavioral specification — 13 requirements, 65 golden tests, self-governance complete
+    - rev: 3
+      date: "2026-04-02"
+      deltas_opened:
+        - D-002
+      deltas_closed:
+        - D-002
+      reqs_added:
+        - REQ-014
+      reqs_verified:
+        - REQ-014
+      summary: Proactive spec writing guidance — write_spec_section step before req add, enriched prose in all 14 sections
+    - rev: 4
+      date: "2026-04-02"
+      deltas_opened:
+        - D-003
+      deltas_closed:
+        - D-003
+      reqs_added:
+        - REQ-015
+        - REQ-016
+        - REQ-017
+        - REQ-018
+        - REQ-019
+        - REQ-020
+      reqs_verified:
+        - REQ-015
+        - REQ-016
+        - REQ-017
+        - REQ-018
+        - REQ-019
+        - REQ-020
+      summary: Full behavioral coverage — 20 requirements, 139 golden tests, all error paths and validation surfaces
+    - rev: 5
+      date: "2026-04-02"
+      deltas_opened:
+        - D-001
+        - D-004
+      deltas_closed:
+        - D-001
+        - D-004
+      reqs_added:
+        - REQ-001
+        - REQ-002
+        - REQ-003
+        - REQ-004
+        - REQ-005
+        - REQ-006
+        - REQ-007
+        - REQ-008
+        - REQ-009
+        - REQ-010
+        - REQ-011
+        - REQ-012
+        - REQ-013
+        - REQ-021
+      reqs_verified:
+        - REQ-001
+        - REQ-002
+        - REQ-003
+        - REQ-004
+        - REQ-005
+        - REQ-006
+        - REQ-007
+        - REQ-008
+        - REQ-009
+        - REQ-010
+        - REQ-011
+        - REQ-012
+        - REQ-013
+        - REQ-021
+      summary: Drift classifier + changelog completeness fixes

@@ -2,7 +2,11 @@
 
 Agent skill teaching specification governance and Agent-First verification.
 
-Install: `npx skills add <owner>/specctl`
+Install:
+
+```bash
+npx skills add https://github.com/aitoroses/specctl --skill specctl --global
+```
 
 ## Development
 
@@ -22,7 +26,7 @@ ln -s "$(pwd)/skills/specctl" ~/.agents/skills/specctl
 The resulting chain:
 
 ```
-tools/specctl/skills/specctl/    ← canonical source (edit here)
+skills/specctl/                  ← canonical source (edit here)
   ↑ symlink
 ~/.agents/skills/specctl/        ← global install
   ↑ symlink

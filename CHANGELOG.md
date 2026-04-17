@@ -13,3 +13,4 @@ Those files contain structured changelog entries tied to revision bumps.
 - Added repository docs (`README`, `ARCHITECTURE`, `CONTRIBUTING`)
 - Tightened ignore/build hygiene for binaries, runtime state, and dashboard artifacts
 - Introduced a narrow `specctl:mcp` transport subspec for MCP-specific behavior
+- Added OSS launch-pack surfaces (license, security/community docs, templates, examples, release policy)

@@ -135,7 +135,6 @@ Owns dashboard UX and delivery surface.
 
 Remaining follow-up areas:
 
-- explicit license choice
 - final boundary cleanup for a few overlapping legacy ownership areas
-- release/versioning process
-- confirmation that the skill remains a first-class shipped artifact
+- release/versioning process maturity over time
+- deciding the long-term role of the dashboard in the product story

@@ -17,6 +17,26 @@ That skill teaches an agent when to use specctl, how to interpret `next`, and ho
 - **Dashboard** — optional Vite/React governance UI embedded into the Go binary
 - **Self-governance** — specctl governs itself via `.specs/specctl/*` and `SPEC.md`
 
+## Install
+
+### Binary
+
+```bash
+go install github.com/aitoroses/specctl/cmd/specctl@latest
+```
+
+For stable consumers, prefer a tagged version once releases are cut:
+
+```bash
+go install github.com/aitoroses/specctl/cmd/specctl@vX.Y.Z
+```
+
+### Packaged skill
+
+```bash
+npx skills add https://github.com/aitoroses/specctl --skill specctl --global
+```
+
 ## How to think about it
 
 Humans usually do **not** sit and drive every `specctl` command manually.
@@ -105,6 +125,11 @@ Important rule: **do not hand-edit tracking YAML**. Use `specctl` commands.
 - [`skills/specctl/SKILL.md`](./skills/specctl/SKILL.md)
 - `specctl mcp`
 - `specctl context ...`
+- packaged skill install:
+
+```bash
+npx skills add https://github.com/aitoroses/specctl --skill specctl --global
+```
 
 ### For humans
 
@@ -143,14 +168,10 @@ make dashboard-dev
 - [`SPEC.md`](./SPEC.md) — core behavioral specification
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — package responsibilities and boundaries
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — local development and governance workflow
-
-## Repository follow-up notes
-
-Remaining follow-up:
-
-- choose and add a `LICENSE` file if desired
-- decide whether dashboard stays first-class or optional
-- finish ownership cleanup for `internal/cli/mcp.go`
+- [`SECURITY.md`](./SECURITY.md) — vulnerability reporting policy
+- [`RELEASING.md`](./RELEASING.md) — release/version/install policy
+- [`examples/`](./examples) — starter usage examples
+- [`docs/oss-launch-ops.md`](./docs/oss-launch-ops.md) — required repo settings and human signoff evidence
 
 ## Status
 

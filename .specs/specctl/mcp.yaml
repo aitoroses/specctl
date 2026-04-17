@@ -1,0 +1,82 @@
+slug: mcp
+charter: specctl
+title: specctl MCP Adapter
+status: verified
+rev: 2
+created: "2026-04-17"
+updated: "2026-04-17"
+last_verified_at: "2026-04-17"
+checkpoint: 2e9c50bc8bd615127c05636ad205d5c39b78bd75
+tags:
+    - mcp
+documents:
+    primary: internal/mcp/SPEC.md
+scope:
+    - internal/mcp/
+deltas:
+    - id: D-001
+      area: MCP transport governance
+      intent: add
+      status: closed
+      origin_checkpoint: 6540bdc744b2797437f99869f85c263fb440c8ba
+      current: MCP transport behavior is implemented but governed only implicitly by the broad CLI spec
+      target: A narrow MCP adapter spec governs tool exposure, uninitialized fallback, and next-action hint translation
+      notes: Smallest safe split — transport-specific MCP behavior gets its own subspec while core governance semantics remain in specctl:cli
+      updates:
+        - add_requirement
+requirements:
+    - id: REQ-001
+      title: MCP server exposes specctl tools to MCP clients
+      tags:
+        - specctl
+        - mcp
+      test_files:
+        - internal/mcp/server_test.go
+      gherkin: |-
+        @specctl @mcp
+        Feature: MCP server exposes specctl tools to MCP clients
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-002
+      title: Uninitialized MCP server preserves the initialization path
+      tags:
+        - specctl
+        - mcp
+      test_files:
+        - internal/mcp/server_test.go
+      gherkin: |-
+        @specctl @mcp
+        Feature: Uninitialized MCP server preserves the initialization path
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+    - id: REQ-003
+      title: MCP tool hints preserve executable next-action guidance
+      tags:
+        - specctl
+        - mcp
+      test_files:
+        - internal/mcp/server_test.go
+      gherkin: |-
+        @specctl @mcp
+        Feature: MCP tool hints preserve executable next-action guidance
+      lifecycle: active
+      verification: verified
+      introduced_by: D-001
+changelog:
+    - rev: 2
+      date: "2026-04-17"
+      deltas_opened:
+        - D-001
+      deltas_closed:
+        - D-001
+      reqs_added:
+        - REQ-001
+        - REQ-002
+        - REQ-003
+      reqs_verified:
+        - REQ-001
+        - REQ-002
+        - REQ-003
+      summary: Add the initial MCP adapter subspec for transport-specific governance.
