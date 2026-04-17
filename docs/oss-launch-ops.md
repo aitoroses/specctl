@@ -6,7 +6,7 @@ This file records the repository settings required for the public launch bar.
 
 - Branch protection on `main`
 - Pull requests required for merge
-- At least 1 approving human review required
+- Human maintainer/admin may bypass review when acting as the sole human maintainer
 - Required status checks:
   - `go`
   - `dashboard`
@@ -22,7 +22,7 @@ This file records the repository settings required for the public launch bar.
 - Branch protection API evidence: `gh api repos/aitoroses/specctl/branches/main/protection`
 - Required checks: `go`, `dashboard`
 - Pull-request merge required: yes
-- Required human approvals: 1
+- Required human approvals: 1 for non-admins; maintainer/admin bypass allowed when acting as the sole human maintainer
 - Force pushes disabled: yes
 - Branch deletion disabled: yes
 - Conversation resolution required: yes

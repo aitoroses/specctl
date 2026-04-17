@@ -67,7 +67,7 @@ This command must remain placeholder-free in public docs.
 
 Even if issue work is primarily agent-driven:
 
-- merges require human approval
+- merges require a human decision; the maintainer/admin may bypass review when acting as the sole human maintainer
 - releases require human approval
 
 Record repo settings evidence in `docs/oss-launch-ops.md`.
