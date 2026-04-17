@@ -2,12 +2,24 @@
 
 Specification governance for agent workflows.
 
+**Keep agents aligned with intended behavior, not just current code.**
+
+If `git` helps teams track the history of source code, `specctl` helps agent
+workflows track the history of **intent**.
+
 `specctl` gives agents a durable source of truth for:
 
 - what behavior matters
 - what changed intentionally
 - what has been verified
 - what the next legal move is
+
+That is the useful metaphor:
+
+- `git` tracks how code changed
+- `specctl` tracks how intended behavior changed
+- `git` records commits
+- `specctl` records deltas, requirements, verification, and revisions
 
 Without that, agents drift: they infer too much from code, lose intent, skip verification, and declare partial work done. `specctl` exists to keep an agent inside a governed loop.
 
@@ -35,6 +47,22 @@ context -> delta -> requirement -> verify -> close -> bump/sync
 ```
 
 At each step, `specctl` returns explicit `next` guidance so the agent does not have to invent process on the fly.
+
+## Without vs with specctl
+
+### Without specctl
+
+- the agent edits code directly
+- intent stays implicit
+- verification is ad hoc
+- partial work can look complete
+
+### With specctl
+
+- intent is tracked
+- change is explicit
+- verification is recorded
+- the next legal step is constrained
 
 ## What ships
 
@@ -93,6 +121,26 @@ bash skills/specctl/scripts/setup.sh --global
 
 This configures the MCP server in the expected Claude-facing config path and keeps the skill as the main operating surface.
 
+## Setup targets
+
+The packaged setup script supports multiple targets:
+
+```bash
+# project-local .mcp.json
+bash skills/specctl/scripts/setup.sh
+
+# Claude Code global MCP config
+bash skills/specctl/scripts/setup.sh --claude-global
+
+# Codex global MCP config
+bash skills/specctl/scripts/setup.sh --codex-global
+
+# both global locations
+bash skills/specctl/scripts/setup.sh --global
+```
+
+Repeated runs should converge the `specctl` MCP entry instead of duplicating it.
+
 ## First run
 
 If you want to understand the product shape immediately:
@@ -123,6 +171,11 @@ specctl context specctl:mcp
 specctl context specctl:dashboard
 specctl context specctl:skill
 ```
+
+If you only remember one idea, remember this:
+
+> Git tracks how code changed.  
+> specctl tracks how intended behavior changes.
 
 ## Core workflow
 

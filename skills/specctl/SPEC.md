@@ -51,24 +51,27 @@ Scenario: Skill frames specctl as an agent-facing tool
 
 ## Skill Setup Surface
 
-The packaged setup path should install the binary and configure the MCP server from the packaged skill surface. A stranger following the public skill entrypoint should not need to rediscover hidden install steps.
+The packaged setup path should install the binary and configure the MCP server from the packaged skill surface. A stranger following the public skill entrypoint should not need to rediscover hidden install steps. The setup path must also handle the fact that Claude-oriented clients and Codex do not use the same global config format.
 
 ### Data Model
 
 - Setup script path: `skills/specctl/scripts/setup.sh`
-- MCP config target: local `.mcp.json` or global `~/.claude/.mcp.json`
+- Project JSON target: local `.mcp.json`
+- Claude global target: `~/.claude/.mcp.json`
+- Codex global target: `~/.codex/config.toml`
 
 ### Invariants
 
 - The setup path is reachable from the packaged skill surface
-- Setup installs the `specctl` binary and configures MCP
+- Setup installs the `specctl` binary and configures MCP for both Claude-style JSON config and Codex TOML config
+- Re-running setup converges the `specctl` entry instead of duplicating or silently preserving stale values
 - The packaged-skill install instructions stay placeholder-free in public docs
 
-## Requirement: Packaged skill setup path installs and configures specctl
+## Requirement: Packaged skill setup path installs and configures specctl for Claude Code and Codex
 
 ```gherkin requirement
 @specctl @manual
-Feature: Packaged skill setup path installs and configures specctl
+Feature: Packaged skill setup path installs and configures specctl for Claude Code and Codex
 ```
 
 ### Scenarios
@@ -79,4 +82,13 @@ Scenario: Skill setup path is explicit and usable
   When they run the documented setup path
   Then the specctl binary is installed
   And MCP configuration instructions are explicit
+  And the target client config is updated coherently
+
+```gherkin scenario
+Scenario: Re-running setup repairs stale specctl config
+  Given an existing stale specctl MCP entry is present
+  When the user re-runs the documented setup path
+  Then the specctl entry is updated to the current expected shape
+  And unrelated config is preserved
+```
 ```
