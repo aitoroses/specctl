@@ -93,6 +93,26 @@ bash skills/specctl/scripts/setup.sh --global
 
 This configures the MCP server in the expected Claude-facing config path and keeps the skill as the main operating surface.
 
+## Setup targets
+
+The packaged setup script supports multiple targets:
+
+```bash
+# project-local .mcp.json
+bash skills/specctl/scripts/setup.sh
+
+# Claude Code global MCP config
+bash skills/specctl/scripts/setup.sh --claude-global
+
+# Codex global MCP config
+bash skills/specctl/scripts/setup.sh --codex-global
+
+# both global locations
+bash skills/specctl/scripts/setup.sh --global
+```
+
+Repeated runs should converge the `specctl` MCP entry instead of duplicating it.
+
 ## First run
 
 If you want to understand the product shape immediately:

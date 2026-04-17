@@ -11,7 +11,8 @@ description: >
   spec-to-verified-tests pipeline.
 compatibility: >
   Requires specctl binary (Go). Run scripts/setup.sh to install and
-  configure the MCP server. Works with Claude Code, Cursor, Codex,
+  configure the MCP server for Claude-style JSON config or Codex TOML
+  config. Works with Claude Code, Cursor, Codex,
   and any agent supporting the Agent Skills format.
 allowed-tools: Bash(specctl:*) Bash(go:*) Read Write Edit
 ---
@@ -104,8 +105,28 @@ bash scripts/setup.sh
 
 If the path is not resolved automatically, locate the skill directory
 and run `bash <absolute-path>/scripts/setup.sh`. The script installs
-the specctl binary via `go install` and configures the MCP server in
-`.mcp.json`. Pass `--global` to configure at the user level instead.
+the specctl binary via `go install` and configures MCP targets.
+
+Supported targets:
+
+```bash
+# project-local JSON MCP config
+bash scripts/setup.sh
+
+# Claude Code global MCP config
+bash scripts/setup.sh --claude-global
+
+# Codex global TOML MCP config
+bash scripts/setup.sh --codex-global
+
+# both Claude + Codex global config
+bash scripts/setup.sh --global
+```
+
+The setup script is intended to be idempotent:
+- reruns repair stale `specctl` entries
+- unrelated config is preserved
+- Codex TOML config is updated without duplicating the `mcp_servers.specctl` block
 
 After setup, call `specctl_context` to check if governance exists, or
 run `specctl example` to see the tool's own governed spec as a reference.
