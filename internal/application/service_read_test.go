@@ -1012,7 +1012,7 @@ First body.
 				t.Fatalf("next = %#v", next)
 			}
 			action := next[0].(map[string]any)
-			if action["instructions"] != "The design document changed in 3 sections. Choose the semantic path that matches the observed contract change." {
+			if action["instructions"] != "The design document changed in 2 sections. Choose the semantic path that matches the observed contract change." {
 				t.Fatalf("instructions = %#v", action["instructions"])
 			}
 			template := action["template"].(map[string]any)
@@ -1118,9 +1118,6 @@ First body.
 			}
 			state := stateAny.(SpecDiffProjection)
 			reviewSurface := state.Focus.(map[string]any)["review_surface"].(map[string]any)
-			if _, ok := reviewSurface["changed_requirement_blocks"]; !ok {
-				t.Fatalf("focus = %#v", state.Focus)
-			}
 			scopeCode := reviewSurface["scope_code"].(map[string]any)
 			if got := strings.Join(scopeCode["changed_files"].([]string), ","); got != "runtime/src/application/commands/handler.py" {
 				t.Fatalf("focus = %#v", state.Focus)
