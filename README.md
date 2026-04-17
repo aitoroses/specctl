@@ -2,12 +2,22 @@
 
 Specification governance for agent workflows.
 
+If `git` helps teams track the history of source code, `specctl` helps agent
+workflows track the history of **intent**.
+
 `specctl` gives agents a durable source of truth for:
 
 - what behavior matters
 - what changed intentionally
 - what has been verified
 - what the next legal move is
+
+That is the useful metaphor:
+
+- `git` tracks how code changed
+- `specctl` tracks how intended behavior changed
+- `git` records commits
+- `specctl` records deltas, requirements, verification, and revisions
 
 Without that, agents drift: they infer too much from code, lose intent, skip verification, and declare partial work done. `specctl` exists to keep an agent inside a governed loop.
 
