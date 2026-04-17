@@ -1327,6 +1327,53 @@ func TestBinaryExistingDocFrontmatterJourney(t *testing.T) {
 	requireNextAction(t, contextEnvelope.Next, 1, "sync")
 }
 
+func TestBinaryExampleCommand(t *testing.T) {
+	t.Parallel()
+	binary := buildSpecctlBinary(t)
+	repoRoot := copyFixtureRepoWithRegistry(t, "verified-spec")
+
+	stdout, stderr, exitCode := runSpecctlBinary(t, binary, repoRoot, "", "example")
+	if exitCode != 0 {
+		t.Fatalf("example failed: exit=%d stderr=%q stdout=%q", exitCode, stderr, stdout)
+	}
+	if stderr != "" {
+		t.Fatalf("example stderr = %q", stderr)
+	}
+
+	var envelope struct {
+		State struct {
+			Kind string `json:"kind"`
+		} `json:"state"`
+		Focus struct {
+			Files []struct {
+				Path string `json:"path"`
+				Role string `json:"role"`
+			} `json:"files"`
+		} `json:"focus"`
+		Result struct {
+			DesignDocument string `json:"design_document"`
+			FormatTemplate string `json:"format_template"`
+			Config         string `json:"config"`
+			Charter        string `json:"charter"`
+			Tracking       string `json:"tracking"`
+		} `json:"result"`
+		Next testNext `json:"next"`
+	}
+	mustUnmarshalJSON(t, stdout, &envelope)
+	if envelope.State.Kind != "example" {
+		t.Fatalf("state.kind = %q", envelope.State.Kind)
+	}
+	if len(envelope.Focus.Files) != 5 {
+		t.Fatalf("focus.files = %#v", envelope.Focus.Files)
+	}
+	if envelope.Result.DesignDocument == "" || envelope.Result.FormatTemplate == "" || envelope.Result.Config == "" || envelope.Result.Charter == "" || envelope.Result.Tracking == "" {
+		t.Fatalf("result = %#v", envelope.Result)
+	}
+	if len(envelope.Next) != 0 {
+		t.Fatalf("next = %#v", envelope.Next)
+	}
+}
+
 func TestBinaryErrorRecoveryJourney(t *testing.T) {
 	t.Parallel()
 	binary := buildSpecctlBinary(t)
