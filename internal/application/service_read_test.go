@@ -339,7 +339,7 @@ func TestReadContextComputesScopeDrift(t *testing.T) {
 			t.Fatalf("serialized scope_drift = %s", string(encoded))
 		}
 
-		replaceFileText(t, filepath.Join(repoRoot, "runtime", "src", "domain", "session_execution", "SPEC.md"), "# Session Lifecycle", "# Session Lifecycle\n\n## Drift Review\n\nUpdated after sync.")
+		replaceFileText(t, filepath.Join(repoRoot, "runtime", "src", "domain", "session_execution", "SPEC.md"), "## Requirement: Compensation stage 4 failure cleanup\n\n```gherkin requirement\n@runtime @e2e\nFeature: Compensation stage 4 failure cleanup\n```\n\n### Scenarios\n\n```gherkin scenario\nScenario: Cleanup runs after stage 4 failure\n  Given stage 4 fails during compensation\n  When recovery completes\n  Then cleanup steps run in documented order\n```\n", "## Requirement: Compensation stage 4 failure cleanup\n\n```gherkin requirement\n@runtime @e2e\nFeature: Compensation stage 4 failure cleanup\n```\n\n### Scenarios\n\n```gherkin scenario\nScenario: Cleanup runs after stage 4 failure\n  Given stage 4 fails during compensation\n  When recovery completes\n  Then cleanup steps run in documented order\n```\n\n## Drift Review\n\nUpdated after sync.\n")
 		runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "add", ".")
 		runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "commit", "-m", "drifted scope change")
 
@@ -347,7 +347,7 @@ func TestReadContextComputesScopeDrift(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ReadContext drifted: %v", err)
 		}
-		if len(next) != 1 {
+		if len(next) != 2 {
 			t.Fatalf("drifted next = %#v", next)
 		}
 
@@ -960,15 +960,35 @@ First body.
 		t.Run("design-doc drift offers semantic branches plus reviewed sync", func(t *testing.T) {
 			repoRoot := copyApplicationFixtureRepo(t, "verified-spec")
 			initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
-			if err := os.WriteFile(filepath.Join(repoRoot, "runtime", "src", "domain", "session_execution", "SPEC.md"), []byte(`---
-spec: session-lifecycle
-charter: runtime
----
-# Session Lifecycle
-
-## Overview
-Document drift.
-`), 0o644); err != nil {
+			designDoc := strings.Join([]string{
+				"---",
+				"spec: session-lifecycle",
+				"charter: runtime",
+				"---",
+				"# Session Lifecycle",
+				"",
+				"## Requirement: Compensation stage 4 failure cleanup",
+				"",
+				"```gherkin requirement",
+				"@runtime @e2e",
+				"Feature: Compensation stage 4 failure cleanup",
+				"```",
+				"",
+				"### Scenarios",
+				"",
+				"```gherkin scenario",
+				"Scenario: Cleanup runs after stage 4 failure",
+				"  Given stage 4 fails during compensation",
+				"  When recovery completes",
+				"  Then cleanup steps run in documented order",
+				"```",
+				"",
+				"## Drift Review",
+				"",
+				"Document drift.",
+				"",
+			}, "\n")
+			if err := os.WriteFile(filepath.Join(repoRoot, "runtime", "src", "domain", "session_execution", "SPEC.md"), []byte(designDoc), 0o644); err != nil {
 				t.Fatalf("write design doc: %v", err)
 			}
 			runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "add", ".")
@@ -1053,15 +1073,35 @@ Document drift.
 		t.Run("mixed drift also offers reviewed sync when nothing blocks it", func(t *testing.T) {
 			repoRoot := copyApplicationFixtureRepo(t, "verified-spec")
 			initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
-			if err := os.WriteFile(filepath.Join(repoRoot, "runtime", "src", "domain", "session_execution", "SPEC.md"), []byte(`---
-spec: session-lifecycle
-charter: runtime
----
-# Session Lifecycle
-
-## Overview
-Mixed drift.
-`), 0o644); err != nil {
+			designDoc := strings.Join([]string{
+				"---",
+				"spec: session-lifecycle",
+				"charter: runtime",
+				"---",
+				"# Session Lifecycle",
+				"",
+				"## Requirement: Compensation stage 4 failure cleanup",
+				"",
+				"```gherkin requirement",
+				"@runtime @e2e",
+				"Feature: Compensation stage 4 failure cleanup",
+				"```",
+				"",
+				"### Scenarios",
+				"",
+				"```gherkin scenario",
+				"Scenario: Cleanup runs after stage 4 failure",
+				"  Given stage 4 fails during compensation",
+				"  When recovery completes",
+				"  Then cleanup steps run in documented order",
+				"```",
+				"",
+				"## Drift Review",
+				"",
+				"Mixed drift.",
+				"",
+			}, "\n")
+			if err := os.WriteFile(filepath.Join(repoRoot, "runtime", "src", "domain", "session_execution", "SPEC.md"), []byte(designDoc), 0o644); err != nil {
 				t.Fatalf("write design doc: %v", err)
 			}
 			codePath := filepath.Join(repoRoot, "runtime", "src", "application", "commands", "handler.py")

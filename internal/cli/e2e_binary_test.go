@@ -1320,10 +1320,11 @@ func TestBinaryExistingDocFrontmatterJourney(t *testing.T) {
 	if contextEnvelope.State.Slug != "session-lifecycle" || contextEnvelope.State.Status != "draft" || contextEnvelope.State.TrackingFile != ".specs/runtime/session-lifecycle.yaml" {
 		t.Fatalf("context state = %#v", contextEnvelope.State)
 	}
-	if contextEnvelope.State.Documents.Primary != "runtime/src/domain/session_execution/SPEC.md" || !contextEnvelope.State.Validation.Valid || len(contextEnvelope.Next) != 1 {
+	if contextEnvelope.State.Documents.Primary != "runtime/src/domain/session_execution/SPEC.md" || !contextEnvelope.State.Validation.Valid || len(contextEnvelope.Next) != 2 {
 		t.Fatalf("context state/next = %#v %#v", contextEnvelope.State, contextEnvelope.Next)
 	}
 	requireNextAction(t, contextEnvelope.Next, 0, "review_diff")
+	requireNextAction(t, contextEnvelope.Next, 1, "sync")
 }
 
 func TestBinaryErrorRecoveryJourney(t *testing.T) {
