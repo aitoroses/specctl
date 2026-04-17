@@ -26,3 +26,10 @@ specs:
       depends_on:
         - cli
       notes: MCP stdio transport and tool-exposure adapter over core specctl behavior
+    - slug: skill
+      group: core
+      order: 30
+      depends_on:
+        - cli
+        - mcp
+      notes: Packaged agent-facing skill surface and setup guidance

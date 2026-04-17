@@ -6,8 +6,7 @@
 - the MCP transport surface
 - the packaged skill under `skills/specctl/`
 - the self-governed example surface used by `specctl example`
-
-The dashboard code may continue to evolve in the repo, but it is not treated as a required public launch surface unless explicitly added back to the release contract.
+- the dashboard surface when shipped by the root command
 
 ## Versioning policy
 

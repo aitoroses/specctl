@@ -14,7 +14,7 @@ That skill teaches an agent when to use specctl, how to interpret `next`, and ho
 
 - **CLI** — an agent-consumable command surface for spec creation, deltas, requirements, verification, and revision management
 - **MCP adapter** — stdio MCP server exposing `specctl_*` tools
-- **Dashboard code** — present in the repo, but not part of the initial public launch contract
+- **Dashboard** — optional Vite/React governance UI embedded into the Go binary
 - **Self-governance** — specctl governs itself via `.specs/specctl/*` and `SPEC.md`
 
 ## Install

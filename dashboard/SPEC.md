@@ -47,7 +47,7 @@ Press Ctrl+C to stop
 ## Requirement: Dashboard CLI subcommand
 
 ```gherkin requirement
-@dashboard
+@dashboard @manual
 Feature: Dashboard CLI subcommand
 ```
 
@@ -129,7 +129,7 @@ GET /api/specs/:charter/:slug:
 ## Requirement: REST API endpoints
 
 ```gherkin requirement
-@dashboard
+@dashboard @manual
 Feature: REST API endpoints
 ```
 
@@ -178,7 +178,7 @@ The frontend is a Vite+React single-page application in `dashboard/`. It uses Ta
 ## Requirement: SPA foundation and navigation
 
 ```gherkin requirement
-@dashboard @ui
+@dashboard @ui @manual
 Feature: SPA foundation and navigation
 ```
 
@@ -219,7 +219,7 @@ The landing page shows all charters as glass-effect cards with aggregated health
 ## Requirement: Charter Overview view
 
 ```gherkin requirement
-@dashboard @ui
+@dashboard @ui @manual
 Feature: Charter Overview view
 ```
 
@@ -261,7 +261,7 @@ A color-coded matrix visualization of all specs organized by charter. Colors ran
 ## Requirement: Health Heatmap view
 
 ```gherkin requirement
-@dashboard @ui
+@dashboard @ui @manual
 Feature: Health Heatmap view
 ```
 
@@ -305,7 +305,7 @@ A D3.js force-directed graph showing spec dependency relationships. Nodes repres
 ## Requirement: Dependency Graph view
 
 ```gherkin requirement
-@dashboard @ui
+@dashboard @ui @manual
 Feature: Dependency Graph view
 ```
 
@@ -352,7 +352,7 @@ The deep-dive view showing everything about a single spec. Displays title, statu
 ## Requirement: Spec Detail view
 
 ```gherkin requirement
-@dashboard @ui
+@dashboard @ui @manual
 Feature: Spec Detail view
 ```
 

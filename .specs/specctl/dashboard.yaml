@@ -1,10 +1,10 @@
 slug: dashboard
 charter: specctl
 title: specctl Dashboard
-status: active
+status: verified
 rev: 1
 created: "2026-04-16"
-updated: "2026-04-16"
+updated: "2026-04-17"
 last_verified_at: "2026-04-16"
 checkpoint: 28411f7c0e74209beb201e051cf4f7c16ede7c3d
 tags:
@@ -20,7 +20,7 @@ deltas:
     - id: D-001
       area: Go CLI subcommand and REST API
       intent: add
-      status: open
+      status: closed
       origin_checkpoint: 28411f7c0e74209beb201e051cf4f7c16ede7c3d
       current: No dashboard subcommand exists in specctl
       target: specctl dashboard generates static HTML; specctl dashboard --serve starts localhost with REST API and file watching
@@ -30,7 +30,7 @@ deltas:
     - id: D-002
       area: Vite React SPA foundation
       intent: add
-      status: open
+      status: closed
       origin_checkpoint: 28411f7c0e74209beb201e051cf4f7c16ede7c3d
       current: No frontend exists in specctl
       target: Vite React SPA in tools/specctl/dashboard/ with Tailwind CSS dark-first, React Query, React Router for 4 views
@@ -40,7 +40,7 @@ deltas:
     - id: D-003
       area: Charter Overview view
       intent: add
-      status: open
+      status: closed
       origin_checkpoint: 28411f7c0e74209beb201e051cf4f7c16ede7c3d
       current: No visual representation of charter health
       target: Landing page with charter cards showing aggregated health stats, overall governance summary, glass-effect styling, drill-down navigation
@@ -50,7 +50,7 @@ deltas:
     - id: D-004
       area: Health Heatmap view
       intent: add
-      status: open
+      status: closed
       origin_checkpoint: 28411f7c0e74209beb201e051cf4f7c16ede7c3d
       current: No heatmap visualization exists
       target: Color-coded matrix of all specs by charter. Green verified, yellow stale, red unverified. Clickable cells, smooth transitions, clear legend.
@@ -60,7 +60,7 @@ deltas:
     - id: D-005
       area: Dependency Graph view
       intent: add
-      status: open
+      status: closed
       origin_checkpoint: 28411f7c0e74209beb201e051cf4f7c16ede7c3d
       current: No dependency visualization exists
       target: D3 force-directed graph with physics simulation. Nodes are specs colored by health. Edges are depends_on with directional arrows. Drag, zoom, pan, tooltips, click to navigate.
@@ -70,7 +70,7 @@ deltas:
     - id: D-006
       area: Spec Detail view
       intent: add
-      status: open
+      status: closed
       origin_checkpoint: 28411f7c0e74209beb201e051cf4f7c16ede7c3d
       current: No spec detail view exists
       target: Full spec breakdown page with deltas, requirements with rendered Gherkin, verification status, lifecycle indicators, document links, changelog
@@ -82,82 +82,89 @@ requirements:
       title: Dashboard CLI subcommand
       tags:
         - dashboard
+        - manual
       test_files: []
       gherkin: |-
-        @dashboard
+        @dashboard @manual
         Feature: Dashboard CLI subcommand
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-001
     - id: REQ-002
       title: REST API endpoints
       tags:
         - dashboard
+        - manual
       test_files: []
       gherkin: |-
-        @dashboard
+        @dashboard @manual
         Feature: REST API endpoints
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-001
     - id: REQ-003
       title: SPA foundation and navigation
       tags:
         - dashboard
         - ui
+        - manual
       test_files: []
       gherkin: |-
-        @dashboard @ui
+        @dashboard @ui @manual
         Feature: SPA foundation and navigation
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-002
     - id: REQ-004
       title: Charter Overview view
       tags:
         - dashboard
         - ui
+        - manual
       test_files: []
       gherkin: |-
-        @dashboard @ui
+        @dashboard @ui @manual
         Feature: Charter Overview view
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-003
     - id: REQ-005
       title: Health Heatmap view
       tags:
         - dashboard
         - ui
+        - manual
       test_files: []
       gherkin: |-
-        @dashboard @ui
+        @dashboard @ui @manual
         Feature: Health Heatmap view
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-004
     - id: REQ-006
       title: Dependency Graph view
       tags:
         - dashboard
         - ui
+        - manual
       test_files: []
       gherkin: |-
-        @dashboard @ui
+        @dashboard @ui @manual
         Feature: Dependency Graph view
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-005
     - id: REQ-007
       title: Spec Detail view
       tags:
         - dashboard
         - ui
+        - manual
       test_files: []
       gherkin: |-
-        @dashboard @ui
+        @dashboard @ui @manual
         Feature: Spec Detail view
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-006
 changelog: []

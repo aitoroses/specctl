@@ -103,11 +103,11 @@ Formatting/presentation helpers shared across transport surfaces.
 
 ### `dashboard/`
 
-Optional governance UI code:
+Optional governance UI:
 
 - React/Vite SPA
 - embedded into Go via build pipeline
-- not required for core CLI/MCP governance or the initial public launch contract
+- not required for core CLI/MCP governance
 
 ## Governance boundaries
 
