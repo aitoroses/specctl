@@ -131,12 +131,11 @@ Owns dashboard UX and delivery surface.
 4. **Keep dashboard optional**
 5. **If a change only affects transport behavior, keep it out of the core spec**
 
-## Extraction concerns
+## Repository maturity concerns
 
-The code is already a standalone Go module, but extraction still needs:
+Remaining follow-up areas:
 
-- root CI workflow
 - explicit license choice
-- final boundary cleanup for a few overlapping monorepo-owned files
+- final boundary cleanup for a few overlapping legacy ownership areas
 - release/versioning process
-- confirmation that the skill ships with the extracted repo as a first-class entrypoint
+- confirmation that the skill remains a first-class shipped artifact

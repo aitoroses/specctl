@@ -10,8 +10,6 @@ For humans, the main entrypoint is usually the packaged skill:
 
 That skill teaches an agent when to use specctl, how to interpret `next`, and how to move through the governed workflow without inventing its own process.
 
-This directory is already a standalone Go module and is being prepared for extraction into its own private repository.
-
 ## What it includes
 
 - **CLI** — an agent-consumable command surface for spec creation, deltas, requirements, verification, and revision management
@@ -145,15 +143,12 @@ make dashboard-dev
 - [`SPEC.md`](./SPEC.md) — core behavioral specification
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — package responsibilities and boundaries
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — local development and governance workflow
-- [`EXTRACTION_CHECKLIST.md`](./EXTRACTION_CHECKLIST.md) — final steps when moving to a standalone repo
-- [`KNOWN_PROBLEMS.md`](./KNOWN_PROBLEMS.md) — dogfooding issues and follow-up ideas
 
-## Extraction readiness notes
+## Repository follow-up notes
 
-Before publishing or moving to a private standalone repo:
+Remaining follow-up:
 
-- choose a license and add a `LICENSE` file
-- add root-level CI workflows in `.github/workflows/`
+- choose and add a `LICENSE` file if desired
 - decide whether dashboard stays first-class or optional
 - finish ownership cleanup for `internal/cli/mcp.go`
 
