@@ -2,13 +2,38 @@
 
 Agent-facing specification governance for behavioral contracts.
 
-`specctl` is primarily a **tool for agents**, not a human-first CLI. It governs what a system should do, tracks whether those behaviors are implemented and verified, and returns explicit next-step guidance so an agent can stay inside legal workflow transitions.
+`specctl` is primarily a **tool for agents**, not a human-first CLI.
+
+Most agent loops fail for the same reason: not because the model is incapable,
+but because the workflow has no durable source of truth for:
+
+- what behavior matters
+- what changed intentionally
+- what has actually been verified
+- what the next legal move is
+
+Without that, agents drift. They overfit to code, miss intent, hand-wave
+verification, and declare partial work “done.”
+
+`specctl` exists to close that gap.
+
+It gives an agent a governed workflow:
+
+1. understand the current spec surface
+2. record intentional change as a delta
+3. register or update requirements
+4. verify evidence
+5. converge the checkpoint/revision
+
+At every step, it returns explicit `next` guidance so the agent does not have
+to invent process on the fly.
 
 For humans, the main entrypoint is usually the packaged skill:
 
 - [`skills/specctl/SKILL.md`](./skills/specctl/SKILL.md)
 
-That skill teaches an agent when to use specctl, how to interpret `next`, and how to move through the governed workflow without inventing its own process.
+That skill teaches an agent when to use specctl, how to interpret `next`, and
+how to move through the governed workflow without inventing its own process.
 
 ## What it includes
 
@@ -37,14 +62,23 @@ go install github.com/aitoroses/specctl/cmd/specctl@vX.Y.Z
 npx skills add https://github.com/aitoroses/specctl --skill specctl --global
 ```
 
+## The story in one paragraph
+
+Humans do not usually sit and drive `specctl` command-by-command. A human sets
+direction, maintains the repo, and decides what policies should hold. The
+agent does the operational work: it reads context, follows `next`, edits spec
+documents, implements code, verifies evidence, and keeps the lifecycle state
+aligned. `specctl` is the layer that keeps that loop honest.
+
 ## How to think about it
 
-Humans usually do **not** sit and drive every `specctl` command manually.
 The intended model is:
 
 1. a human installs/configures the tool once
-2. an agent uses the skill + MCP/CLI surfaces
-3. the agent follows `next` guidance to stay inside legal transitions
+2. an agent uses the packaged skill
+3. the agent drives `specctl` through CLI or MCP
+4. the agent follows `next` guidance to stay inside legal transitions
+5. a human reviews and approves important outcomes
 
 So the product should be evaluated as:
 
@@ -53,6 +87,30 @@ So the product should be evaluated as:
 - **a governance engine with adapters**
 
 not as a traditional human-operated CLI product.
+
+## What it feels like to use
+
+The shortest path is:
+
+```bash
+specctl context <charter:slug>
+```
+
+That gives the agent:
+
+- current lifecycle state
+- drift status
+- requirement match integrity
+- verification state
+- explicit `next` actions
+
+From there the loop becomes:
+
+```text
+context -> delta -> requirement -> verify -> close -> bump/sync
+```
+
+That is the core product experience.
 
 ## Human setup / maintainer quick start
 
@@ -140,6 +198,11 @@ Humans mostly:
 - debug edge cases
 - review governance state
 - evolve the skill/documentation
+
+The important distinction is:
+
+- humans define intent and policy
+- agents operate the workflow
 
 ## Debug / maintainer workflows
 
