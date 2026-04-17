@@ -1,12 +1,12 @@
 slug: cli
 charter: specctl
 title: specctl CLI Behavioral Spec
-status: active
-rev: 5
+status: verified
+rev: 6
 created: "2026-04-01"
 updated: "2026-04-17"
-last_verified_at: "2026-04-02"
-checkpoint: 6441fc99221af9b63012ec73d17643ade619cd9d
+last_verified_at: "2026-04-17"
+checkpoint: bd1c68fb5c4fba3dc6b4490e519dad9f56644bc8
 tags: []
 documents:
     primary: SPEC.md
@@ -57,7 +57,7 @@ deltas:
     - id: D-005
       area: Example subcommand
       intent: add
-      status: open
+      status: closed
       origin_checkpoint: 6441fc99221af9b63012ec73d17643ade619cd9d
       current: Agents must read external files to understand specctl's own spec format and tracking structure
       target: specctl example packs SPEC.md, SPEC_FORMAT.md, and .specs/ into a single CLI output the agent can observe directly
@@ -498,12 +498,13 @@ requirements:
       tags:
         - specctl
         - read
-      test_files: []
+      test_files:
+        - internal/cli/e2e_binary_test.go
       gherkin: |-
         @specctl @read
         Feature: Example subcommand returns the embedded governed spec
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-005
     - id: REQ-023
       title: INVALID_GHERKIN_TAG guides the agent to register missing tags then retry
@@ -711,3 +712,30 @@ changelog:
         - REQ-013
         - REQ-021
       summary: Drift classifier + changelog completeness fixes
+    - rev: 6
+      date: "2026-04-17"
+      deltas_opened:
+        - D-005
+        - D-006
+        - D-007
+      deltas_closed:
+        - D-005
+        - D-006
+        - D-007
+      reqs_added:
+        - REQ-022
+        - REQ-023
+        - REQ-024
+        - REQ-025
+        - REQ-026
+        - REQ-027
+        - REQ-028
+      reqs_verified:
+        - REQ-022
+        - REQ-023
+        - REQ-024
+        - REQ-025
+        - REQ-026
+        - REQ-027
+        - REQ-028
+      summary: Complete the embedded example surface and re-anchor self-governance in the standalone OSS repo.

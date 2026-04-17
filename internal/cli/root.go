@@ -45,7 +45,6 @@ Output:
 		newCharterCmd(),
 		newConfigCmd(),
 		newExampleCmd(),
-		newDashboardCmd(),
 	)
 
 	return rootCmd
