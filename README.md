@@ -1,250 +1,218 @@
 # specctl
 
-Agent-facing specification governance for behavioral contracts.
+Specification governance for agent workflows.
 
-`specctl` is primarily a **tool for agents**, not a human-first CLI.
-
-Most agent loops fail for the same reason: not because the model is incapable,
-but because the workflow has no durable source of truth for:
+`specctl` gives agents a durable source of truth for:
 
 - what behavior matters
 - what changed intentionally
-- what has actually been verified
+- what has been verified
 - what the next legal move is
 
-Without that, agents drift. They overfit to code, miss intent, hand-wave
-verification, and declare partial work “done.”
+Without that, agents drift: they infer too much from code, lose intent, skip verification, and declare partial work done. `specctl` exists to keep an agent inside a governed loop.
 
-`specctl` exists to close that gap.
+## Why it exists
 
-It gives an agent a governed workflow:
+Most agent loops need more than:
 
-1. understand the current spec surface
-2. record intentional change as a delta
-3. register or update requirements
-4. verify evidence
-5. converge the checkpoint/revision
+- a model
+- a prompt
+- a codebase
 
-At every step, it returns explicit `next` guidance so the agent does not have
-to invent process on the fly.
+They also need a workflow that remembers:
 
-For humans, the main entrypoint is usually the packaged skill:
+- the behavioral contract
+- the active change set
+- the verification state
+- the checkpoint/revision boundary
 
-- [`skills/specctl/SKILL.md`](./skills/specctl/SKILL.md)
+That is what `specctl` provides.
 
-That skill teaches an agent when to use specctl, how to interpret `next`, and
-how to move through the governed workflow without inventing its own process.
-
-## What it includes
-
-- **CLI** — an agent-consumable command surface for spec creation, deltas, requirements, verification, and revision management
-- **MCP adapter** — stdio MCP server exposing `specctl_*` tools
-- **Dashboard** — optional Vite/React governance UI embedded into the Go binary
-- **Self-governance** — specctl governs itself via `.specs/specctl/*` and `SPEC.md`
-
-## Install
-
-### Binary
-
-```bash
-go install github.com/aitoroses/specctl/cmd/specctl@latest
-```
-
-For stable consumers, prefer a tagged version once releases are cut:
-
-```bash
-go install github.com/aitoroses/specctl/cmd/specctl@vX.Y.Z
-```
-
-### Packaged skill
-
-```bash
-npx skills add https://github.com/aitoroses/specctl --skill specctl --global
-```
-
-## The story in one paragraph
-
-Humans do not usually sit and drive `specctl` command-by-command. A human sets
-direction, maintains the repo, and decides what policies should hold. The
-agent does the operational work: it reads context, follows `next`, edits spec
-documents, implements code, verifies evidence, and keeps the lifecycle state
-aligned. `specctl` is the layer that keeps that loop honest.
-
-## How to think about it
-
-The intended model is:
-
-1. a human installs/configures the tool once
-2. an agent uses the packaged skill
-3. the agent drives `specctl` through CLI or MCP
-4. the agent follows `next` guidance to stay inside legal transitions
-5. a human reviews and approves important outcomes
-
-So the product should be evaluated as:
-
-- **a tool for agents**
-- **a skill-backed workflow surface**
-- **a governance engine with adapters**
-
-not as a traditional human-operated CLI product.
-
-## What it feels like to use
-
-The shortest path is:
-
-```bash
-specctl context <charter:slug>
-```
-
-That gives the agent:
-
-- current lifecycle state
-- drift status
-- requirement match integrity
-- verification state
-- explicit `next` actions
-
-From there the loop becomes:
+The core loop is:
 
 ```text
 context -> delta -> requirement -> verify -> close -> bump/sync
 ```
 
-That is the core product experience.
+At each step, `specctl` returns explicit `next` guidance so the agent does not have to invent process on the fly.
 
-## Human setup / maintainer quick start
+## What ships
 
-### Prerequisites
+- **CLI** — command surface for governed spec operations
+- **MCP server** — stdio MCP adapter exposing `specctl_*` tools
+- **Packaged skill** — the primary agent-facing entrypoint
+- **Self-governed example** — `specctl` ships its own governed spec as the built-in example
+- **Dashboard** — optional embedded governance UI
 
-- Go `1.26.x` toolchain
-- `pnpm` for dashboard development/builds
+## Install
 
-### Build the CLI
-
-```bash
-make build
-```
-
-### Install locally
+### 1. Install the binary
 
 ```bash
-make install
+go install github.com/aitoroses/specctl/cmd/specctl@latest
 ```
 
-### Run Go tests
+For stable consumers, prefer a tagged version once releases exist:
 
 ```bash
-make test-go
+go install github.com/aitoroses/specctl/cmd/specctl@vX.Y.Z
 ```
 
-### Build the dashboard bundle
-
-```bash
-make dashboard-build
-```
-
-### Run all primary checks
-
-```bash
-make test
-```
-
-## Repository layout
-
-```text
-cmd/specctl/             Cobra entrypoint
-internal/application/    Workflow orchestration and read/write projections
-internal/domain/         Pure domain types and invariants
-internal/infrastructure/ Filesystem, git, config, registry, persistence adapters
-internal/cli/            CLI command surface and envelope formatting
-internal/mcp/            MCP transport adapter and MCP-specific tests/spec
-internal/presenter/      Response presentation helpers
-dashboard/               Optional React/Vite dashboard
-.specs/specctl/          Self-governance tracking files
-SPEC.md                  Core behavioral specification
-internal/mcp/SPEC.md     MCP adapter behavioral specification
-skills/specctl/          Agent skill packaging and references
-test/                    E2E shell coverage
-testdata/                Fixtures and golden inputs
-```
-
-## Behavioral ownership
-
-- `SPEC.md` owns **core product semantics**
-- `internal/mcp/SPEC.md` owns **MCP transport-specific behavior**
-- `.specs/specctl/*.yaml` owns **tracking state**
-
-Important rule: **do not hand-edit tracking YAML**. Use `specctl` commands.
-
-## Main entrypoints
-
-### For agents
-
-- [`skills/specctl/SKILL.md`](./skills/specctl/SKILL.md)
-- `specctl mcp`
-- `specctl context ...`
-- packaged skill install:
+### 2. Install the packaged skill
 
 ```bash
 npx skills add https://github.com/aitoroses/specctl --skill specctl --global
 ```
 
-### For humans
+## Use with Codex
 
-Humans mostly:
+1. Install the binary
+2. Install the packaged skill
+3. Run the packaged setup path:
 
-- install/build the tool
-- maintain specs and code
-- debug edge cases
-- review governance state
-- evolve the skill/documentation
+```bash
+bash skills/specctl/scripts/setup.sh
+```
 
-The important distinction is:
+That setup installs/configures:
 
-- humans define intent and policy
-- agents operate the workflow
+- the `specctl` binary
+- local or global MCP configuration
 
-## Debug / maintainer workflows
+After that, the normal entrypoint is the skill plus `specctl context ...`.
 
-### Review spec health
+## Use with Claude Code
+
+1. Install the binary
+2. Install the packaged skill
+3. Run the packaged setup path:
+
+```bash
+bash skills/specctl/scripts/setup.sh --global
+```
+
+This configures the MCP server in the expected Claude-facing config path and keeps the skill as the main operating surface.
+
+## First run
+
+If you want to understand the product shape immediately:
+
+```bash
+specctl example
+```
+
+That returns the built-in governed example:
+
+- `SPEC.md`
+- `SPEC_FORMAT.md`
+- `.specs/specctl.yaml`
+- `.specs/specctl/CHARTER.yaml`
+- `.specs/specctl/cli.yaml`
+
+If you want to start operating on a real governed surface:
+
+```bash
+specctl context <charter:slug>
+```
+
+Examples:
 
 ```bash
 specctl context specctl:cli
 specctl context specctl:mcp
+specctl context specctl:dashboard
+specctl context specctl:skill
 ```
 
-### Run the MCP server
+## Core workflow
+
+Typical agent-driven sequence:
 
 ```bash
-specctl mcp
+specctl context <charter:slug>
+specctl delta add ...
+# edit SPEC.md
+specctl req add|replace|refresh ...
+# implement code/tests
+specctl req verify ...
+specctl delta close ...
+specctl rev bump ...
 ```
 
-### Work on the dashboard
+Key rule:
 
-```bash
-make dashboard-dev
-```
+- write meaning in `SPEC.md`
+- use `specctl` to mutate tracking state
 
-## Documentation map
+Do **not** hand-edit `.specs/*.yaml`.
 
-- [`skills/specctl/SKILL.md`](./skills/specctl/SKILL.md) — **primary agent-facing surface**
+## For agents vs humans
+
+### Agents
+
+The primary agent-facing surface is:
+
+- [`skills/specctl/SKILL.md`](./skills/specctl/SKILL.md)
+
+Agents should use:
+
+- the packaged skill
+- CLI/MCP surfaces
+- `next` guidance
+
+### Humans
+
+Humans mostly:
+
+- install/configure the tool
+- maintain specs and code
+- review governance state
+- decide policy
+- approve merges/releases
+
+In other words:
+
+- humans define intent and boundaries
+- agents operate the workflow
+
+## Documentation
+
+- [`skills/specctl/SKILL.md`](./skills/specctl/SKILL.md) — primary agent-facing entrypoint
 - [`SPEC.md`](./SPEC.md) — core behavioral specification
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — package responsibilities and boundaries
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — local development and governance workflow
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — package boundaries and system shape
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — maintainer/development workflow
 - [`SECURITY.md`](./SECURITY.md) — vulnerability reporting policy
 - [`RELEASING.md`](./RELEASING.md) — release/version/install policy
-- [`examples/`](./examples) — starter usage examples
-- [`docs/oss-launch-ops.md`](./docs/oss-launch-ops.md) — required repo settings and human signoff evidence
+- [`examples/`](./examples) — quickstart examples
+- [`docs/oss-launch-ops.md`](./docs/oss-launch-ops.md) — repo settings / launch evidence
 
-## Status
+## Development
 
-Strengths:
-- strong behavioral governance
-- clear Go module boundary
-- good contract-test coverage
-- narrow MCP adapter spec now exists
-- clear skill-backed story once extracted
+Build:
 
-Remaining follow-up:
-- refine a few overlapping ownership areas inherited from the monorepo
-- formalize release/CI workflow in the extracted repo
+```bash
+make build
+```
+
+Install locally:
+
+```bash
+make install
+```
+
+Run tests:
+
+```bash
+make test-go
+```
+
+Dashboard typecheck/build:
+
+```bash
+make dashboard-typecheck
+make dashboard-build
+```
+
+## License
+
+MIT
