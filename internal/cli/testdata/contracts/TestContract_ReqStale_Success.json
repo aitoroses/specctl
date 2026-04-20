@@ -107,6 +107,22 @@
     }
   },
   "state": {
+    "actionable_unverified_requirements": [
+      {
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [
+          "runtime/tests/domain/test_compensation_cleanup.py"
+        ],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "stale"
+      }
+    ],
     "changelog": [
       {
         "date": "2026-03-28",
@@ -176,6 +192,7 @@
     },
     "format": null,
     "format_template": null,
+    "inactive_unverified_requirements": [],
     "last_verified_at": "2026-03-28",
     "open_deltas": [
       {
@@ -239,22 +256,6 @@
     "title": "Session Lifecycle",
     "tracking_file": ".specs/runtime/session-lifecycle.yaml",
     "uncommitted_changes": [],
-    "unverified_requirements": [
-      {
-        "id": "REQ-001",
-        "introduced_by": "D-001",
-        "lifecycle": "active",
-        "tags": [
-          "runtime",
-          "e2e"
-        ],
-        "test_files": [
-          "runtime/tests/domain/test_compensation_cleanup.py"
-        ],
-        "title": "Compensation stage 4 failure cleanup",
-        "verification": "stale"
-      }
-    ],
     "updated": "__TODAY__",
     "validation": {
       "findings": [],

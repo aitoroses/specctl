@@ -77,6 +77,23 @@
         ],
         "rev": 2,
         "summary": "Closed the compensation cleanup work"
+      },
+      {
+        "date": "2026-03-30",
+        "deltas_closed": [
+          "D-002"
+        ],
+        "deltas_opened": [
+          "D-002"
+        ],
+        "reqs_added": [
+          "REQ-002"
+        ],
+        "reqs_verified": [
+          "REQ-002"
+        ],
+        "rev": 3,
+        "summary": "Verified the replacement cleanup requirement while preserving the superseded predecessor as history"
       }
     ],
     "charter": "runtime",
@@ -91,7 +108,7 @@
     "checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
     "created": "2026-03-05",
     "deltas": {
-      "closed": 1,
+      "closed": 2,
       "deferred": 0,
       "in_progress": 0,
       "items": [
@@ -108,6 +125,22 @@
           "updates": [
             "add_requirement"
           ]
+        },
+        {
+          "affects_requirements": [
+            "REQ-001"
+          ],
+          "area": "Compensation cleanup rewrite",
+          "current": "Cleanup wording is outdated",
+          "id": "D-002",
+          "intent": "change",
+          "notes": "Replacement requirement is verified; superseded predecessor remains historical only",
+          "origin_checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
+          "status": "closed",
+          "target": "Replace the tracked cleanup contract",
+          "updates": [
+            "replace_requirement"
+          ]
         }
       ],
       "open": 0
@@ -117,15 +150,28 @@
     },
     "format": null,
     "format_template": null,
-    "inactive_unverified_requirements": [],
-    "last_verified_at": "2026-03-28",
+    "inactive_unverified_requirements": [
+      {
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "superseded",
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      }
+    ],
+    "last_verified_at": "2026-03-30",
     "open_deltas": [],
     "requirements": [
       {
         "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
         "id": "REQ-001",
         "introduced_by": "D-001",
-        "lifecycle": "active",
+        "lifecycle": "superseded",
         "match": {
           "heading": "Requirement: Compensation stage 4 failure cleanup",
           "status": "matched"
@@ -135,20 +181,44 @@
             "Cleanup runs after stage 4 failure"
           ]
         },
-        "superseded_by": null,
+        "superseded_by": "REQ-002",
         "supersedes": null,
         "tags": [
           "runtime",
           "e2e"
         ],
-        "test_files": [
-          "runtime/tests/domain/test_compensation_cleanup.py"
-        ],
+        "test_files": [],
         "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      },
+      {
+        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup replacement",
+        "id": "REQ-002",
+        "introduced_by": "D-002",
+        "lifecycle": "active",
+        "match": {
+          "heading": "Requirement: Compensation stage 4 failure cleanup replacement",
+          "status": "matched"
+        },
+        "spec_context": {
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ]
+        },
+        "superseded_by": null,
+        "supersedes": "REQ-001",
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [
+          "runtime/tests/domain/test_compensation_cleanup_replacement.py"
+        ],
+        "title": "Compensation stage 4 failure cleanup replacement",
         "verification": "verified"
       }
     ],
-    "rev": 3,
+    "rev": 4,
     "scope": [
       "runtime/src/domain/session_execution/",
       "runtime/src/application/commands/"
@@ -157,7 +227,7 @@
       "checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
       "drift_source": null,
       "files_changed_since_checkpoint": [],
-      "last_verified_at": "2026-03-28",
+      "last_verified_at": "2026-03-30",
       "status": "clean",
       "tracked_by": []
     },

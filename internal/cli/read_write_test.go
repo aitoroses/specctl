@@ -308,9 +308,12 @@ func TestReadCommandsReturnCanonicalJSON(t *testing.T) {
 					OpenDeltas []struct {
 						ID string `json:"id"`
 					} `json:"open_deltas"`
-					UnverifiedRequirements []struct {
+					ActionableUnverifiedRequirements []struct {
 						ID string `json:"id"`
-					} `json:"unverified_requirements"`
+					} `json:"actionable_unverified_requirements"`
+					InactiveUnverifiedRequirements []struct {
+						ID string `json:"id"`
+					} `json:"inactive_unverified_requirements"`
 				} `json:"state"`
 			}
 			mustUnmarshalJSON(t, stdout, &envelope)
@@ -330,8 +333,11 @@ func TestReadCommandsReturnCanonicalJSON(t *testing.T) {
 			if len(envelope.State.OpenDeltas) != 1 || envelope.State.OpenDeltas[0].ID != "D-001" {
 				t.Fatalf("unexpected open deltas %#v", envelope.State.OpenDeltas)
 			}
-			if len(envelope.State.UnverifiedRequirements) != 1 || envelope.State.UnverifiedRequirements[0].ID != "REQ-001" {
-				t.Fatalf("unexpected requirements %#v", envelope.State.UnverifiedRequirements)
+			if len(envelope.State.ActionableUnverifiedRequirements) != 1 || envelope.State.ActionableUnverifiedRequirements[0].ID != "REQ-001" {
+				t.Fatalf("unexpected actionable requirements %#v", envelope.State.ActionableUnverifiedRequirements)
+			}
+			if len(envelope.State.InactiveUnverifiedRequirements) != 0 {
+				t.Fatalf("unexpected inactive requirements %#v", envelope.State.InactiveUnverifiedRequirements)
 			}
 			if stderr != "" {
 				t.Fatalf("expected empty stderr, got %q", stderr)

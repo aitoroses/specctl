@@ -1,11 +1,6 @@
 {
   "focus": {
     "review_surface": {
-      "classification": {
-        "correctness_blocker": false,
-        "housekeeping_candidate": true,
-        "review_required": true
-      },
       "changed_requirement_blocks": [
         {
           "heading": "Requirement: Tracked drift review",
@@ -16,6 +11,11 @@
           "type": "added"
         }
       ],
+      "classification": {
+        "correctness_blocker": false,
+        "housekeeping_candidate": true,
+        "review_required": true
+      },
       "scope_code": {
         "changed_files": [
           "runtime/src/application/commands/handler.py"

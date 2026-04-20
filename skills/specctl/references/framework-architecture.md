@@ -83,7 +83,7 @@ agent loop can consume the harness:
 
 ```
 Loop iteration N:
-  1. Read specctl context → what's drifted? what's unverified?
+  1. Read specctl context → what's drifted? what is actionable now vs inactive audit debt?
   2. Pick the next delta / requirement to work on
   3. Boot the system via MCP → environment ready
   4. Seed the scenario → preconditions set

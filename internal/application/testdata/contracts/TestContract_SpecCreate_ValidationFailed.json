@@ -20,6 +20,7 @@
     "mode": "none"
   },
   "state": {
+    "actionable_unverified_requirements": [],
     "changelog": [],
     "charter": "runtime",
     "charter_membership": {
@@ -44,6 +45,7 @@
     },
     "format": null,
     "format_template": null,
+    "inactive_unverified_requirements": [],
     "last_verified_at": "__TODAY__",
     "open_deltas": [],
     "requirements": [],
@@ -67,7 +69,6 @@
     "title": "New Protocol",
     "tracking_file": ".specs/runtime/new-protocol.yaml",
     "uncommitted_changes": [],
-    "unverified_requirements": [],
     "updated": "__TODAY__",
     "validation": {
       "findings": [

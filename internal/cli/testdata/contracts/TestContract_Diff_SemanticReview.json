@@ -1,11 +1,6 @@
 {
   "focus": {
     "review_surface": {
-      "classification": {
-        "correctness_blocker": true,
-        "housekeeping_candidate": false,
-        "review_required": true
-      },
       "changed_requirement_blocks": [
         {
           "heading": "Requirement: Compensation stage 4 failure cleanup",
@@ -16,6 +11,11 @@
           "type": "removed"
         }
       ],
+      "classification": {
+        "correctness_blocker": true,
+        "housekeeping_candidate": false,
+        "review_required": true
+      },
       "sections_changed": [
         {
           "heading": "Overview",
