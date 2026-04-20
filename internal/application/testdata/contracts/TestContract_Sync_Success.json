@@ -11,6 +11,7 @@
     "previous_checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a"
   },
   "state": {
+    "actionable_unverified_requirements": [],
     "changelog": [
       {
         "date": "2026-03-28",
@@ -68,6 +69,7 @@
     },
     "format": null,
     "format_template": null,
+    "inactive_unverified_requirements": [],
     "last_verified_at": "__TODAY__",
     "open_deltas": [],
     "requirements": [
@@ -120,7 +122,6 @@
     "title": "Session Lifecycle",
     "tracking_file": ".specs/runtime/session-lifecycle.yaml",
     "uncommitted_changes": [],
-    "unverified_requirements": [],
     "updated": "__TODAY__",
     "validation": {
       "findings": [],

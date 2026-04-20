@@ -116,6 +116,8 @@ The context projection reads and assembles these tracking file fields:
 | `scope_drift` | `object` | `{status, checkpoint, drift_source, tracked_by[], files_changed_since_checkpoint[]}` |
 | `uncommitted_changes` | `string[]` | Dirty paths under `scope[]` from `git status --porcelain` |
 | `requirements[]` | `array` | Each with `id, title, tags, lifecycle, verification, match.status, spec_context.scenarios[]` |
+| `actionable_unverified_requirements[]` | `array` | Actionable non-verified requirements from the current truth surface only (`lifecycle: active`) |
+| `inactive_unverified_requirements[]` | `array` | Non-verified inactive requirements (`lifecycle: superseded|withdrawn`) retained for audit/debugging and cleanup context |
 | `deltas` | `object` | Summary counts (`open, in_progress, closed, deferred`) plus `items[]` |
 | `validation` | `object` | `{valid: bool, findings[]}` |
 
@@ -191,6 +193,9 @@ Error (SPEC_NOT_FOUND):
 - If `scope_drift.status == "unavailable"`, `next` begins with `specctl sync <target> --checkpoint HEAD`
 - `focus.scope_drift` classifies whether the current drift is an immediate correctness blocker or a review-first housekeeping candidate
 - `state` is a projected view, never a raw YAML fragment
+- `state.requirements[]` is the canonical requirement record; summary arrays are convenience views
+- `state.actionable_unverified_requirements[]` contains only active requirements that still need action
+- `state.inactive_unverified_requirements[]` contains inactive non-verified requirements for audit/debugging and cleanup context; it does not directly block `next`, delta close, or rev bump on its own
 - `next` is never `null` and always present
 
 ## Requirement: Context classifies committed drift before checkpoint cleanup

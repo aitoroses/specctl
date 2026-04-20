@@ -44,6 +44,7 @@
     "tracking_file": ".specs/runtime/session-lifecycle.yaml"
   },
   "state": {
+    "actionable_unverified_requirements": [],
     "changelog": [],
     "charter": "runtime",
     "charter_membership": {
@@ -68,6 +69,7 @@
     },
     "format": null,
     "format_template": null,
+    "inactive_unverified_requirements": [],
     "last_verified_at": "__TODAY__",
     "open_deltas": [],
     "requirements": [],
@@ -91,7 +93,6 @@
     "uncommitted_changes": [
       "runtime/src/domain/session_execution/SPEC.md"
     ],
-    "unverified_requirements": [],
     "updated": "__TODAY__",
     "validation": {
       "findings": [],

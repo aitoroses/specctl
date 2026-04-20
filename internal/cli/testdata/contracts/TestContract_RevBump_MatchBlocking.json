@@ -131,6 +131,7 @@
     ]
   },
   "state": {
+    "actionable_unverified_requirements": [],
     "changelog": [
       {
         "date": "2026-03-28",
@@ -188,6 +189,7 @@
     },
     "format": null,
     "format_template": null,
+    "inactive_unverified_requirements": [],
     "last_verified_at": "2026-03-28",
     "open_deltas": [],
     "requirements": [
@@ -242,7 +244,6 @@
     "uncommitted_changes": [
       "runtime/src/domain/session_execution/SPEC.md"
     ],
-    "unverified_requirements": [],
     "updated": "2026-03-30",
     "validation": {
       "findings": [],

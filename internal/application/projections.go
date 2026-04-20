@@ -44,31 +44,32 @@ type ValidationContainer struct {
 }
 
 type SpecProjection struct {
-	Slug                   string                         `json:"slug"`
-	Charter                string                         `json:"charter"`
-	Title                  string                         `json:"title"`
-	Status                 domain.SpecStatus              `json:"status"`
-	Rev                    int                            `json:"rev"`
-	Created                string                         `json:"created"`
-	Updated                string                         `json:"updated"`
-	LastVerifiedAt         string                         `json:"last_verified_at"`
-	Checkpoint             string                         `json:"checkpoint"`
-	TrackingFile           string                         `json:"tracking_file"`
-	Tags                   []string                       `json:"tags"`
-	Format                 *string                        `json:"format"`
-	FormatTemplate         *string                        `json:"format_template"`
-	Documents              domain.Documents               `json:"documents"`
-	CharterMembership      *CharterMembershipProjection   `json:"charter_membership"`
-	Scope                  []string                       `json:"scope"`
-	Deltas                 DeltaProjection                `json:"deltas"`
-	OpenDeltas             []OpenDeltaProjection          `json:"open_deltas"`
-	Requirements           []RequirementProjection        `json:"requirements"`
-	UnverifiedRequirements []RequirementSummaryProjection `json:"unverified_requirements"`
-	Changelog              []domain.ChangelogEntry        `json:"changelog"`
-	ScopeDrift             ScopeDriftProjection           `json:"scope_drift"`
-	UncommittedChanges     []string                       `json:"uncommitted_changes"`
-	Validation             ValidationProjection           `json:"validation"`
-	Focus                  any                            `json:"focus,omitempty"`
+	Slug                             string                         `json:"slug"`
+	Charter                          string                         `json:"charter"`
+	Title                            string                         `json:"title"`
+	Status                           domain.SpecStatus              `json:"status"`
+	Rev                              int                            `json:"rev"`
+	Created                          string                         `json:"created"`
+	Updated                          string                         `json:"updated"`
+	LastVerifiedAt                   string                         `json:"last_verified_at"`
+	Checkpoint                       string                         `json:"checkpoint"`
+	TrackingFile                     string                         `json:"tracking_file"`
+	Tags                             []string                       `json:"tags"`
+	Format                           *string                        `json:"format"`
+	FormatTemplate                   *string                        `json:"format_template"`
+	Documents                        domain.Documents               `json:"documents"`
+	CharterMembership                *CharterMembershipProjection   `json:"charter_membership"`
+	Scope                            []string                       `json:"scope"`
+	Deltas                           DeltaProjection                `json:"deltas"`
+	OpenDeltas                       []OpenDeltaProjection          `json:"open_deltas"`
+	Requirements                     []RequirementProjection        `json:"requirements"`
+	ActionableUnverifiedRequirements []RequirementSummaryProjection `json:"actionable_unverified_requirements"`
+	InactiveUnverifiedRequirements   []RequirementSummaryProjection `json:"inactive_unverified_requirements"`
+	Changelog                        []domain.ChangelogEntry        `json:"changelog"`
+	ScopeDrift                       ScopeDriftProjection           `json:"scope_drift"`
+	UncommittedChanges               []string                       `json:"uncommitted_changes"`
+	Validation                       ValidationProjection           `json:"validation"`
+	Focus                            any                            `json:"focus,omitempty"`
 }
 
 type CharterMembershipProjection struct {
@@ -88,10 +89,10 @@ type DeltaCountsProjection struct {
 }
 
 type DeltaProjection struct {
-	Open       int            `json:"open"`
-	InProgress int            `json:"in_progress"`
-	Closed     int            `json:"closed"`
-	Deferred   int            `json:"deferred"`
+	Open       int                   `json:"open"`
+	InProgress int                   `json:"in_progress"`
+	Closed     int                   `json:"closed"`
+	Deferred   int                   `json:"deferred"`
 	Items      []DeltaItemProjection `json:"items"`
 }
 
@@ -125,17 +126,17 @@ type RequirementSummaryProjection struct {
 }
 
 type RequirementProjection struct {
-	ID           string                         `json:"id"`
-	Title        string                         `json:"title"`
-	Tags         []string                       `json:"tags"`
-	Lifecycle    domain.RequirementLifecycle    `json:"lifecycle"`
-	Verification domain.RequirementVerification `json:"verification"`
-	IntroducedBy string                         `json:"introduced_by"`
-	Supersedes   *string                        `json:"supersedes"`
-	SupersededBy *string                        `json:"superseded_by"`
-	TestFiles    []string                       `json:"test_files"`
-	Gherkin      string                         `json:"gherkin"`
-	Match        RequirementMatchProjection     `json:"match"`
+	ID           string                           `json:"id"`
+	Title        string                           `json:"title"`
+	Tags         []string                         `json:"tags"`
+	Lifecycle    domain.RequirementLifecycle      `json:"lifecycle"`
+	Verification domain.RequirementVerification   `json:"verification"`
+	IntroducedBy string                           `json:"introduced_by"`
+	Supersedes   *string                          `json:"supersedes"`
+	SupersededBy *string                          `json:"superseded_by"`
+	TestFiles    []string                         `json:"test_files"`
+	Gherkin      string                           `json:"gherkin"`
+	Match        RequirementMatchProjection       `json:"match"`
 	SpecContext  RequirementSpecContextProjection `json:"spec_context"`
 }
 
@@ -204,13 +205,13 @@ type FileMatchProjection struct {
 }
 
 type ConfigProjection struct {
-	SemanticTags   []string                                  `json:"semantic_tags"`
-	GherkinTags    []string                                  `json:"gherkin_tags"`
-	SourcePrefixes []string                                  `json:"source_prefixes"`
-	Formats        map[string]infrastructure.FormatConfig    `json:"formats"`
-	Validation     ValidationProjection                      `json:"validation"`
-	Warnings       []infrastructure.SourcePrefixWarning      `json:"warnings,omitempty"`
-	Focus          any                                       `json:"focus,omitempty"`
+	SemanticTags   []string                               `json:"semantic_tags"`
+	GherkinTags    []string                               `json:"gherkin_tags"`
+	SourcePrefixes []string                               `json:"source_prefixes"`
+	Formats        map[string]infrastructure.FormatConfig `json:"formats"`
+	Validation     ValidationProjection                   `json:"validation"`
+	Warnings       []infrastructure.SourcePrefixWarning   `json:"warnings,omitempty"`
+	Focus          any                                    `json:"focus,omitempty"`
 }
 
 type HookProjection struct {
@@ -334,7 +335,8 @@ func newSpecProjection(repoRoot string, tracking *domain.TrackingFile, charter *
 
 	projection.Deltas = buildDeltaProjection(tracking.Deltas)
 	projection.OpenDeltas = buildOpenDeltas(tracking.Deltas)
-	projection.UnverifiedRequirements = buildUnverifiedRequirements(tracking.Requirements)
+	projection.ActionableUnverifiedRequirements = buildActionableUnverifiedRequirements(tracking.Requirements)
+	projection.InactiveUnverifiedRequirements = buildInactiveUnverifiedRequirements(tracking.Requirements)
 	return projection, nil
 }
 
@@ -435,7 +437,7 @@ func buildRegistryProjection(repoRoot string, config *infrastructure.ProjectConf
 		Specs:    specs,
 		Charters: charterSummaries,
 		Config:   configContainer,
-		Audit: projectionFromFindings(auditFindings),
+		Audit:    projectionFromFindings(auditFindings),
 	}
 }
 
@@ -486,13 +488,16 @@ func buildOpenDeltas(deltas []domain.Delta) []OpenDeltaProjection {
 	return open
 }
 
-func buildUnverifiedRequirements(requirements []domain.Requirement) []RequirementSummaryProjection {
-	unverified := make([]RequirementSummaryProjection, 0)
+func buildActionableUnverifiedRequirements(requirements []domain.Requirement) []RequirementSummaryProjection {
+	actionable := make([]RequirementSummaryProjection, 0)
 	for _, requirement := range requirements {
+		if requirement.EffectiveLifecycle() != domain.RequirementLifecycleActive {
+			continue
+		}
 		if requirement.EffectiveVerification() == domain.RequirementVerificationVerified {
 			continue
 		}
-		unverified = append(unverified, RequirementSummaryProjection{
+		actionable = append(actionable, RequirementSummaryProjection{
 			ID:           requirement.ID,
 			Title:        requirement.Title,
 			Tags:         append([]string{}, requirement.Tags...),
@@ -502,7 +507,29 @@ func buildUnverifiedRequirements(requirements []domain.Requirement) []Requiremen
 			TestFiles:    append([]string{}, requirement.TestFiles...),
 		})
 	}
-	return unverified
+	return actionable
+}
+
+func buildInactiveUnverifiedRequirements(requirements []domain.Requirement) []RequirementSummaryProjection {
+	inactive := make([]RequirementSummaryProjection, 0)
+	for _, requirement := range requirements {
+		if requirement.EffectiveLifecycle() == domain.RequirementLifecycleActive {
+			continue
+		}
+		if requirement.EffectiveVerification() == domain.RequirementVerificationVerified {
+			continue
+		}
+		inactive = append(inactive, RequirementSummaryProjection{
+			ID:           requirement.ID,
+			Title:        requirement.Title,
+			Tags:         append([]string{}, requirement.Tags...),
+			Lifecycle:    requirement.EffectiveLifecycle(),
+			Verification: requirement.EffectiveVerification(),
+			IntroducedBy: introducedByForRequirement(requirement),
+			TestFiles:    append([]string{}, requirement.TestFiles...),
+		})
+	}
+	return inactive
 }
 
 func buildRequirementProjections(requirements []domain.Requirement, contexts map[string]infrastructure.RequirementDocContext) []RequirementProjection {

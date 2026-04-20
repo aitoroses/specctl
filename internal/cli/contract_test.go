@@ -25,6 +25,23 @@ func TestContract_Context_SpecClean(t *testing.T) {
 	})
 }
 
+func TestContract_Context_CleanNone_InactiveSupersededUnverified(t *testing.T) {
+	repoRoot := contractInactiveSupersededRequirementRepo(t)
+	headSHA := strings.TrimSpace(runGit(t, repoRoot, "rev-parse", "HEAD"))
+
+	withWorkingDir(t, repoRoot, func() {
+		stdout, stderr, exitCode := executeCLI("context", "runtime:session-lifecycle")
+		if exitCode != 0 {
+			t.Fatalf("exit code = %d, stderr=%s stdout=%s", exitCode, stderr, stdout)
+		}
+		if stderr != "" {
+			t.Fatalf("stderr = %q", stderr)
+		}
+
+		assertContractFixture(t, stdout, map[string]string{"__HEAD_SHA__": headSHA})
+	})
+}
+
 func TestContract_Context_InvalidInput(t *testing.T) {
 	stdout, stderr, exitCode := executeCLI("context", "runtime/session-lifecycle")
 	if exitCode == 0 {
@@ -908,6 +925,123 @@ func contractReplaceFlowRepo(t *testing.T) string {
 		contractRequirementSection("Compensation stage 4 failure cleanup", contractRequirementBlock("@runtime @e2e", "Compensation stage 4 failure cleanup", "Cleanup runs after stage 4 failure", "stage 4 fails during compensation", "recovery completes", "cleanup steps run in documented order"))+
 			"\n"+
 			contractRequirementSection("Compensation stage 4 failure cleanup replacement", contractRequirementBlock("@runtime @e2e", "Compensation stage 4 failure cleanup replacement", "Cleanup runs after stage 4 failure", "stage 4 fails during compensation", "recovery completes", "cleanup steps run in documented order")))
+	return repoRoot
+}
+
+func contractInactiveSupersededRequirementRepo(t *testing.T) string {
+	t.Helper()
+
+	repoRoot := copyFixtureRepoWithRegistry(t, "verified-spec")
+	replaceSessionLifecycleDoc(t, repoRoot,
+		contractRequirementSection("Compensation stage 4 failure cleanup", contractRequirementBlock("@runtime @e2e", "Compensation stage 4 failure cleanup", "Cleanup runs after stage 4 failure", "stage 4 fails during compensation", "recovery completes", "cleanup steps run in documented order"))+
+			"\n"+
+			contractRequirementSection("Compensation stage 4 failure cleanup replacement", contractRequirementBlock("@runtime @e2e", "Compensation stage 4 failure cleanup replacement", "Cleanup runs after stage 4 failure", "stage 4 fails during compensation", "recovery completes", "cleanup steps run in documented order")),
+	)
+	writeCLIAdjacentTestFile(t, filepath.Join(repoRoot, "runtime", "tests", "domain", "test_compensation_cleanup_replacement.py"), []byte("def test_cleanup_replacement():\n    assert True\n"))
+
+	trackingPath := filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml")
+	data, err := os.ReadFile(trackingPath)
+	if err != nil {
+		t.Fatalf("read tracking file: %v", err)
+	}
+	checkpoint := "a1b2c3f"
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "checkpoint: ") {
+			checkpoint = strings.TrimSpace(strings.TrimPrefix(line, "checkpoint: "))
+			break
+		}
+	}
+
+	replacement := fmt.Sprintf(`slug: session-lifecycle
+charter: runtime
+title: Session Lifecycle
+status: verified
+rev: 4
+created: 2026-03-05
+updated: 2026-03-30
+last_verified_at: 2026-03-30
+checkpoint: %s
+tags:
+  - runtime
+  - domain
+documents:
+  primary: runtime/src/domain/session_execution/SPEC.md
+scope:
+  - runtime/src/domain/session_execution/
+  - runtime/src/application/commands/
+deltas:
+  - id: D-001
+    area: Compensation stage 4
+    status: closed
+    origin_checkpoint: %s
+    current: Stage 4 compensation exists in code but failure ordering is unclear
+    target: Document ordering and verify failure cleanup
+    notes: Multi-agent implementation split between runtime and workflow work
+  - id: D-002
+    area: Compensation cleanup rewrite
+    intent: change
+    status: closed
+    origin_checkpoint: %s
+    current: Cleanup wording is outdated
+    target: Replace the tracked cleanup contract
+    notes: Replacement requirement is verified; superseded predecessor remains historical only
+    affects_requirements:
+      - REQ-001
+    updates:
+      - replace_requirement
+requirements:
+  - id: REQ-001
+    title: Compensation stage 4 failure cleanup
+    tags:
+      - runtime
+      - e2e
+    test_files: []
+    gherkin: |
+      @runtime @e2e
+      Feature: Compensation stage 4 failure cleanup
+    lifecycle: superseded
+    verification: unverified
+    introduced_by: D-001
+    superseded_by: REQ-002
+  - id: REQ-002
+    title: Compensation stage 4 failure cleanup replacement
+    tags:
+      - runtime
+      - e2e
+    test_files:
+      - runtime/tests/domain/test_compensation_cleanup_replacement.py
+    gherkin: |
+      @runtime @e2e
+      Feature: Compensation stage 4 failure cleanup replacement
+    lifecycle: active
+    verification: verified
+    introduced_by: D-002
+    supersedes: REQ-001
+changelog:
+  - rev: 2
+    date: 2026-03-28
+    deltas_opened:
+      - D-001
+    deltas_closed:
+      - D-001
+    reqs_added:
+      - REQ-001
+    reqs_verified:
+      - REQ-001
+    summary: Closed the compensation cleanup work
+  - rev: 3
+    date: 2026-03-30
+    deltas_opened:
+      - D-002
+    deltas_closed:
+      - D-002
+    reqs_added:
+      - REQ-002
+    reqs_verified:
+      - REQ-002
+    summary: Verified the replacement cleanup requirement while preserving the superseded predecessor as history
+`, checkpoint, checkpoint, checkpoint)
+	writeCLIAdjacentTestFile(t, trackingPath, []byte(replacement))
 	return repoRoot
 }
 
