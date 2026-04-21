@@ -115,6 +115,7 @@ The context projection reads and assembles these tracking file fields:
 | `last_verified_at` | `YYYY-MM-DD` | Last verification date |
 | `scope_drift` | `object` | `{status, checkpoint, drift_source, tracked_by[], files_changed_since_checkpoint[]}` |
 | `uncommitted_changes` | `string[]` | Dirty paths under `scope[]` from `git status --porcelain` |
+| `warnings[]` | `array` | Advisory spec-context warnings with `{kind, code, severity, message, delta_ids[], requirement_ids[], details}` |
 | `requirements[]` | `array` | Each with `id, title, tags, lifecycle, verification, match.status, spec_context.scenarios[]` |
 | `actionable_unverified_requirements[]` | `array` | Actionable non-verified requirements from the current truth surface only (`lifecycle: active`) |
 | `inactive_unverified_requirements[]` | `array` | Non-verified inactive requirements (`lifecycle: superseded|withdrawn`) retained for audit/debugging and cleanup context |
@@ -138,6 +139,45 @@ Success (clean):
   },
   "focus": {},
   "next": { "mode": "none" }
+}
+```
+
+Success (clean warning-only residue):
+```json
+{
+  "state": {
+    "slug": "session-lifecycle",
+    "charter": "runtime",
+    "status": "verified",
+    "scope_drift": { "status": "clean" },
+    "uncommitted_changes": [],
+    "warnings": [
+      {
+        "kind": "historical_residue",
+        "code": "DEFERRED_SUPERSEDED_RESIDUE",
+        "severity": "warning",
+        "message": "Deferred deltas only reference superseded requirements already replaced by later closed work. Review whether governed cleanup is still needed.",
+        "delta_ids": ["D-002"],
+        "requirement_ids": ["REQ-001"],
+        "details": {
+          "dedupe_key": "deferred_superseded_residue:REQ-001",
+          "replacement_requirement_ids": ["REQ-002"],
+          "replacement_delta_ids": ["D-003"]
+        }
+      }
+    ],
+    "validation": { "valid": true, "findings": [] }
+  },
+  "focus": {},
+  "next": {
+    "mode": "sequence",
+    "steps": [
+      {
+        "action": "review_warnings",
+        "kind": "guidance"
+      }
+    ]
+  }
 }
 ```
 
@@ -196,6 +236,10 @@ Error (SPEC_NOT_FOUND):
 - `state.requirements[]` is the canonical requirement record; summary arrays are convenience views
 - `state.actionable_unverified_requirements[]` contains only active requirements that still need action
 - `state.inactive_unverified_requirements[]` contains inactive non-verified requirements for audit/debugging and cleanup context; it does not directly block `next`, delta close, or rev bump on its own
+- Deferred counts alone do not create warnings or backlog-driving `next` steps
+- `DEFERRED_SUPERSEDED_RESIDUE` appears only when deferred deltas point exclusively at superseded requirements already replaced by later closed work
+- `state.warnings[]` remains visible even when stronger `next` actions suppress fallback warning review
+- Clean context with only `review_warnings` fallback serializes as `next.mode = sequence`; otherwise clean + empty next remains `none`
 - `next` is never `null` and always present
 
 ## Requirement: Context classifies committed drift before checkpoint cleanup

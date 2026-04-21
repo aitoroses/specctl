@@ -316,7 +316,7 @@ with Boot/Seed/Probe/Verify operations. See `references/verification-surfaces.md
 - **Delta close blocked:** all requirements must be verified first.
 - **Sync vs delta add:** sync is for code-only drift. Design doc changes need a delta.
 - **Uninit repo?** Call `specctl_init` first. It creates `.specs/` and auto-detects source prefixes. All other tools return `NOT_INITIALIZED` until init runs.
-- **`warnings` in config/context:** `specctl_context` and `specctl config` emit structured `warnings` for each `source_prefixes` entry that doesn't exist on disk: `{"kind":"MISSING_SOURCE_PREFIX","prefix":"ui/src/","resolved_path":"/abs/path","severity":"warning"}`. These are advisory — `valid` stays `true`. Common after copy-pasting config from a sibling repo.
+- **`warnings` in config/context:** `specctl_context` and `specctl config` emit advisory `warnings`. Config warnings cover missing `source_prefixes` entries on disk: `{"kind":"MISSING_SOURCE_PREFIX","prefix":"ui/src/","resolved_path":"/abs/path","severity":"warning"}`. Spec-context warnings can also surface governed residue such as `DEFERRED_SUPERSEDED_RESIDUE` with `delta_ids`, `requirement_ids`, and `details`. These are advisory — review them through governed specctl actions, never by hand-editing tracking YAML.
 - **Spec the test infra too.** The framework is a product — govern it like one.
 
 ## Recommended Tools

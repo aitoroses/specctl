@@ -1,0 +1,151 @@
+{
+  "focus": {},
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "actionable_unverified_requirements": [],
+    "changelog": [
+      {
+        "date": "2026-03-28",
+        "deltas_closed": [
+          "D-001"
+        ],
+        "deltas_opened": [
+          "D-001"
+        ],
+        "reqs_added": [
+          "REQ-001"
+        ],
+        "reqs_verified": [
+          "REQ-001"
+        ],
+        "rev": 2,
+        "summary": "Closed the compensation cleanup work"
+      },
+      {
+        "date": "2026-03-29",
+        "deltas_closed": [],
+        "deltas_opened": [
+          "D-002"
+        ],
+        "reqs_added": [],
+        "reqs_verified": [],
+        "rev": 3,
+        "summary": "Deferred follow-up inventory was recorded without changing the verified requirement"
+      }
+    ],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "d5a0d20b10217b6858a55e7da3273eb22f73a7a3",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 1,
+      "deferred": 1,
+      "in_progress": 0,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Multi-agent implementation split between runtime and workflow work",
+          "origin_checkpoint": "d5a0d20b10217b6858a55e7da3273eb22f73a7a3",
+          "status": "closed",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ]
+        },
+        {
+          "affects_requirements": [
+            "REQ-001"
+          ],
+          "area": "Deferred follow-up",
+          "current": "Additional review may be needed",
+          "id": "D-002",
+          "intent": "change",
+          "notes": "Deferred inventory only",
+          "origin_checkpoint": "d5a0d20b10217b6858a55e7da3273eb22f73a7a3",
+          "status": "deferred",
+          "target": "Revisit the active requirement later",
+          "updates": [
+            "replace_requirement"
+          ]
+        }
+      ],
+      "open": 0
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "inactive_unverified_requirements": [],
+    "last_verified_at": "2026-03-28",
+    "open_deltas": [],
+    "requirements": [
+      {
+        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "active",
+        "match": {
+          "heading": "Requirement: Compensation stage 4 failure cleanup",
+          "status": "matched"
+        },
+        "spec_context": {
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ]
+        },
+        "superseded_by": null,
+        "supersedes": null,
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [
+          "runtime/tests/domain/test_compensation_cleanup.py"
+        ],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "verified"
+      }
+    ],
+    "rev": 3,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "d5a0d20b10217b6858a55e7da3273eb22f73a7a3",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "2026-03-28",
+      "status": "clean",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "verified",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "updated": "2026-03-29",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}
