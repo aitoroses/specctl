@@ -373,10 +373,66 @@ func TestReadContextComputesScopeDrift(t *testing.T) {
 		if scopeDrift["status"] != "drifted" || scopeDrift["drift_source"] != "design_doc" {
 			t.Fatalf("focus.scope_drift = %#v", scopeDrift)
 		}
+		if scopeDrift["review_required"] != true {
+			t.Fatalf("focus.scope_drift = %#v", scopeDrift)
+		}
 		if strings.Join(state.ScopeDrift.FilesChangedSinceCheckpoint, ",") != "runtime/src/domain/session_execution/SPEC.md" {
 			t.Fatalf("files_changed_since_checkpoint = %#v", state.ScopeDrift.FilesChangedSinceCheckpoint)
 		}
 		if next[0].(map[string]any)["action"] != "review_diff" {
+			t.Fatalf("next = %#v", next)
+		}
+		template := next[0].(map[string]any)["template"].(map[string]any)
+		if got := strings.Join(template["argv"].([]string), " "); got != "specctl diff runtime:session-lifecycle" {
+			t.Fatalf("review_diff argv = %v", template["argv"])
+		}
+	})
+
+	t.Run("scope-code drift exposes explicit review handoff before sync", func(t *testing.T) {
+		repoRoot := copyApplicationFixtureRepo(t, "verified-spec")
+		initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+		codePath := filepath.Join(repoRoot, "runtime", "src", "application", "commands", "handler.py")
+		if err := os.WriteFile(codePath, []byte("def handle():\n    return 'drift'\n"), 0o644); err != nil {
+			t.Fatalf("write code file: %v", err)
+		}
+		runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "add", "runtime/src/application/commands/handler.py")
+		runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "commit", "-m", "code drift")
+
+		service := &Service{repoRoot: repoRoot, specsDir: filepath.Join(repoRoot, ".specs")}
+		stateAny, next, err := service.ReadContext("runtime:session-lifecycle", "")
+		if err != nil {
+			t.Fatalf("ReadContext: %v", err)
+		}
+		if len(next) != 2 {
+			t.Fatalf("next = %#v", next)
+		}
+
+		state := stateAny.(SpecProjection)
+		if state.ScopeDrift.Status != "drifted" {
+			t.Fatalf("scope_drift.status = %q", state.ScopeDrift.Status)
+		}
+		if state.ScopeDrift.DriftSource == nil || *state.ScopeDrift.DriftSource != "scope_code" {
+			t.Fatalf("drift_source = %#v", state.ScopeDrift.DriftSource)
+		}
+		focus, ok := state.Focus.(map[string]any)
+		if !ok {
+			t.Fatalf("focus = %#v", state.Focus)
+		}
+		scopeDrift, ok := focus["scope_drift"].(map[string]any)
+		if !ok {
+			t.Fatalf("focus.scope_drift = %#v", focus)
+		}
+		if scopeDrift["status"] != "drifted" || scopeDrift["drift_source"] != "scope_code" || scopeDrift["review_required"] != true {
+			t.Fatalf("focus.scope_drift = %#v", scopeDrift)
+		}
+		if next[0].(map[string]any)["action"] != "review_diff" {
+			t.Fatalf("next = %#v", next)
+		}
+		reviewTemplate := next[0].(map[string]any)["template"].(map[string]any)
+		if got := strings.Join(reviewTemplate["argv"].([]string), " "); got != "specctl diff runtime:session-lifecycle" {
+			t.Fatalf("review_diff argv = %v", reviewTemplate["argv"])
+		}
+		if next[1].(map[string]any)["action"] != "sync" {
 			t.Fatalf("next = %#v", next)
 		}
 	})

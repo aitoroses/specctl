@@ -108,6 +108,9 @@ That setup installs/configures:
 - local or global MCP configuration
 
 After that, the normal entrypoint is the skill plus `specctl context ...`.
+Treat `specctl context` as the triage surface: when it reports
+review-required drift, follow its `review_diff` handoff to
+`specctl diff` before deciding between sync and new tracked work.
 
 ## Use with Claude Code
 
@@ -172,6 +175,12 @@ specctl context specctl:dashboard
 specctl context specctl:skill
 ```
 
+If drift is reported, the next step is normally:
+
+```bash
+specctl diff <charter:slug>
+```
+
 If you only remember one idea, remember this:
 
 > Git tracks how code changed.  
@@ -183,6 +192,8 @@ Typical agent-driven sequence:
 
 ```bash
 specctl context <charter:slug>
+# if context reports review-required drift
+specctl diff <charter:slug>
 specctl delta add ...
 # edit SPEC.md
 specctl req add|replace|refresh ...

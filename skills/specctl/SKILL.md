@@ -71,6 +71,12 @@ Every response is JSON with `{state, focus, next}`:
 - `mcp.available: false` → agent-owned action. Perform it yourself
   (edit a file, run a command, commit code), then continue to the next step.
 
+For committed drift, `specctl_context` is still the triage surface, not
+the full review surface. When it marks drift as `review_required`, treat
+its `review_diff` action as the canonical handoff to `specctl_diff`
+before deciding whether the change needs semantic tracking or only a
+checkpoint sync.
+
 **`write_spec_section` is the most common agent-owned action.** It means:
 open the SPEC.md file, write behavioral prose following the five-layer
 structure in `references/spec-format.md` (prose, data model, contracts,
@@ -314,7 +320,7 @@ with Boot/Seed/Probe/Verify operations. See `references/verification-surfaces.md
 - **`@manual` for non-automated verification.** Inspection-verified requirements.
 - **Unregistered Gherkin tags:** `INVALID_GHERKIN_TAG` → use Bash: `specctl config add-tag <tag>` (CLI-only, not available via MCP), then retry the MCP tool call.
 - **Delta close blocked:** all requirements must be verified first.
-- **Sync vs delta add:** sync is for code-only drift. Design doc changes need a delta.
+- **Sync vs delta add:** for review-required drift, start with `review_diff`. Use `sync` only when that review concludes the drift is clarification-only or the checkpoint just needs re-anchoring; otherwise open the appropriate delta.
 - **Uninit repo?** Call `specctl_init` first. It creates `.specs/` and auto-detects source prefixes. All other tools return `NOT_INITIALIZED` until init runs.
 - **`warnings` in config/context:** `specctl_context` and `specctl config` emit advisory `warnings`. Config warnings cover missing `source_prefixes` entries on disk: `{"kind":"MISSING_SOURCE_PREFIX","prefix":"ui/src/","resolved_path":"/abs/path","severity":"warning"}`. Spec-context warnings can also surface governed residue such as `DEFERRED_SUPERSEDED_RESIDUE` with `delta_ids`, `requirement_ids`, and `details`. These are advisory — review them through governed specctl actions, never by hand-editing tracking YAML.
 - **Spec the test infra too.** The framework is a product — govern it like one.

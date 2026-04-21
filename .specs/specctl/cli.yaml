@@ -4,9 +4,9 @@ title: specctl CLI Behavioral Spec
 status: verified
 rev: 6
 created: "2026-04-01"
-updated: "2026-04-17"
-last_verified_at: "2026-04-17"
-checkpoint: 7012af709cf0a1bacf6dfa2e1f9c75892ea5066a
+updated: "2026-04-21"
+last_verified_at: "2026-04-21"
+checkpoint: 6e63dbe47c2e63eef195d590d3522f69792961ca
 tags: []
 documents:
     primary: SPEC.md

@@ -2,11 +2,11 @@ slug: skill
 charter: specctl
 title: specctl Packaged Skill
 status: verified
-rev: 2
+rev: 3
 created: "2026-04-17"
-updated: "2026-04-17"
-last_verified_at: "2026-04-17"
-checkpoint: 0a773986dfc62cbe11fc57136caf6dbd6064879c
+updated: "2026-04-21"
+last_verified_at: "2026-04-21"
+checkpoint: 6e63dbe47c2e63eef195d590d3522f69792961ca
 tags: []
 documents:
     primary: skills/specctl/SPEC.md
@@ -98,3 +98,15 @@ changelog:
         - REQ-001
         - REQ-002
       summary: Govern the packaged skill as a first-class OSS surface.
+    - rev: 3
+      date: "2026-04-21"
+      deltas_opened:
+        - D-002
+        - D-003
+      deltas_closed:
+        - D-003
+      reqs_added:
+        - REQ-003
+      reqs_verified:
+        - REQ-003
+      summary: Clarify packaged-skill guidance so review-required drift routes through review_diff before sync or delta work.

@@ -96,7 +96,10 @@ current status (draft/ready/active/verified), drift state relative to
 the last checkpoint, requirement match integrity, and — critically —
 the **next actions** the agent should take. The next actions are what
 make specctl agent-first: the tool doesn't just report state, it tells
-the agent what to do about it.
+the agent what to do about it. When committed drift is present,
+`specctl context` stays in the triage role: it classifies whether review
+is required and hands the agent to `specctl diff` before the agent
+chooses semantic tracking vs checkpoint cleanup.
 
 ### Data Model
 
@@ -228,7 +231,7 @@ Error (SPEC_NOT_FOUND):
 ### Invariants
 
 - If `uncommitted_changes[]` is non-empty, `next` prepends `stage_changes` and `commit_changes` before any specctl mutation step
-- If `scope_drift.status == "drifted"`, `next` begins with `specctl diff`
+- If `scope_drift.status == "drifted"` and review is required, `next` exposes `review_diff` as the canonical handoff to `specctl diff` before any sync cleanup choice
 - If `scope_drift.status == "tracked"`, `next` continues the active delta/requirement workflow
 - If `scope_drift.status == "unavailable"`, `next` begins with `specctl sync <target> --checkpoint HEAD`
 - `focus.scope_drift` classifies whether the current drift is an immediate correctness blocker or a review-first housekeeping candidate
@@ -2251,6 +2254,7 @@ Checkpoint unavailable:
 - When `scope_drift.status == "tracked"`, no drift chooser appears — context continues the active delta workflow
 - When `scope_drift.status == "unavailable"`, the only option is `sync --checkpoint HEAD` (no chooser)
 - Review-first drift guidance can mark committed drift as non-blocking housekeeping without deciding whether the change is semantic
+- When `focus.scope_drift.review_required == true`, `review_diff` is the canonical first-class handoff to `specctl diff`; sync guidance remains conditional on what that review concludes
 - Spec-not-found always offers `create_spec` when the charter exists; when the charter also does not exist, guidance includes `charter create` first
 
 ## Requirement: Context chooser flows surface review-first drift guidance
@@ -2282,6 +2286,14 @@ Scenario: Design-doc drift is marked as review-first housekeeping
   When the agent runs specctl context
   Then focus.scope_drift marks the situation as review-required and non-blocking
   And next includes review_diff and sync guidance
+```
+
+```gherkin scenario
+Scenario: Scope-code drift still hands off through review_diff first
+  Given committed scope-code drift exists with no tracked delta
+  When the agent runs specctl context
+  Then focus.scope_drift marks the situation as review-required
+  And next includes review_diff before any sync cleanup guidance
 ```
 
 ```gherkin scenario
