@@ -798,12 +798,9 @@ func sortedKeys(values map[string]struct{}) []string {
 func buildSpecContextStateAndNext(state SpecProjection, target, repoRoot string) SpecProjection {
 	_ = target
 	state.Warnings = buildSpecContextWarnings(state)
+	orphans := findSupersededOrphans(state, repoRoot)
 	if len(state.UncommittedChanges) > 0 {
 		state.Focus = map[string]any{"working_tree": map[string]any{"status": "dirty"}}
-		return state
-	}
-	if orphans := findSupersededOrphans(state, repoRoot); len(orphans) > 0 {
-		state.Focus = map[string]any{"superseded_orphans": orphans}
 		return state
 	}
 	if issues := buildContextRefreshMatchIssues(state); len(issues) > 0 {
@@ -822,6 +819,10 @@ func buildSpecContextStateAndNext(state SpecProjection, target, repoRoot string)
 		return state
 	}
 	if state.ScopeDrift.Status == "clean" {
+		if len(orphans) > 0 {
+			state.Focus = map[string]any{"superseded_orphans": orphans}
+			return state
+		}
 		state.Focus = nil
 		return state
 	}
@@ -835,15 +836,19 @@ func buildSpecContextStateAndNext(state SpecProjection, target, repoRoot string)
 		}
 	}
 	state.Focus = map[string]any{"scope_drift": scopeDriftFocus}
+	if len(orphans) > 0 {
+		state.Focus.(map[string]any)["superseded_orphans"] = orphans
+	}
 	return state
 }
 
 func buildSpecContextNext(state SpecProjection, target, repoRoot string) []any {
 	next := make([]any, 0)
 	priority := 1
+	orphans := findSupersededOrphans(state, repoRoot)
 
 	// Superseded requirements with orphan test files on disk — recommend cleanup
-	if orphans := findSupersededOrphans(state, repoRoot); len(orphans) > 0 {
+	if len(orphans) > 0 && state.ScopeDrift.Status == "clean" {
 		for _, orphan := range orphans {
 			for _, testFile := range orphan["orphan_test_files"].([]string) {
 				next = append(next, map[string]any{

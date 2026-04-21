@@ -235,6 +235,7 @@ Error (SPEC_NOT_FOUND):
 - If `scope_drift.status == "tracked"`, `next` continues the active delta/requirement workflow
 - If `scope_drift.status == "unavailable"`, `next` begins with `specctl sync <target> --checkpoint HEAD`
 - `focus.scope_drift` classifies whether the current drift is an immediate correctness blocker or a review-first housekeeping candidate
+- Residue such as `superseded_orphans` may remain visible in `focus`, but it does not replace drift triage when committed scope drift exists
 - `state` is a projected view, never a raw YAML fragment
 - `state.requirements[]` is the canonical requirement record; summary arrays are convenience views
 - `state.actionable_unverified_requirements[]` contains only active requirements that still need action
@@ -2286,6 +2287,14 @@ Scenario: Design-doc drift is marked as review-first housekeeping
   When the agent runs specctl context
   Then focus.scope_drift marks the situation as review-required and non-blocking
   And next includes review_diff and sync guidance
+```
+
+```gherkin scenario
+Scenario: Residue cleanup does not replace review-first drift triage
+  Given committed drift exists and superseded orphan cleanup residue is still visible
+  When the agent runs specctl context
+  Then focus keeps scope_drift as the primary triage surface
+  And next still begins with review_diff instead of cleanup guidance
 ```
 
 ```gherkin scenario
