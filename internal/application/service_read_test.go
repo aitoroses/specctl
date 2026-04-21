@@ -139,6 +139,96 @@ func TestReadContextLenientStoredState(t *testing.T) {
 	})
 }
 
+func TestReadContextAdvisorySummaries(t *testing.T) {
+	t.Run("registry context surfaces advisory deferred and drift summaries without changing next", func(t *testing.T) {
+		repoRoot := contractDeferredSupersededResidueRepo(t)
+		initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+		replaceFileText(t, filepath.Join(repoRoot, "runtime", "src", "domain", "session_execution", "SPEC.md"), "# Session Lifecycle", "# Session Lifecycle\n\n## Drift Review\n\nPending governed change.\n")
+		runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "add", ".")
+		runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "commit", "-m", "registry-level advisory drift")
+
+		service := &Service{repoRoot: repoRoot, specsDir: filepath.Join(repoRoot, ".specs")}
+		stateAny, next, err := service.ReadContext("", "")
+		if err != nil {
+			t.Fatalf("ReadContext: %v", err)
+		}
+		if len(next) != 0 {
+			t.Fatalf("next = %#v", next)
+		}
+
+		state := stateAny.(RegistryProjection)
+		focus, ok := state.Focus.(map[string]any)
+		if !ok {
+			t.Fatalf("focus = %#v", state.Focus)
+		}
+		deferred, ok := focus["deferred_summary"].(map[string]any)
+		if !ok {
+			t.Fatalf("deferred_summary = %#v", focus)
+		}
+		if deferred["count"] != 1 || deferred["specs_affected"] != 1 || deferred["charters_affected"] != 1 {
+			t.Fatalf("deferred_summary = %#v", deferred)
+		}
+		drift, ok := focus["drift_summary"].(map[string]any)
+		if !ok {
+			t.Fatalf("drift_summary = %#v", focus)
+		}
+		if drift["count"] != 1 {
+			t.Fatalf("drift_summary = %#v", drift)
+		}
+		recommended, ok := focus["recommended_review"].(map[string]any)
+		if !ok {
+			t.Fatalf("recommended_review = %#v", focus)
+		}
+		if recommended["tool"] != "specctl_diff" || recommended["target"] != "runtime:session-lifecycle" {
+			t.Fatalf("recommended_review = %#v", recommended)
+		}
+	})
+
+	t.Run("charter context surfaces advisory deferred and drift summaries without changing next", func(t *testing.T) {
+		repoRoot := contractDeferredSupersededResidueRepo(t)
+		initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+		replaceFileText(t, filepath.Join(repoRoot, "runtime", "src", "domain", "session_execution", "SPEC.md"), "# Session Lifecycle", "# Session Lifecycle\n\n## Drift Review\n\nPending governed change.\n")
+		runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "add", ".")
+		runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "commit", "-m", "charter-level advisory drift")
+
+		service := &Service{repoRoot: repoRoot, specsDir: filepath.Join(repoRoot, ".specs")}
+		stateAny, next, err := service.ReadContext("runtime", "")
+		if err != nil {
+			t.Fatalf("ReadContext: %v", err)
+		}
+		if len(next) != 0 {
+			t.Fatalf("next = %#v", next)
+		}
+
+		state := stateAny.(CharterProjection)
+		focus, ok := state.Focus.(map[string]any)
+		if !ok {
+			t.Fatalf("focus = %#v", state.Focus)
+		}
+		deferred, ok := focus["deferred_summary"].(map[string]any)
+		if !ok {
+			t.Fatalf("deferred_summary = %#v", focus)
+		}
+		if deferred["count"] != 1 || deferred["specs_affected"] != 1 {
+			t.Fatalf("deferred_summary = %#v", deferred)
+		}
+		drift, ok := focus["drift_summary"].(map[string]any)
+		if !ok {
+			t.Fatalf("drift_summary = %#v", focus)
+		}
+		if drift["count"] != 1 {
+			t.Fatalf("drift_summary = %#v", drift)
+		}
+		recommended, ok := focus["recommended_review"].(map[string]any)
+		if !ok {
+			t.Fatalf("recommended_review = %#v", focus)
+		}
+		if recommended["tool"] != "specctl_diff" || recommended["target"] != "runtime:session-lifecycle" {
+			t.Fatalf("recommended_review = %#v", recommended)
+		}
+	})
+}
+
 func TestReadDiffLenientStoredState(t *testing.T) {
 	t.Run("spec diff returns canonical projection with validation findings", func(t *testing.T) {
 		repoRoot := copyApplicationFixtureRepo(t, "malformed-gapful-spec")

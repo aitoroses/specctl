@@ -17,6 +17,7 @@ type RegistryProjection struct {
 	Charters []RegistryCharterSummary `json:"charters"`
 	Config   ValidationContainer      `json:"config"`
 	Audit    ValidationProjection     `json:"audit"`
+	Focus    any                      `json:"focus,omitempty"`
 }
 
 type RegistrySpecSummary struct {

@@ -182,7 +182,9 @@ func (s *Service) readRegistryContext() (RegistryProjection, []any, error) {
 		trackingBySpec[key] = trackingState.tracking
 		specFindings[key] = repoState.specValidation(key)
 	}
-	return buildRegistryProjection(s.repoRoot, repoState.config, charters, trackingBySpec, repoState.configReadFindings, repoState.auditFindings, charterFindings, specFindings), []any{}, nil
+	projection := buildRegistryProjection(s.repoRoot, repoState.config, charters, trackingBySpec, repoState.configReadFindings, repoState.auditFindings, charterFindings, specFindings)
+	projection.Focus = s.buildRegistryContextFocus(repoState)
+	return projection, []any{}, nil
 }
 
 func (s *Service) readCharterContext(name string) (any, []any, error) {
@@ -214,7 +216,180 @@ func (s *Service) readCharterContext(name string) (any, []any, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	state.Focus = s.buildCharterContextFocus(repoState, name)
 	return state, []any{}, nil
+}
+
+type advisoryTarget struct {
+	target                string
+	title                 string
+	charter               string
+	deferred              int
+	scopeDriftStatus      string
+	driftSource           *string
+	reviewRequired        bool
+	correctnessBlocker    bool
+	housekeepingCandidate bool
+}
+
+func (s *Service) buildRegistryContextFocus(repoState *repoReadState) any {
+	targets := s.collectContextAdvisoryTargets(repoState, "")
+	return buildContextAdvisoryFocus(targets, "")
+}
+
+func (s *Service) buildCharterContextFocus(repoState *repoReadState, charterName string) any {
+	targets := s.collectContextAdvisoryTargets(repoState, charterName)
+	return buildContextAdvisoryFocus(targets, charterName)
+}
+
+func (s *Service) collectContextAdvisoryTargets(repoState *repoReadState, charterName string) []advisoryTarget {
+	targets := make([]advisoryTarget, 0)
+	for key, trackingState := range repoState.trackings {
+		if charterName != "" && trackingState.tracking.Charter != charterName {
+			continue
+		}
+		charter := (*domain.Charter)(nil)
+		if charterState := repoState.charterState(trackingState.tracking.Charter); charterState != nil {
+			charter = charterState.charter
+		}
+		specState, err := s.projectSpec(trackingState.tracking, charter, repoState.config, repoState.specValidation(key))
+		if err != nil {
+			continue
+		}
+		specState = buildSpecContextStateAndNext(specState, key, s.repoRoot)
+		deferred := 0
+		for _, delta := range trackingState.tracking.Deltas {
+			if delta.Status == domain.DeltaStatusDeferred {
+				deferred++
+			}
+		}
+		target := advisoryTarget{
+			target:           key,
+			title:            trackingState.tracking.Title,
+			charter:          trackingState.tracking.Charter,
+			deferred:         deferred,
+			scopeDriftStatus: specState.ScopeDrift.Status,
+			driftSource:      specState.ScopeDrift.DriftSource,
+		}
+		if specState.ScopeDrift.Status == "drifted" {
+			classification := driftClassificationFocus(specState)
+			target.reviewRequired, _ = classification["review_required"].(bool)
+			target.correctnessBlocker, _ = classification["correctness_blocker"].(bool)
+			target.housekeepingCandidate, _ = classification["housekeeping_candidate"].(bool)
+		}
+		if target.deferred > 0 || target.scopeDriftStatus == "drifted" {
+			targets = append(targets, target)
+		}
+	}
+	sort.Slice(targets, func(i, j int) bool {
+		leftDrift := targets[i].scopeDriftStatus == "drifted"
+		rightDrift := targets[j].scopeDriftStatus == "drifted"
+		if leftDrift != rightDrift {
+			return leftDrift
+		}
+		if targets[i].deferred != targets[j].deferred {
+			return targets[i].deferred > targets[j].deferred
+		}
+		return targets[i].target < targets[j].target
+	})
+	return targets
+}
+
+func buildContextAdvisoryFocus(targets []advisoryTarget, charterName string) any {
+	if len(targets) == 0 {
+		return nil
+	}
+
+	focus := map[string]any{}
+	deferredSummaries := make([]map[string]any, 0)
+	totalDeferred := 0
+	charters := make(map[string]struct{})
+	driftSummaries := make([]map[string]any, 0)
+	for _, target := range targets {
+		if target.deferred > 0 {
+			totalDeferred += target.deferred
+			charters[target.charter] = struct{}{}
+			entry := map[string]any{
+				"target":         target.target,
+				"title":          target.title,
+				"deferred_count": target.deferred,
+			}
+			if charterName == "" {
+				entry["charter"] = target.charter
+			}
+			deferredSummaries = append(deferredSummaries, entry)
+		}
+		if target.scopeDriftStatus == "drifted" {
+			entry := map[string]any{
+				"target":       target.target,
+				"title":        target.title,
+				"status":       target.scopeDriftStatus,
+				"drift_source": target.driftSource,
+			}
+			if charterName == "" {
+				entry["charter"] = target.charter
+			}
+			entry["review_required"] = target.reviewRequired
+			entry["correctness_blocker"] = target.correctnessBlocker
+			entry["housekeeping_candidate"] = target.housekeepingCandidate
+			driftSummaries = append(driftSummaries, entry)
+		}
+	}
+
+	if len(deferredSummaries) > 0 {
+		summary := map[string]any{
+			"count":          totalDeferred,
+			"specs_affected": len(deferredSummaries),
+			"targets":        deferredSummaries,
+		}
+		if charterName == "" {
+			summary["charters_affected"] = len(charters)
+		}
+		focus["deferred_summary"] = summary
+	}
+	if len(driftSummaries) > 0 {
+		focus["drift_summary"] = map[string]any{
+			"count":   len(driftSummaries),
+			"targets": driftSummaries,
+		}
+	}
+
+	if target := recommendedAdvisoryTarget(targets); target != nil {
+		review := map[string]any{
+			"target": target.target,
+		}
+		if target.scopeDriftStatus == "drifted" {
+			review["tool"] = "specctl_diff"
+			review["reason"] = fmt.Sprintf("%s has active committed drift and should be reviewed before any semantic decision.", target.target)
+		} else {
+			review["tool"] = "specctl_context"
+			if charterName == "" {
+				review["reason"] = fmt.Sprintf("%s carries the highest deferred delta count (%d) in the current governed set.", target.target, target.deferred)
+			} else {
+				review["reason"] = fmt.Sprintf("%s carries the highest deferred delta count (%d) in charter %s.", target.target, target.deferred, charterName)
+			}
+		}
+		focus["recommended_review"] = review
+	}
+
+	if len(focus) == 0 {
+		return nil
+	}
+	return focus
+}
+
+func recommendedAdvisoryTarget(targets []advisoryTarget) *advisoryTarget {
+	for i := range targets {
+		if targets[i].scopeDriftStatus == "drifted" {
+			return &targets[i]
+		}
+	}
+	for i := range targets {
+		if targets[i].deferred > 0 {
+			return &targets[i]
+		}
+	}
+	return nil
 }
 
 func (s *Service) readSpecContext(target string) (any, []any, error) {
