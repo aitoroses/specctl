@@ -101,6 +101,11 @@ the agent what to do about it. When committed drift is present,
 is required and hands the agent to `specctl diff` before the agent
 chooses semantic tracking vs checkpoint cleanup.
 
+Registry- and charter-level context may also attach advisory `focus`
+summaries even when there is no urgent `next` action. Those summaries
+help the operator see where deferred work clusters or drifted surfaces
+exist without turning optional review into false urgency.
+
 ### Data Model
 
 The context projection reads and assembles these tracking file fields:
@@ -244,6 +249,7 @@ Error (SPEC_NOT_FOUND):
 - `DEFERRED_SUPERSEDED_RESIDUE` appears only when deferred deltas point exclusively at superseded requirements already replaced by later closed work
 - `state.warnings[]` remains visible even when stronger `next` actions suppress fallback warning review
 - Clean context with only `review_warnings` fallback serializes as `next.mode = sequence`; otherwise clean + empty next remains `none`
+- Registry- and charter-level advisory focus may summarize deferred or drifted surfaces while keeping `next.mode = none`
 - `next` is never `null` and always present
 
 ## Requirement: Context classifies committed drift before checkpoint cleanup
@@ -2287,6 +2293,22 @@ Scenario: Design-doc drift is marked as review-first housekeeping
   When the agent runs specctl context
   Then focus.scope_drift marks the situation as review-required and non-blocking
   And next includes review_diff and sync guidance
+```
+
+```gherkin scenario
+Scenario: Registry context summarizes deferred and drifted surfaces without false urgency
+  Given the governed repo contains deferred deltas or drifted specs
+  When the agent runs specctl context without a target
+  Then focus may include advisory summaries and a recommended review target
+  And next remains none when no mandatory action exists
+```
+
+```gherkin scenario
+Scenario: Charter context summarizes deferred and drifted surfaces without false urgency
+  Given one charter contains deferred deltas or drifted specs
+  When the agent runs specctl context for that charter
+  Then focus may include advisory summaries and a recommended review target
+  And next remains none when no mandatory action exists
 ```
 
 ```gherkin scenario
