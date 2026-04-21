@@ -2,6 +2,7 @@ package application
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -435,6 +436,154 @@ func TestReadContextComputesScopeDrift(t *testing.T) {
 		if next[1].(map[string]any)["action"] != "sync" {
 			t.Fatalf("next = %#v", next)
 		}
+	})
+
+	t.Run("drift remains primary when superseded orphan cleanup residue also exists", func(t *testing.T) {
+		repoRoot := copyApplicationFixtureRepo(t, "verified-spec")
+		initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+
+		replaceSessionLifecycleDoc(t, repoRoot,
+			contractRequirementSection("Compensation stage 4 failure cleanup", contractRequirementBlock("@runtime @e2e", "Compensation stage 4 failure cleanup"))+
+				"\n"+
+				contractRequirementSection("Compensation stage 4 failure cleanup replacement", contractRequirementBlock("@runtime @e2e", "Compensation stage 4 failure cleanup replacement")),
+		)
+		writeApplicationTestFile(t, filepath.Join(repoRoot, "runtime", "tests", "domain", "test_compensation_cleanup_replacement.py"), []byte("def test_cleanup_replacement():\n    assert True\n"))
+
+		trackingPath := filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml")
+		content, err := os.ReadFile(trackingPath)
+		if err != nil {
+			t.Fatalf("read tracking file: %v", err)
+		}
+		checkpoint := "a1b2c3f"
+		for _, line := range strings.Split(string(content), "\n") {
+			if strings.HasPrefix(line, "checkpoint: ") {
+				checkpoint = strings.TrimSpace(strings.TrimPrefix(line, "checkpoint: "))
+				break
+			}
+		}
+
+		replacement := fmt.Sprintf(`slug: session-lifecycle
+charter: runtime
+title: Session Lifecycle
+status: verified
+rev: 4
+created: 2026-03-05
+updated: 2026-03-30
+last_verified_at: 2026-03-30
+checkpoint: %s
+tags:
+  - runtime
+  - domain
+documents:
+  primary: runtime/src/domain/session_execution/SPEC.md
+scope:
+  - runtime/src/domain/session_execution/
+  - runtime/src/application/commands/
+deltas:
+  - id: D-001
+    area: Compensation stage 4
+    status: closed
+    origin_checkpoint: %s
+    current: Stage 4 compensation exists in code but failure ordering is unclear
+    target: Document ordering and verify failure cleanup
+    notes: Multi-agent implementation split between runtime and workflow work
+  - id: D-002
+    area: Compensation cleanup rewrite
+    intent: change
+    status: closed
+    origin_checkpoint: %s
+    current: Cleanup wording is outdated
+    target: Replace the tracked cleanup contract
+    notes: Replacement requirement is verified; superseded predecessor remains historical only
+    affects_requirements:
+      - REQ-001
+    updates:
+      - replace_requirement
+requirements:
+  - id: REQ-001
+    title: Compensation stage 4 failure cleanup
+    tags:
+      - runtime
+      - e2e
+    test_files:
+      - runtime/tests/domain/test_compensation_cleanup.py
+    gherkin: |
+      @runtime @e2e
+      Feature: Compensation stage 4 failure cleanup
+    lifecycle: superseded
+    verification: unverified
+    introduced_by: D-001
+    superseded_by: REQ-002
+  - id: REQ-002
+    title: Compensation stage 4 failure cleanup replacement
+    tags:
+      - runtime
+      - e2e
+    test_files:
+      - runtime/tests/domain/test_compensation_cleanup_replacement.py
+    gherkin: |
+      @runtime @e2e
+      Feature: Compensation stage 4 failure cleanup replacement
+    lifecycle: active
+    verification: verified
+    introduced_by: D-002
+    supersedes: REQ-001
+changelog:
+  - rev: 2
+    date: 2026-03-28
+    deltas_opened:
+      - D-001
+    deltas_closed:
+      - D-001
+    reqs_added:
+      - REQ-001
+    reqs_verified:
+      - REQ-001
+    summary: Closed the compensation cleanup work
+  - rev: 3
+    date: 2026-03-30
+    deltas_opened:
+      - D-002
+    deltas_closed:
+      - D-002
+    reqs_added:
+      - REQ-002
+    reqs_verified:
+      - REQ-002
+    summary: Verified the replacement cleanup requirement while preserving the superseded predecessor as history
+`, checkpoint, checkpoint, checkpoint)
+		writeApplicationTestFile(t, trackingPath, []byte(replacement))
+
+		replaceFileText(t, filepath.Join(repoRoot, "runtime", "src", "domain", "session_execution", "SPEC.md"), "## Requirement: Compensation stage 4 failure cleanup replacement\n\n```gherkin requirement\n@runtime @e2e\nFeature: Compensation stage 4 failure cleanup replacement\n```\n", "## Requirement: Compensation stage 4 failure cleanup replacement\n\n```gherkin requirement\n@runtime @e2e\nFeature: Compensation stage 4 failure cleanup replacement\n```\n\n## Drift Review\n\nUpdated after sync.\n")
+		runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "add", ".")
+		runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "commit", "-m", "drift with superseded orphan cleanup residue")
+
+		service := &Service{repoRoot: repoRoot, specsDir: filepath.Join(repoRoot, ".specs")}
+		stateAny, next, err := service.ReadContext("runtime:session-lifecycle", "")
+		if err != nil {
+			t.Fatalf("ReadContext: %v", err)
+		}
+
+		state := stateAny.(SpecProjection)
+		focus, ok := state.Focus.(map[string]any)
+		if !ok {
+			t.Fatalf("focus = %#v", state.Focus)
+		}
+		scopeDrift, ok := focus["scope_drift"].(map[string]any)
+		if !ok {
+			t.Fatalf("focus.scope_drift = %#v", focus)
+		}
+		if scopeDrift["status"] != "drifted" || scopeDrift["review_required"] != true {
+			t.Fatalf("focus.scope_drift = %#v", scopeDrift)
+		}
+		orphans, ok := focus["superseded_orphans"].([]map[string]any)
+		if !ok || len(orphans) != 1 {
+			t.Fatalf("focus.superseded_orphans = %#v", focus["superseded_orphans"])
+		}
+		if next[0].(map[string]any)["action"] != "review_diff" {
+			t.Fatalf("next = %#v", next)
+		}
+		requireNoNextAction(t, next, "cleanup_superseded_orphan")
 	})
 
 	t.Run("tracked drift returns executable requirement verification guidance", func(t *testing.T) {
