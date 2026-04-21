@@ -23,6 +23,10 @@ func ReadSurfaceNextMode(state any, next []any) string {
 			return "choose_one"
 		case "delta_add_repair":
 			return "choose_then_sequence"
+		case "review_warnings":
+			if projection.ScopeDrift.Status == "clean" && len(projection.UncommittedChanges) == 0 {
+				return "sequence"
+			}
 		}
 		switch projection.ScopeDrift.Status {
 		case "clean":

@@ -33,6 +33,46 @@ func TestContract_Context_CleanNone_InactiveSupersededUnverified(t *testing.T) {
 	})
 }
 
+func TestContract_Context_CleanReviewWarnings(t *testing.T) {
+	repoRoot := contractDeferredSupersededResidueRepo(t)
+	initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+	headSHA := strings.TrimSpace(runGitAtDate(t, repoRoot, "2026-03-28T12:00:00Z", "rev-parse", "HEAD"))
+	service := newApplicationContractService(repoRoot)
+
+	placeholders := contractPlaceholders()
+	placeholders["__HEAD_SHA__"] = headSHA
+	assertReadContractFixtureCall(t, placeholders, func() (any, []any, error) {
+		return service.ReadContext("runtime:session-lifecycle", "")
+	})
+}
+
+func TestContract_Context_WarningsSuppressedByStrongerNext(t *testing.T) {
+	repoRoot := contractDeferredSupersededResidueRepo(t)
+	initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+	headSHA := strings.TrimSpace(runGitAtDate(t, repoRoot, "2026-03-28T12:00:00Z", "rev-parse", "HEAD"))
+	replaceFileText(t, filepath.Join(repoRoot, "runtime", "src", "domain", "session_execution", "SPEC.md"), "# Session Lifecycle", "# Session Lifecycle\n\n## Dirty Drift\n\nPending governed change.\n")
+	service := newApplicationContractService(repoRoot)
+
+	placeholders := contractPlaceholders()
+	placeholders["__HEAD_SHA__"] = headSHA
+	assertReadContractFixtureCall(t, placeholders, func() (any, []any, error) {
+		return service.ReadContext("runtime:session-lifecycle", "")
+	})
+}
+
+func TestContract_Context_DeferredInventoryNoWarning(t *testing.T) {
+	repoRoot := contractDeferredInventoryNoWarningRepo(t)
+	initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+	headSHA := strings.TrimSpace(runGitAtDate(t, repoRoot, "2026-03-28T12:00:00Z", "rev-parse", "HEAD"))
+	service := newApplicationContractService(repoRoot)
+
+	placeholders := contractPlaceholders()
+	placeholders["__HEAD_SHA__"] = headSHA
+	assertReadContractFixtureCall(t, placeholders, func() (any, []any, error) {
+		return service.ReadContext("runtime:session-lifecycle", "")
+	})
+}
+
 func TestContract_Context_UncommittedGovernedChanges(t *testing.T) {
 	repoRoot := copyApplicationFixtureRepo(t, "verified-spec")
 	initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")

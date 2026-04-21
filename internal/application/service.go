@@ -263,7 +263,8 @@ func (s *Service) readSpecContext(target string) (any, []any, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return buildSpecContextStateAndNext(state, target, s.repoRoot), buildSpecContextNext(state, target, s.repoRoot), nil
+	state = buildSpecContextStateAndNext(state, target, s.repoRoot)
+	return state, buildSpecContextNext(state, target, s.repoRoot), nil
 }
 
 func (s *Service) readFileContext(file string) (FileContextProjection, []any, error) {
@@ -612,8 +613,191 @@ func findSupersededOrphans(state SpecProjection, repoRoot string) []map[string]a
 	return orphans
 }
 
+type specContextWarningAccumulator struct {
+	deltaIDs         map[string]struct{}
+	requirementIDs   map[string]struct{}
+	replacementPairs map[string]specContextReplacementPair
+}
+
+type specContextReplacementPair struct {
+	SupersededRequirementID  string
+	ReplacementRequirementID string
+	ReplacementDeltaID       string
+}
+
+func buildSpecContextWarnings(state SpecProjection) []SpecContextWarningProjection {
+	warningsByKey := make(map[string]*specContextWarningAccumulator)
+	for _, delta := range state.Deltas.Items {
+		if delta.Status != domain.DeltaStatusDeferred || len(delta.AffectsRequirements) == 0 {
+			continue
+		}
+
+		replacements := make([]specContextReplacementPair, 0, len(delta.AffectsRequirements))
+		eligible := true
+		for _, requirementID := range sortedUniqueStrings(delta.AffectsRequirements) {
+			replacement, ok := deferredSupersededResidueReplacement(state, requirementID, delta.ID)
+			if !ok {
+				eligible = false
+				break
+			}
+			replacements = append(replacements, replacement)
+		}
+		if !eligible || len(replacements) == 0 {
+			continue
+		}
+
+		requirementIDs := make([]string, 0, len(replacements))
+		for _, replacement := range replacements {
+			requirementIDs = append(requirementIDs, replacement.SupersededRequirementID)
+		}
+		sort.Strings(requirementIDs)
+		dedupeKey := "deferred_superseded_residue:" + strings.Join(requirementIDs, ",")
+
+		accumulator := warningsByKey[dedupeKey]
+		if accumulator == nil {
+			accumulator = &specContextWarningAccumulator{
+				deltaIDs:         make(map[string]struct{}),
+				requirementIDs:   make(map[string]struct{}),
+				replacementPairs: make(map[string]specContextReplacementPair),
+			}
+			warningsByKey[dedupeKey] = accumulator
+		}
+		accumulator.deltaIDs[delta.ID] = struct{}{}
+		for _, replacement := range replacements {
+			accumulator.requirementIDs[replacement.SupersededRequirementID] = struct{}{}
+			accumulator.replacementPairs[replacement.SupersededRequirementID] = replacement
+		}
+	}
+
+	if len(warningsByKey) == 0 {
+		return []SpecContextWarningProjection{}
+	}
+
+	keys := make([]string, 0, len(warningsByKey))
+	for key := range warningsByKey {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	warnings := make([]SpecContextWarningProjection, 0, len(keys))
+	for _, key := range keys {
+		accumulator := warningsByKey[key]
+		requirementIDs := sortedKeys(accumulator.requirementIDs)
+		replacementPairs := make([]map[string]string, 0, len(requirementIDs))
+		replacementDeltaIDs := make([]string, 0, len(requirementIDs))
+		replacementRequirementIDs := make([]string, 0, len(requirementIDs))
+		for _, requirementID := range requirementIDs {
+			replacement := accumulator.replacementPairs[requirementID]
+			replacementPairs = append(replacementPairs, map[string]string{
+				"superseded_requirement_id":  replacement.SupersededRequirementID,
+				"replacement_requirement_id": replacement.ReplacementRequirementID,
+				"replacement_delta_id":       replacement.ReplacementDeltaID,
+			})
+			replacementRequirementIDs = append(replacementRequirementIDs, replacement.ReplacementRequirementID)
+			replacementDeltaIDs = append(replacementDeltaIDs, replacement.ReplacementDeltaID)
+		}
+		replacementRequirementIDs = sortedUniqueStrings(replacementRequirementIDs)
+		replacementDeltaIDs = sortedUniqueStrings(replacementDeltaIDs)
+		deltaIDs := sortedKeys(accumulator.deltaIDs)
+
+		warnings = append(warnings, SpecContextWarningProjection{
+			Kind:           "historical_residue",
+			Code:           "DEFERRED_SUPERSEDED_RESIDUE",
+			Severity:       "warning",
+			Message:        "Deferred deltas only reference superseded requirements already replaced by later closed work. Review whether governed cleanup is still needed.",
+			DeltaIDs:       deltaIDs,
+			RequirementIDs: requirementIDs,
+			Details: map[string]any{
+				"dedupe_key":                  key,
+				"replacement_pairs":           replacementPairs,
+				"replacement_requirement_ids": replacementRequirementIDs,
+				"replacement_delta_ids":       replacementDeltaIDs,
+			},
+		})
+	}
+
+	return warnings
+}
+
+func deferredSupersededResidueReplacement(state SpecProjection, requirementID, deferredDeltaID string) (specContextReplacementPair, bool) {
+	requirement := requirementProjectionByID(state, requirementID)
+	if requirement == nil || requirement.Lifecycle != domain.RequirementLifecycleSuperseded || requirement.SupersededBy == nil {
+		return specContextReplacementPair{}, false
+	}
+
+	replacementRequirementID := strings.TrimSpace(*requirement.SupersededBy)
+	if replacementRequirementID == "" {
+		return specContextReplacementPair{}, false
+	}
+
+	replacementRequirement := requirementProjectionByID(state, replacementRequirementID)
+	if replacementRequirement == nil || strings.TrimSpace(replacementRequirement.IntroducedBy) == "" {
+		return specContextReplacementPair{}, false
+	}
+	if replacementRequirement.IntroducedBy == deferredDeltaID {
+		return specContextReplacementPair{}, false
+	}
+
+	replacementDelta := deltaItemProjectionByID(state, replacementRequirement.IntroducedBy)
+	if replacementDelta == nil || replacementDelta.Status != domain.DeltaStatusClosed {
+		return specContextReplacementPair{}, false
+	}
+
+	return specContextReplacementPair{
+		SupersededRequirementID:  requirement.ID,
+		ReplacementRequirementID: replacementRequirement.ID,
+		ReplacementDeltaID:       replacementDelta.ID,
+	}, true
+}
+
+func requirementProjectionByID(state SpecProjection, requirementID string) *RequirementProjection {
+	for i := range state.Requirements {
+		if state.Requirements[i].ID == requirementID {
+			return &state.Requirements[i]
+		}
+	}
+	return nil
+}
+
+func deltaItemProjectionByID(state SpecProjection, deltaID string) *DeltaItemProjection {
+	for i := range state.Deltas.Items {
+		if state.Deltas.Items[i].ID == deltaID {
+			return &state.Deltas.Items[i]
+		}
+	}
+	return nil
+}
+
+func sortedUniqueStrings(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		result = append(result, trimmed)
+	}
+	sort.Strings(result)
+	return result
+}
+
+func sortedKeys(values map[string]struct{}) []string {
+	result := make([]string, 0, len(values))
+	for value := range values {
+		result = append(result, value)
+	}
+	sort.Strings(result)
+	return result
+}
+
 func buildSpecContextStateAndNext(state SpecProjection, target, repoRoot string) SpecProjection {
 	_ = target
+	state.Warnings = buildSpecContextWarnings(state)
 	if len(state.UncommittedChanges) > 0 {
 		state.Focus = map[string]any{"working_tree": map[string]any{"status": "dirty"}}
 		return state
@@ -743,7 +927,27 @@ func buildSpecContextNext(state SpecProjection, target, repoRoot string) []any {
 		}
 	}
 
+	if len(next) == 0 && state.ScopeDrift.Status == "clean" && len(state.UncommittedChanges) == 0 && len(state.Warnings) > 0 {
+		next = append(next, map[string]any{
+			"priority":     priority,
+			"action":       "review_warnings",
+			"kind":         "guidance",
+			"instructions": "Review the advisory warnings and decide whether governed specctl cleanup follow-up is still needed. Do not edit tracking YAML manually.",
+			"details": map[string]any{
+				"warning_codes": warningCodes(state.Warnings),
+			},
+		})
+	}
+
 	return next
+}
+
+func warningCodes(warnings []SpecContextWarningProjection) []string {
+	codes := make([]string, 0, len(warnings))
+	for _, warning := range warnings {
+		codes = append(codes, warning.Code)
+	}
+	return sortedUniqueStrings(codes)
 }
 
 func buildContextRefreshMatchIssues(state SpecProjection) []map[string]any {

@@ -31,6 +31,8 @@ npx skills add https://github.com/aitoroses/specctl --skill specctl --global
 - The skill is treated as a first-class product surface
 - The skill frames `specctl` as agent-facing first
 - The skill describes the intended governed workflow instead of encouraging ad-hoc mutation of tracking files
+- The skill explains that `specctl context` warnings are advisory status, not permission to hand-edit tracking YAML
+- The skill distinguishes stronger workflow-driving `next` actions from fallback advisory cleanup guidance like `review_warnings`
 
 ## Requirement: Packaged skill teaches the agent-first governance workflow
 

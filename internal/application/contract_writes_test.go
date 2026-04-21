@@ -1260,6 +1260,386 @@ changelog:
 	return repoRoot
 }
 
+func contractDeferredSupersededResidueRepo(t *testing.T) string {
+	t.Helper()
+
+	repoRoot := copyApplicationFixtureRepo(t, "verified-spec")
+	replaceSessionLifecycleDoc(t, repoRoot,
+		contractRequirementSection("Compensation stage 4 failure cleanup", contractRequirementBlock("@runtime @e2e", "Compensation stage 4 failure cleanup"))+
+			"\n"+
+			contractRequirementSection("Compensation stage 4 failure cleanup replacement", contractRequirementBlock("@runtime @e2e", "Compensation stage 4 failure cleanup replacement")),
+	)
+	writeApplicationTestFile(t, filepath.Join(repoRoot, "runtime", "tests", "domain", "test_compensation_cleanup_replacement.py"), []byte("def test_cleanup_replacement():\n    assert True\n"))
+
+	trackingPath := filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml")
+	content, err := os.ReadFile(trackingPath)
+	if err != nil {
+		t.Fatalf("read tracking file: %v", err)
+	}
+	checkpoint := "a1b2c3f"
+	for _, line := range strings.Split(string(content), "\n") {
+		if strings.HasPrefix(line, "checkpoint: ") {
+			checkpoint = strings.TrimSpace(strings.TrimPrefix(line, "checkpoint: "))
+			break
+		}
+	}
+
+	replacement := fmt.Sprintf(`slug: session-lifecycle
+charter: runtime
+title: Session Lifecycle
+status: verified
+rev: 5
+created: 2026-03-05
+updated: 2026-03-31
+last_verified_at: 2026-03-31
+checkpoint: %s
+tags:
+  - runtime
+  - domain
+documents:
+  primary: runtime/src/domain/session_execution/SPEC.md
+scope:
+  - runtime/src/domain/session_execution/
+  - runtime/src/application/commands/
+deltas:
+  - id: D-001
+    area: Compensation stage 4
+    status: closed
+    origin_checkpoint: %s
+    current: Stage 4 compensation exists in code but failure ordering is unclear
+    target: Document ordering and verify failure cleanup
+    notes: Initial tracked behavior
+  - id: D-002
+    area: Deferred cleanup residue
+    intent: change
+    status: deferred
+    origin_checkpoint: %s
+    current: Deferred follow-up still points at the old cleanup contract
+    target: Revisit whether more cleanup is needed
+    notes: Historical residue kept after replacement landed
+    affects_requirements:
+      - REQ-001
+    updates:
+      - replace_requirement
+  - id: D-003
+    area: Compensation cleanup rewrite
+    intent: change
+    status: closed
+    origin_checkpoint: %s
+    current: Cleanup wording is outdated
+    target: Replace the tracked cleanup contract
+    notes: Replacement requirement is verified; predecessor remains historical only
+    affects_requirements:
+      - REQ-001
+    updates:
+      - replace_requirement
+requirements:
+  - id: REQ-001
+    title: Compensation stage 4 failure cleanup
+    tags:
+      - runtime
+      - e2e
+    test_files: []
+    gherkin: |
+      @runtime @e2e
+      Feature: Compensation stage 4 failure cleanup
+    lifecycle: superseded
+    verification: unverified
+    introduced_by: D-001
+    superseded_by: REQ-002
+  - id: REQ-002
+    title: Compensation stage 4 failure cleanup replacement
+    tags:
+      - runtime
+      - e2e
+    test_files:
+      - runtime/tests/domain/test_compensation_cleanup_replacement.py
+    gherkin: |
+      @runtime @e2e
+      Feature: Compensation stage 4 failure cleanup replacement
+    lifecycle: active
+    verification: verified
+    introduced_by: D-003
+    supersedes: REQ-001
+changelog:
+  - rev: 2
+    date: 2026-03-28
+    deltas_opened:
+      - D-001
+    deltas_closed:
+      - D-001
+    reqs_added:
+      - REQ-001
+    reqs_verified:
+      - REQ-001
+    summary: Closed the compensation cleanup work
+  - rev: 3
+    date: 2026-03-29
+    deltas_opened:
+      - D-002
+    deltas_closed: []
+    reqs_added: []
+    reqs_verified: []
+    summary: Deferred a follow-up against the original cleanup requirement
+  - rev: 4
+    date: 2026-03-30
+    deltas_opened:
+      - D-003
+    deltas_closed:
+      - D-003
+    reqs_added:
+      - REQ-002
+    reqs_verified:
+      - REQ-002
+    summary: Verified the replacement cleanup requirement while preserving the superseded predecessor as history
+`, checkpoint, checkpoint, checkpoint, checkpoint)
+	writeApplicationTestFile(t, trackingPath, []byte(replacement))
+	return repoRoot
+}
+
+func contractDeferredSupersededResidueDedupedRepo(t *testing.T) string {
+	t.Helper()
+
+	repoRoot := copyApplicationFixtureRepo(t, "verified-spec")
+	replaceSessionLifecycleDoc(t, repoRoot,
+		contractRequirementSection("Compensation stage 4 failure cleanup", contractRequirementBlock("@runtime @e2e", "Compensation stage 4 failure cleanup"))+
+			"\n"+
+			contractRequirementSection("Compensation stage 4 failure cleanup replacement", contractRequirementBlock("@runtime @e2e", "Compensation stage 4 failure cleanup replacement")),
+	)
+	writeApplicationTestFile(t, filepath.Join(repoRoot, "runtime", "tests", "domain", "test_compensation_cleanup_replacement.py"), []byte("def test_cleanup_replacement():\n    assert True\n"))
+
+	trackingPath := filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml")
+	content, err := os.ReadFile(trackingPath)
+	if err != nil {
+		t.Fatalf("read tracking file: %v", err)
+	}
+	checkpoint := "a1b2c3f"
+	for _, line := range strings.Split(string(content), "\n") {
+		if strings.HasPrefix(line, "checkpoint: ") {
+			checkpoint = strings.TrimSpace(strings.TrimPrefix(line, "checkpoint: "))
+			break
+		}
+	}
+
+	replacement := fmt.Sprintf(`slug: session-lifecycle
+charter: runtime
+title: Session Lifecycle
+status: verified
+rev: 6
+created: 2026-03-05
+updated: 2026-03-31
+last_verified_at: 2026-03-31
+checkpoint: %s
+tags:
+  - runtime
+  - domain
+documents:
+  primary: runtime/src/domain/session_execution/SPEC.md
+scope:
+  - runtime/src/domain/session_execution/
+  - runtime/src/application/commands/
+deltas:
+  - id: D-001
+    area: Compensation stage 4
+    status: closed
+    origin_checkpoint: %s
+    current: Stage 4 compensation exists in code but failure ordering is unclear
+    target: Document ordering and verify failure cleanup
+    notes: Initial tracked behavior
+  - id: D-002
+    area: Deferred cleanup residue one
+    intent: change
+    status: deferred
+    origin_checkpoint: %s
+    current: Deferred follow-up still points at the old cleanup contract
+    target: Revisit whether more cleanup is needed
+    notes: Historical residue kept after replacement planning started
+    affects_requirements:
+      - REQ-001
+    updates:
+      - replace_requirement
+  - id: D-003
+    area: Deferred cleanup residue two
+    intent: change
+    status: deferred
+    origin_checkpoint: %s
+    current: Another deferred follow-up still points at the old cleanup contract
+    target: Decide whether any cleanup remains
+    notes: Additional historical residue against the same superseded requirement
+    affects_requirements:
+      - REQ-001
+    updates:
+      - replace_requirement
+  - id: D-004
+    area: Compensation cleanup rewrite
+    intent: change
+    status: closed
+    origin_checkpoint: %s
+    current: Cleanup wording is outdated
+    target: Replace the tracked cleanup contract
+    notes: Replacement requirement is verified; predecessor remains historical only
+    affects_requirements:
+      - REQ-001
+    updates:
+      - replace_requirement
+requirements:
+  - id: REQ-001
+    title: Compensation stage 4 failure cleanup
+    tags:
+      - runtime
+      - e2e
+    test_files: []
+    gherkin: |
+      @runtime @e2e
+      Feature: Compensation stage 4 failure cleanup
+    lifecycle: superseded
+    verification: unverified
+    introduced_by: D-001
+    superseded_by: REQ-002
+  - id: REQ-002
+    title: Compensation stage 4 failure cleanup replacement
+    tags:
+      - runtime
+      - e2e
+    test_files:
+      - runtime/tests/domain/test_compensation_cleanup_replacement.py
+    gherkin: |
+      @runtime @e2e
+      Feature: Compensation stage 4 failure cleanup replacement
+    lifecycle: active
+    verification: verified
+    introduced_by: D-004
+    supersedes: REQ-001
+changelog:
+  - rev: 2
+    date: 2026-03-28
+    deltas_opened:
+      - D-001
+    deltas_closed:
+      - D-001
+    reqs_added:
+      - REQ-001
+    reqs_verified:
+      - REQ-001
+    summary: Closed the compensation cleanup work
+  - rev: 3
+    date: 2026-03-29
+    deltas_opened:
+      - D-002
+      - D-003
+    deltas_closed: []
+    reqs_added: []
+    reqs_verified: []
+    summary: Deferred follow-ups remained attached to the original cleanup requirement
+  - rev: 4
+    date: 2026-03-30
+    deltas_opened:
+      - D-004
+    deltas_closed:
+      - D-004
+    reqs_added:
+      - REQ-002
+    reqs_verified:
+      - REQ-002
+    summary: Verified the replacement cleanup requirement while preserving the superseded predecessor as history
+`, checkpoint, checkpoint, checkpoint, checkpoint, checkpoint)
+	writeApplicationTestFile(t, trackingPath, []byte(replacement))
+	return repoRoot
+}
+
+func contractDeferredInventoryNoWarningRepo(t *testing.T) string {
+	t.Helper()
+
+	repoRoot := copyApplicationFixtureRepo(t, "verified-spec")
+	trackingPath := filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml")
+	content, err := os.ReadFile(trackingPath)
+	if err != nil {
+		t.Fatalf("read tracking file: %v", err)
+	}
+	checkpoint := "a1b2c3f"
+	for _, line := range strings.Split(string(content), "\n") {
+		if strings.HasPrefix(line, "checkpoint: ") {
+			checkpoint = strings.TrimSpace(strings.TrimPrefix(line, "checkpoint: "))
+			break
+		}
+	}
+
+	replacement := fmt.Sprintf(`slug: session-lifecycle
+charter: runtime
+title: Session Lifecycle
+status: verified
+rev: 3
+created: 2026-03-05
+updated: 2026-03-29
+last_verified_at: 2026-03-28
+checkpoint: %s
+tags:
+  - runtime
+  - domain
+documents:
+  primary: runtime/src/domain/session_execution/SPEC.md
+scope:
+  - runtime/src/domain/session_execution/
+  - runtime/src/application/commands/
+deltas:
+  - id: D-001
+    area: Compensation stage 4
+    status: closed
+    origin_checkpoint: %s
+    current: Stage 4 compensation exists in code but failure ordering is unclear
+    target: Document ordering and verify failure cleanup
+    notes: Multi-agent implementation split between runtime and workflow work
+  - id: D-002
+    area: Deferred follow-up
+    intent: change
+    status: deferred
+    origin_checkpoint: %s
+    current: Additional review may be needed
+    target: Revisit the active requirement later
+    notes: Deferred inventory only
+    affects_requirements:
+      - REQ-001
+    updates:
+      - replace_requirement
+requirements:
+  - id: REQ-001
+    title: Compensation stage 4 failure cleanup
+    tags:
+      - runtime
+      - e2e
+    test_files:
+      - runtime/tests/domain/test_compensation_cleanup.py
+    gherkin: |
+      @runtime @e2e
+      Feature: Compensation stage 4 failure cleanup
+    lifecycle: active
+    verification: verified
+    introduced_by: D-001
+changelog:
+  - rev: 2
+    date: 2026-03-28
+    deltas_opened:
+      - D-001
+    deltas_closed:
+      - D-001
+    reqs_added:
+      - REQ-001
+    reqs_verified:
+      - REQ-001
+    summary: Closed the compensation cleanup work
+  - rev: 3
+    date: 2026-03-29
+    deltas_opened:
+      - D-002
+    deltas_closed: []
+    reqs_added: []
+    reqs_verified: []
+    summary: Deferred follow-up inventory was recorded without changing the verified requirement
+`, checkpoint, checkpoint, checkpoint)
+	writeApplicationTestFile(t, trackingPath, []byte(replacement))
+	return repoRoot
+}
+
 func contractRepairDeltaRepo(t *testing.T) string {
 	t.Helper()
 

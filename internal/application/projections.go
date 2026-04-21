@@ -68,8 +68,19 @@ type SpecProjection struct {
 	Changelog                        []domain.ChangelogEntry        `json:"changelog"`
 	ScopeDrift                       ScopeDriftProjection           `json:"scope_drift"`
 	UncommittedChanges               []string                       `json:"uncommitted_changes"`
+	Warnings                         []SpecContextWarningProjection `json:"warnings,omitempty"`
 	Validation                       ValidationProjection           `json:"validation"`
 	Focus                            any                            `json:"focus,omitempty"`
+}
+
+type SpecContextWarningProjection struct {
+	Kind           string         `json:"kind"`
+	Code           string         `json:"code"`
+	Severity       string         `json:"severity"`
+	Message        string         `json:"message"`
+	DeltaIDs       []string       `json:"delta_ids"`
+	RequirementIDs []string       `json:"requirement_ids"`
+	Details        map[string]any `json:"details"`
 }
 
 type CharterMembershipProjection struct {
@@ -309,6 +320,7 @@ func newSpecProjection(repoRoot string, tracking *domain.TrackingFile, charter *
 			FilesChangedSinceCheckpoint: append([]string{}, inputs.ScopeDrift.FilesChangedSinceCheckpoint...),
 		},
 		UncommittedChanges: append([]string{}, inputs.ScopeDrift.UncommittedChanges...),
+		Warnings:           []SpecContextWarningProjection{},
 		Validation:         projectionFromFindings(validationFindings),
 	}
 

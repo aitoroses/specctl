@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -515,6 +516,223 @@ func TestReadContextComputesScopeDrift(t *testing.T) {
 			t.Fatalf("validation.findings = %#v", state.Validation.Findings)
 		}
 	})
+}
+
+func TestReadContextWarningSemantics(t *testing.T) {
+	t.Run("deferred inventory alone does not create warnings", func(t *testing.T) {
+		repoRoot := contractDeferredInventoryNoWarningRepo(t)
+		initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+
+		service := &Service{repoRoot: repoRoot, specsDir: filepath.Join(repoRoot, ".specs")}
+		stateAny, next, err := service.ReadContext("runtime:session-lifecycle", "")
+		if err != nil {
+			t.Fatalf("ReadContext: %v", err)
+		}
+
+		state := stateAny.(SpecProjection)
+		if len(state.Warnings) != 0 {
+			t.Fatalf("warnings = %#v", state.Warnings)
+		}
+		if len(next) != 0 {
+			t.Fatalf("next = %#v", next)
+		}
+		if got := ReadSurfaceNextMode(state, next); got != "none" {
+			t.Fatalf("next mode = %q", got)
+		}
+	})
+
+	t.Run("deferred superseded residue emits warning and fallback review guidance", func(t *testing.T) {
+		repoRoot := contractDeferredSupersededResidueRepo(t)
+		initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+
+		service := &Service{repoRoot: repoRoot, specsDir: filepath.Join(repoRoot, ".specs")}
+		stateAny, next, err := service.ReadContext("runtime:session-lifecycle", "")
+		if err != nil {
+			t.Fatalf("ReadContext: %v", err)
+		}
+
+		state := stateAny.(SpecProjection)
+		if len(state.Warnings) != 1 {
+			t.Fatalf("warnings = %#v", state.Warnings)
+		}
+		warning := state.Warnings[0]
+		if warning.Kind != "historical_residue" {
+			t.Fatalf("warning.kind = %q", warning.Kind)
+		}
+		if warning.Code != "DEFERRED_SUPERSEDED_RESIDUE" {
+			t.Fatalf("warning.code = %q", warning.Code)
+		}
+		if warning.Severity != "warning" {
+			t.Fatalf("warning.severity = %q", warning.Severity)
+		}
+		if got := strings.Join(warning.DeltaIDs, ","); got != "D-002" {
+			t.Fatalf("warning.delta_ids = %#v", warning.DeltaIDs)
+		}
+		if got := strings.Join(warning.RequirementIDs, ","); got != "REQ-001" {
+			t.Fatalf("warning.requirement_ids = %#v", warning.RequirementIDs)
+		}
+		if !strings.Contains(warning.Message, "superseded requirements already replaced by later closed work") {
+			t.Fatalf("warning.message = %q", warning.Message)
+		}
+		if got := warning.Details["dedupe_key"]; got != "deferred_superseded_residue:REQ-001" {
+			t.Fatalf("warning.details = %#v", warning.Details)
+		}
+		if got := strings.Join(stringSliceFromAny(t, warning.Details["replacement_requirement_ids"]), ","); got != "REQ-002" {
+			t.Fatalf("warning.details = %#v", warning.Details)
+		}
+		if got := strings.Join(stringSliceFromAny(t, warning.Details["replacement_delta_ids"]), ","); got != "D-003" {
+			t.Fatalf("warning.details = %#v", warning.Details)
+		}
+		requireWarningShape(t, warning)
+
+		if len(next) != 1 {
+			t.Fatalf("next = %#v", next)
+		}
+		action := next[0].(map[string]any)
+		if action["action"] != "review_warnings" || action["kind"] != "guidance" {
+			t.Fatalf("next = %#v", next)
+		}
+		if got := ReadSurfaceNextMode(state, next); got != "sequence" {
+			t.Fatalf("next mode = %q", got)
+		}
+	})
+
+	t.Run("mixed active and superseded affected requirements do not emit residue warning", func(t *testing.T) {
+		repoRoot := contractDeferredSupersededResidueRepo(t)
+		initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+		replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "    affects_requirements:\n      - REQ-001\n    updates:\n      - replace_requirement\n  - id: D-003\n", "    affects_requirements:\n      - REQ-001\n      - REQ-002\n    updates:\n      - replace_requirement\n  - id: D-003\n")
+
+		service := &Service{repoRoot: repoRoot, specsDir: filepath.Join(repoRoot, ".specs")}
+		stateAny, next, err := service.ReadContext("runtime:session-lifecycle", "")
+		if err != nil {
+			t.Fatalf("ReadContext: %v", err)
+		}
+
+		state := stateAny.(SpecProjection)
+		if len(state.Warnings) != 0 {
+			t.Fatalf("warnings = %#v", state.Warnings)
+		}
+		requireNoNextAction(t, next, "review_warnings")
+	})
+
+	t.Run("superseded requirement without later closed replacement work does not emit residue warning", func(t *testing.T) {
+		repoRoot := contractDeferredSupersededResidueRepo(t)
+		initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+		replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "  - id: D-003\n    area: Compensation cleanup rewrite\n    intent: change\n    status: closed\n", "  - id: D-003\n    area: Compensation cleanup rewrite\n    intent: change\n    status: deferred\n")
+
+		service := &Service{repoRoot: repoRoot, specsDir: filepath.Join(repoRoot, ".specs")}
+		stateAny, next, err := service.ReadContext("runtime:session-lifecycle", "")
+		if err != nil {
+			t.Fatalf("ReadContext: %v", err)
+		}
+
+		state := stateAny.(SpecProjection)
+		if len(state.Warnings) != 0 {
+			t.Fatalf("warnings = %#v", state.Warnings)
+		}
+		requireNoNextAction(t, next, "review_warnings")
+	})
+
+	t.Run("multiple deferred deltas on one superseded requirement dedupe into one warning", func(t *testing.T) {
+		repoRoot := contractDeferredSupersededResidueDedupedRepo(t)
+		initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+
+		service := &Service{repoRoot: repoRoot, specsDir: filepath.Join(repoRoot, ".specs")}
+		stateAny, _, err := service.ReadContext("runtime:session-lifecycle", "")
+		if err != nil {
+			t.Fatalf("ReadContext: %v", err)
+		}
+
+		state := stateAny.(SpecProjection)
+		if len(state.Warnings) != 1 {
+			t.Fatalf("warnings = %#v", state.Warnings)
+		}
+		warning := state.Warnings[0]
+		if got := strings.Join(warning.DeltaIDs, ","); got != "D-002,D-003" {
+			t.Fatalf("warning.delta_ids = %#v", warning.DeltaIDs)
+		}
+		if got := strings.Join(warning.RequirementIDs, ","); got != "REQ-001" {
+			t.Fatalf("warning.requirement_ids = %#v", warning.RequirementIDs)
+		}
+		if got := strings.Join(stringSliceFromAny(t, warning.Details["replacement_delta_ids"]), ","); got != "D-004" {
+			t.Fatalf("warning.details = %#v", warning.Details)
+		}
+	})
+
+	t.Run("stronger next suppresses fallback while preserving warning visibility", func(t *testing.T) {
+		repoRoot := contractDeferredSupersededResidueRepo(t)
+		initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+		replaceFileText(t, filepath.Join(repoRoot, "runtime", "src", "domain", "session_execution", "SPEC.md"), "# Session Lifecycle", "# Session Lifecycle\n\n## Dirty Drift\n\nPending governed change.\n")
+
+		service := &Service{repoRoot: repoRoot, specsDir: filepath.Join(repoRoot, ".specs")}
+		stateAny, next, err := service.ReadContext("runtime:session-lifecycle", "")
+		if err != nil {
+			t.Fatalf("ReadContext: %v", err)
+		}
+
+		state := stateAny.(SpecProjection)
+		if len(state.Warnings) != 1 {
+			t.Fatalf("warnings = %#v", state.Warnings)
+		}
+		if len(next) < 1 || next[0].(map[string]any)["action"] != "stage_changes" {
+			t.Fatalf("next = %#v", next)
+		}
+		requireNoNextAction(t, next, "review_warnings")
+		if got := ReadSurfaceNextMode(state, next); got != "sequence" {
+			t.Fatalf("next mode = %q", got)
+		}
+	})
+}
+
+func requireNoNextAction(t *testing.T, next []any, actionName string) {
+	t.Helper()
+	for _, raw := range next {
+		action, ok := raw.(map[string]any)
+		if ok && action["action"] == actionName {
+			t.Fatalf("unexpected action %q in %#v", actionName, next)
+		}
+	}
+}
+
+func stringSliceFromAny(t *testing.T, value any) []string {
+	t.Helper()
+	switch values := value.(type) {
+	case []string:
+		return values
+	case []any:
+		result := make([]string, 0, len(values))
+		for _, raw := range values {
+			text, ok := raw.(string)
+			if !ok {
+				t.Fatalf("value element type = %T", raw)
+			}
+			result = append(result, text)
+		}
+		return result
+	default:
+		t.Fatalf("value type = %T", value)
+		return nil
+	}
+}
+
+func requireWarningShape(t *testing.T, warning SpecContextWarningProjection) {
+	t.Helper()
+	data, err := json.Marshal(warning)
+	if err != nil {
+		t.Fatalf("marshal warning: %v", err)
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("unmarshal warning: %v", err)
+	}
+	actualKeys := make([]string, 0, len(parsed))
+	for key := range parsed {
+		actualKeys = append(actualKeys, key)
+	}
+	sort.Strings(actualKeys)
+	if got := strings.Join(actualKeys, ","); got != "code,delta_ids,details,kind,message,requirement_ids,severity" {
+		t.Fatalf("warning keys = %v", actualKeys)
+	}
 }
 
 func TestBuildContextRefreshMatchIssuesIncludesAllBlockingStatuses(t *testing.T) {
