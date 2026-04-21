@@ -2,11 +2,11 @@ slug: dashboard
 charter: specctl
 title: specctl Dashboard
 status: verified
-rev: 1
+rev: 2
 created: "2026-04-16"
 updated: "2026-04-21"
 last_verified_at: "2026-04-21"
-checkpoint: 72efb43a69b41f508c05fb2bf6bcb24e6cca1e63
+checkpoint: 6e63dbe47c2e63eef195d590d3522f69792961ca
 tags:
     - dashboard
 documents:
@@ -167,4 +167,37 @@ requirements:
       lifecycle: active
       verification: verified
       introduced_by: D-006
-changelog: []
+changelog:
+    - rev: 2
+      date: "2026-04-21"
+      deltas_opened:
+        - D-001
+        - D-002
+        - D-003
+        - D-004
+        - D-005
+        - D-006
+      deltas_closed:
+        - D-001
+        - D-002
+        - D-003
+        - D-004
+        - D-005
+        - D-006
+      reqs_added:
+        - REQ-001
+        - REQ-002
+        - REQ-003
+        - REQ-004
+        - REQ-005
+        - REQ-006
+        - REQ-007
+      reqs_verified:
+        - REQ-001
+        - REQ-002
+        - REQ-003
+        - REQ-004
+        - REQ-005
+        - REQ-006
+        - REQ-007
+      summary: Record verified regression coverage that makes the review-first drift handoff explicit in shared application tests.
