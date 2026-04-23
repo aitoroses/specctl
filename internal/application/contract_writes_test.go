@@ -861,6 +861,86 @@ func TestContract_ReqAdd_WithdrawnAllowsReuse(t *testing.T) {
 	assertContractFixture(t, output, contractPlaceholders())
 }
 
+func TestContract_ReqReplace_AutoRebindOtherDeltas(t *testing.T) {
+	repoRoot := contractReplaceFlowRepo(t)
+	appendDeltaBeforeRequirements(t, repoRoot, `  - id: D-003
+    area: Downstream cleanup follow-up
+    intent: repair
+    status: open
+    origin_checkpoint: a1b2c3f
+    current: Evidence is soft
+    target: Firm up evidence after the replacement lands
+    notes: Independent delta that still anchors to REQ-001
+    affects_requirements:
+      - REQ-001
+    updates:
+      - stale_requirement
+`)
+	replaceFileText(t, filepath.Join(repoRoot, ".specs", "specctl.yaml"), "source_prefixes:", "auto_rebind_on_replace: true\nsource_prefixes:")
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.ReplaceRequirement(RequirementReplaceRequest{
+			Target:        "runtime:session-lifecycle",
+			RequirementID: "REQ-001",
+			DeltaID:       "D-002",
+			Gherkin:       contractReplacementRequirementBlock(),
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
+func TestContract_DeltaRebind_Success(t *testing.T) {
+	repoRoot := contractReplaceFlowRepo(t)
+	appendDeltaBeforeRequirements(t, repoRoot, `  - id: D-003
+    area: Downstream cleanup follow-up
+    intent: repair
+    status: open
+    origin_checkpoint: a1b2c3f
+    current: Evidence is soft
+    target: Firm up evidence after the replacement lands
+    notes: Rebinds to REQ-002 once the replacement lands
+    affects_requirements:
+      - REQ-001
+    updates:
+      - stale_requirement
+`)
+	service := newApplicationContractService(repoRoot)
+	if _, _, _, err := service.ReplaceRequirement(RequirementReplaceRequest{
+		Target:        "runtime:session-lifecycle",
+		RequirementID: "REQ-001",
+		DeltaID:       "D-002",
+		Gherkin:       contractReplacementRequirementBlock(),
+	}); err != nil {
+		t.Fatalf("ReplaceRequirement: %v", err)
+	}
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.RebindDeltaRequirements(DeltaRebindRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-003",
+			From:    "REQ-001",
+			To:      "REQ-002",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
+func TestContract_DeltaRebind_ClosedRejected(t *testing.T) {
+	repoRoot := contractInactiveSupersededRequirementRepo(t)
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.RebindDeltaRequirements(DeltaRebindRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-002",
+			From:    "REQ-001",
+			To:      "REQ-002",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
 func TestContract_ReqReplace_RequirementNotInSpec(t *testing.T) {
 	repoRoot := contractChangeDeltaRepo(t)
 	service := newApplicationContractService(repoRoot)
@@ -1929,6 +2009,27 @@ func contractCodeOnlyDriftRepo(t *testing.T) string {
 	runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "add", "runtime/src/application/commands/handler.py")
 	runGitAtDate(t, repoRoot, "2026-03-30T09:30:00Z", "commit", "-m", "code drift")
 	return repoRoot
+}
+
+// appendDeltaBeforeRequirements inserts the delta YAML immediately before
+// the top-level `requirements:` section. Unlike appendDelta it matches
+// `\nrequirements:` so it does not accidentally splice into an inner
+// `affects_requirements:` field on a preceding delta, and it leaves the
+// spec status untouched so callers can assert the post-append computed state.
+func appendDeltaBeforeRequirements(t *testing.T, repoRoot, deltaYAML string) {
+	t.Helper()
+
+	trackingPath := filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml")
+	data, err := os.ReadFile(trackingPath)
+	if err != nil {
+		t.Fatalf("read tracking file: %v", err)
+	}
+	marker := "\nrequirements:"
+	if !strings.Contains(string(data), marker) {
+		t.Fatalf("%s does not contain top-level requirements section", trackingPath)
+	}
+	updated := strings.Replace(string(data), marker, "\n"+strings.TrimRight(deltaYAML, "\n")+marker, 1)
+	writeApplicationTestFile(t, trackingPath, []byte(updated))
 }
 
 func appendDelta(t *testing.T, repoRoot, deltaYAML string) {

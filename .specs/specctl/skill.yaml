@@ -1,12 +1,12 @@
 slug: skill
 charter: specctl
 title: specctl Packaged Skill
-status: active
-rev: 3
+status: verified
+rev: 4
 created: "2026-04-17"
 updated: "2026-04-23"
-last_verified_at: "2026-04-21"
-checkpoint: 6e63dbe47c2e63eef195d590d3522f69792961ca
+last_verified_at: "2026-04-23"
+checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
 tags: []
 documents:
     primary: skills/specctl/SPEC.md
@@ -48,7 +48,7 @@ deltas:
     - id: D-004
       area: Agent guidance for retract rebind and repair-intent validation
       intent: add
-      status: open
+      status: closed
       origin_checkpoint: 6e63dbe47c2e63eef195d590d3522f69792961ca
       current: |-
         Skill teaches the generic governance workflow but does not cover
@@ -117,7 +117,7 @@ requirements:
         @specctl @manual
         Feature: Skill guides retraction rebind and repair-intent validation
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-004
 changelog:
     - rev: 2
@@ -145,3 +145,14 @@ changelog:
       reqs_verified:
         - REQ-003
       summary: Clarify packaged-skill guidance so review-required drift routes through review_diff before sync or delta work.
+    - rev: 4
+      date: "2026-04-23"
+      deltas_opened:
+        - D-004
+      deltas_closed:
+        - D-004
+      reqs_added:
+        - REQ-004
+      reqs_verified:
+        - REQ-004
+      summary: Document the delta withdraw, rebind-requirements, and repair-intent validation escape hatches in the packaged skill.

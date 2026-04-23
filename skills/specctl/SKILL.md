@@ -325,6 +325,40 @@ with Boot/Seed/Probe/Verify operations. See `references/verification-surfaces.md
 - **`warnings` in config/context:** `specctl_context` and `specctl config` emit advisory `warnings`. Config warnings cover missing `source_prefixes` entries on disk: `{"kind":"MISSING_SOURCE_PREFIX","prefix":"ui/src/","resolved_path":"/abs/path","severity":"warning"}`. Spec-context warnings can also surface governed residue such as `DEFERRED_SUPERSEDED_RESIDUE` with `delta_ids`, `requirement_ids`, and `details`. These are advisory — review them through governed specctl actions, never by hand-editing tracking YAML.
 - **Spec the test infra too.** The framework is a product — govern it like one.
 
+## Delta escape hatches: withdraw, rebind, repair validation
+
+Three agent-facing escape hatches exist for governance states that otherwise
+force misuse of `defer` and create permanent residue:
+
+- **Opened a delta in error?** Use `specctl delta withdraw <charter:slug> <D-id> --reason "<text>"`.
+  This transitions `open | in-progress | deferred → withdrawn` with an
+  auditable reason. Withdrawn deltas are inert: they do not emit
+  `DEFERRED_SUPERSEDED_RESIDUE`, do not count as live, and cannot be
+  resumed. If you change your mind, open a fresh delta. Do **not** use
+  `delta defer` to park an error — `defer` signals "not now, maybe
+  later" and keeps residue warnings firing.
+
+- **Your requirements were superseded under an open delta?** Two paths:
+  - Auto: enable `auto_rebind_on_replace: true` in `.specs/specctl.yaml`.
+    On `req replace`, independent open deltas whose `affects_requirements`
+    references the replaced REQ get rebound to the new REQ. Each rebind
+    emits an `AUTO_REBIND_APPLIED` advisory in the response envelope.
+    New installs (`specctl init`) default this to `true`; existing
+    installs default to `false`.
+  - Explicit: `specctl delta rebind-requirements <charter:slug> <D-id>
+    --from REQ-X --to REQ-Y` (or `--remove REQ-X --reason "<text>"`).
+    Works on `open | in-progress | deferred` deltas only; `closed`
+    deltas keep their anchors immutable.
+
+- **`delta add --intent repair` got `VALIDATION_FAILED` with
+  `reason: closed_delta_invariant`?** A closed delta already depends on
+  the requirement being verified, so `req stale` (the only update path
+  repair allows) is forbidden. The error payload lists the conflicting
+  closed deltas under `conflicts[]` and names the intent to use instead
+  under `suggestion.intent`. Re-run `delta add` with `--intent change`
+  and follow `req replace` to preserve closed-delta verification while
+  introducing an updated successor requirement.
+
 ## Recommended Tools
 
 - **oh-my-claudecode** — multi-agent orchestration plugin for Claude Code. Provides ralph (persistent execution loops), and ralphplan (convergence planning) and much more. Install via `npx skills find oh-my-claudecode`.

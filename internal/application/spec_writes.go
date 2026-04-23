@@ -49,6 +49,15 @@ type DeltaWithdrawRequest struct {
 	Reason  string
 }
 
+type DeltaRebindRequest struct {
+	Target  string
+	DeltaID string
+	From    string
+	To      string
+	Remove  bool
+	Reason  string
+}
+
 type RequirementAddRequest struct {
 	Target  string
 	DeltaID string
@@ -653,6 +662,104 @@ func (s *Service) CloseDelta(request DeltaTransitionRequest) (SpecProjection, ma
 	})
 }
 
+func (s *Service) RebindDeltaRequirements(request DeltaRebindRequest) (SpecProjection, map[string]any, []any, error) {
+	loaded, failure, err := s.loadSpecForMutation(request.Target)
+	if err != nil || failure != nil {
+		return SpecProjection{}, nil, nil, collapseFailure(err, failure)
+	}
+	from := strings.TrimSpace(request.From)
+	if from == "" {
+		return SpecProjection{}, nil, nil, invalidSpecInputFailure(loaded.state, "--from is required", "from")
+	}
+	to := strings.TrimSpace(request.To)
+	if request.Remove {
+		if to != "" {
+			return SpecProjection{}, nil, nil, invalidSpecInputFailure(loaded.state, "--remove is mutually exclusive with --to", "to")
+		}
+		if strings.TrimSpace(request.Reason) == "" {
+			return SpecProjection{}, nil, nil, invalidSpecInputFailure(loaded.state, "--reason is required with --remove", "reason")
+		}
+	} else if to == "" {
+		return SpecProjection{}, nil, nil, invalidSpecInputFailure(loaded.state, "--to or --remove is required", "to")
+	}
+	delta := loaded.tracking.DeltaByID(request.DeltaID)
+	if delta == nil {
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_NOT_FOUND",
+			fmt.Sprintf("delta %s not found", request.DeltaID),
+			map[string]any{"delta": map[string]any{"id": request.DeltaID}},
+			[]any{},
+		)
+	}
+	switch delta.Status {
+	case domain.DeltaStatusOpen, domain.DeltaStatusInProgress, domain.DeltaStatusDeferred:
+		// allowed
+	default:
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_INVALID_STATE",
+			fmt.Sprintf("delta %s cannot be rebound while status is %s", request.DeltaID, delta.Status),
+			map[string]any{
+				"delta":      deltaFailureFocus(*delta),
+				"transition": "rebind",
+			},
+			[]any{},
+		)
+	}
+	if !slices.Contains(delta.AffectsRequirements, from) {
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_REQUIREMENT_NOT_AFFECTED",
+			fmt.Sprintf("delta %s does not list %s in affects_requirements", request.DeltaID, from),
+			map[string]any{"req_rebind": map[string]any{"reason": "requirement_not_in_delta"}},
+			[]any{},
+		)
+	}
+	if !request.Remove {
+		if loaded.tracking.RequirementByID(to) == nil {
+			return SpecProjection{}, nil, nil, s.specFailure(
+				loaded,
+				"INVALID_INPUT",
+				fmt.Sprintf("replacement requirement %s not found", to),
+				map[string]any{"req_rebind": map[string]any{"reason": "replacement_not_found"}},
+				[]any{},
+			)
+		}
+	}
+
+	updated := cloneTracking(loaded.tracking)
+	mutated := updated.DeltaByID(request.DeltaID)
+	newAR := make([]string, 0, len(mutated.AffectsRequirements))
+	for _, id := range mutated.AffectsRequirements {
+		if id != from {
+			newAR = append(newAR, id)
+			continue
+		}
+		if !request.Remove {
+			newAR = append(newAR, to)
+		}
+	}
+	mutated.AffectsRequirements = newAR
+	updated.SyncComputedStatus()
+	updated.Updated = s.todayUTC()
+
+	detail := map[string]any{"from": from}
+	if request.Remove {
+		detail["removed"] = true
+		detail["reason"] = strings.TrimSpace(request.Reason)
+	} else {
+		detail["to"] = to
+	}
+	return s.finalizeSpecMutation(loaded, updated, map[string]any{
+		"kind":   "delta",
+		"delta":  projectDelta(*mutated),
+		"rebind": detail,
+	}, map[string]any{"delta": projectDelta(*mutated)}, func(_ SpecProjection) []any {
+		return []any{}
+	})
+}
+
 func (s *Service) WithdrawDelta(request DeltaWithdrawRequest) (SpecProjection, map[string]any, []any, error) {
 	loaded, failure, err := s.loadSpecForMutation(request.Target)
 	if err != nil || failure != nil {
@@ -893,6 +1000,8 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 		mutatedDelta.Updates = nil
 	}
 
+	rebinds := autoRebindAffectsRequirements(updated, delta.ID, request.RequirementID, newRequirement.ID, loaded.config)
+
 	updated.SyncComputedStatus()
 	updated.Updated = s.todayUTC()
 
@@ -901,6 +1010,9 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 		"kind":        "requirement",
 		"requirement": resultRequirement,
 		"allocation":  map[string]any{"previous_max": len(loaded.tracking.Requirements), "allocated": newRequirement.ID},
+	}
+	if len(rebinds) > 0 {
+		result["auto_rebinds"] = rebinds
 	}
 	return s.finalizeSpecMutation(
 		loaded,
@@ -921,6 +1033,41 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 			)
 		},
 	)
+}
+
+// autoRebindAffectsRequirements updates the affects_requirements list of
+// every open | in-progress | deferred delta that still references the
+// superseded requirement, replacing it with the new requirement id.
+// Closed and withdrawn deltas are never touched. The parent delta of the
+// replace is skipped — it keeps the old id so its trace survives.
+// Gated by config.AutoRebindOnReplace; returns the list of rebinds made
+// for inclusion in the response.
+func autoRebindAffectsRequirements(tracking *domain.TrackingFile, parentDeltaID, fromReq, toReq string, config *infrastructure.ProjectConfig) []map[string]any {
+	if config == nil || !config.AutoRebindOnReplace {
+		return nil
+	}
+	rebinds := make([]map[string]any, 0)
+	for i := range tracking.Deltas {
+		d := &tracking.Deltas[i]
+		if d.ID == parentDeltaID {
+			continue
+		}
+		if d.Status != domain.DeltaStatusOpen && d.Status != domain.DeltaStatusInProgress && d.Status != domain.DeltaStatusDeferred {
+			continue
+		}
+		for j, req := range d.AffectsRequirements {
+			if req == fromReq {
+				d.AffectsRequirements[j] = toReq
+				rebinds = append(rebinds, map[string]any{
+					"code":  "AUTO_REBIND_APPLIED",
+					"delta": d.ID,
+					"from":  fromReq,
+					"to":    toReq,
+				})
+			}
+		}
+	}
+	return rebinds
 }
 
 func (s *Service) WithdrawRequirement(request RequirementDeltaRequest) (SpecProjection, map[string]any, []any, error) {

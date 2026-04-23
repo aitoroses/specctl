@@ -3436,11 +3436,110 @@ keep anchors live.
   immutable. Neither the automatic nor the explicit path may modify
   it.
 
+### Contracts
+
+Success (`req replace` with `auto_rebind_on_replace: true`) — the result
+envelope gains an `auto_rebinds` list:
+
+```json
+{
+  "result": {
+    "kind": "requirement",
+    "requirement": { "id": "REQ-002", ... },
+    "allocation": { "previous_max": 1, "allocated": "REQ-002" },
+    "auto_rebinds": [
+      { "code": "AUTO_REBIND_APPLIED", "delta": "D-003",
+        "from": "REQ-001", "to": "REQ-002" }
+    ]
+  }
+}
+```
+
+Success (`delta rebind-requirements --from REQ-X --to REQ-Y`):
+
+```json
+{
+  "result": {
+    "kind": "delta",
+    "delta": { "id": "D-003", "status": "open",
+               "affects_requirements": ["REQ-002"] },
+    "rebind": { "from": "REQ-001", "to": "REQ-002" }
+  },
+  "next": { "mode": "none" }
+}
+```
+
+Error (`DELTA_INVALID_STATE`, rebinding a closed delta):
+
+```json
+{
+  "error": {
+    "code": "DELTA_INVALID_STATE",
+    "message": "delta D-002 cannot be rebound while status is closed"
+  },
+  "focus": { "delta": { "id": "D-002", "status": "closed" },
+             "transition": "rebind" }
+}
+```
+
 ## Requirement: Requirement rebind keeps open-delta anchors live across supersession
 
 ```gherkin requirement
 @specctl @write
 Feature: Requirement rebind keeps open-delta anchors live across supersession
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: req replace auto-rebinds independent open deltas when the config is enabled
+  Given auto_rebind_on_replace is true in specctl.yaml
+  And delta D-A is the parent of the replace
+  And delta D-B is open with REQ-X in its affects_requirements
+  When the agent runs req replace REQ-X --delta D-A
+  Then REQ-X is superseded by REQ-Y
+  And delta D-B's affects_requirements is rebound to REQ-Y
+  And the result envelope carries an auto_rebinds entry with code AUTO_REBIND_APPLIED
+  And the parent delta D-A keeps REQ-X as its historical anchor
+```
+
+```gherkin scenario
+Scenario: req replace does not rebind when the config is disabled
+  Given auto_rebind_on_replace is absent or false in specctl.yaml
+  When the agent runs req replace REQ-X --delta D-A
+  Then no other delta's affects_requirements is modified
+  And the result envelope does not include an auto_rebinds field
+```
+
+```gherkin scenario
+Scenario: Explicit delta rebind-requirements moves an open delta's anchor
+  Given delta D-B is open|in-progress|deferred with REQ-X in its affects_requirements
+  When the agent runs delta rebind-requirements D-B --from REQ-X --to REQ-Y
+  Then D-B's affects_requirements replaces REQ-X with REQ-Y
+  And the delta's status and intent are unchanged
+```
+
+```gherkin scenario
+Scenario: Explicit delta rebind-requirements --remove drops an anchor with a reason
+  Given delta D-B is open with REQ-X in its affects_requirements
+  When the agent runs delta rebind-requirements D-B --from REQ-X --remove --reason <text>
+  Then D-B's affects_requirements no longer contains REQ-X
+  And the result records the reason in the rebind detail
+```
+
+```gherkin scenario
+Scenario: Rebinding a closed delta is rejected
+  Given delta D-B has status closed
+  When the agent runs delta rebind-requirements on D-B
+  Then the response returns DELTA_INVALID_STATE
+  And D-B's affects_requirements is unchanged
+```
+
+```gherkin scenario
+Scenario: Rebinding requires --from to currently anchor the delta
+  Given delta D-B is open and does not reference REQ-X in affects_requirements
+  When the agent runs delta rebind-requirements D-B --from REQ-X --to REQ-Y
+  Then the response returns DELTA_REQUIREMENT_NOT_AFFECTED
 ```
 
 ---

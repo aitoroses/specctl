@@ -1,12 +1,12 @@
 slug: cli
 charter: specctl
 title: specctl CLI Behavioral Spec
-status: active
-rev: 6
+status: verified
+rev: 7
 created: "2026-04-01"
 updated: "2026-04-23"
-last_verified_at: "2026-04-21"
-checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
+last_verified_at: "2026-04-23"
+checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
 tags: []
 documents:
     primary: SPEC.md
@@ -134,7 +134,7 @@ deltas:
     - id: D-010
       area: Rebind affects_requirements across supersession
       intent: add
-      status: open
+      status: closed
       origin_checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
       current: |-
         affects_requirements freezes at delta add. When a referenced REQ is
@@ -740,12 +740,15 @@ requirements:
       tags:
         - specctl
         - write
-      test_files: []
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_ClosedRejected.json
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_AutoRebindOtherDeltas.json
       gherkin: |-
         @specctl @write
         Feature: Requirement rebind keeps open-delta anchors live across supersession
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-010
 changelog:
     - rev: 2
@@ -853,3 +856,22 @@ changelog:
         - REQ-027
         - REQ-028
       summary: Complete the embedded example surface and re-anchor self-governance in the standalone OSS repo.
+    - rev: 7
+      date: "2026-04-23"
+      deltas_opened:
+        - D-008
+        - D-009
+        - D-010
+      deltas_closed:
+        - D-008
+        - D-009
+        - D-010
+      reqs_added:
+        - REQ-029
+        - REQ-030
+        - REQ-031
+      reqs_verified:
+        - REQ-029
+        - REQ-030
+        - REQ-031
+      summary: Introduce delta withdraw, rebind-requirements, and eager repair validation as first-class governance verbs.

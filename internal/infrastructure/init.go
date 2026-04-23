@@ -64,6 +64,10 @@ func InitWorkspace() (*InitResult, error) {
 	if len(detected) > 0 {
 		config.SourcePrefixes = detected
 	}
+	// New inits enable auto-rebind so req replace keeps open/deferred
+	// deltas anchored across supersession. Existing installs without
+	// the key keep the backwards-compatible false default.
+	config.AutoRebindOnReplace = true
 
 	// Write specctl.yaml.
 	data, err := yaml.Marshal(config)

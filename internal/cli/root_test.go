@@ -66,7 +66,7 @@ func TestCommandHelpIncludesSpecSurface(t *testing.T) {
 		{
 			name:     "delta family",
 			args:     []string{"delta", "--help"},
-			snippets: []string{"Usage:\n  specctl delta", "add         Add a tracked delta", "close       Move open|in-progress -> closed"},
+			snippets: []string{"Usage:\n  specctl delta", "Add a tracked delta", "Move open|in-progress -> closed", "Retract an open|in-progress|deferred delta opened in error", "Rebind affects_requirements"},
 		},
 		{
 			name:     "delta add",
