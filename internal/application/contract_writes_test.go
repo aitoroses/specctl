@@ -286,6 +286,42 @@ func TestContract_DeltaAdd_RepairSuccess(t *testing.T) {
 	assertContractFixture(t, output, contractPlaceholders())
 }
 
+func TestContract_DeltaAdd_RepairClosedDeltaConflict(t *testing.T) {
+	repoRoot := contractActiveRequirementRepo(t)
+	replaceTrackedRequirementBlockOnly(t, repoRoot, "verified")
+	appendDelta(t, repoRoot, `  - id: D-002
+    area: Compensation cleanup first repair
+    intent: repair
+    status: closed
+    origin_checkpoint: a1b2c3f
+    current: Evidence gap after a regression
+    target: Re-verify the tracked cleanup behavior
+    notes: Prior repair is historical; REQ-001 stayed active and verified
+    affects_requirements:
+      - REQ-001
+    updates:
+      - stale_requirement
+`)
+	replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "status: ready", "status: active")
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.AddDelta(DeltaAddRequest{
+			Target:              "runtime:session-lifecycle",
+			Intent:              domain.DeltaIntentRepair,
+			Area:                "Compensation cleanup second repair",
+			Current:             "Evidence stale again",
+			CurrentPresent:      true,
+			Targets:             "Re-verify against new fixtures",
+			TargetPresent:       true,
+			Notes:               "Should be rejected before allocation",
+			NotesPresent:        true,
+			AffectsRequirements: []string{"REQ-001"},
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
 func TestContract_DeltaAdd_ValidationFailed(t *testing.T) {
 	repoRoot := copyApplicationFixtureRepo(t, "ready-spec")
 	replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "id: D-001", "id: D-003")

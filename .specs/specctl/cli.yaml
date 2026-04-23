@@ -91,7 +91,7 @@ deltas:
     - id: D-008
       area: Eager validation of repair intent against closed-delta invariants
       intent: add
-      status: open
+      status: closed
       origin_checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
       current: |-
         delta add --intent repair accepts a delta even when closed-delta
@@ -711,12 +711,13 @@ requirements:
       tags:
         - specctl
         - lifecycle
-      test_files: []
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_RepairClosedDeltaConflict.json
       gherkin: |-
         @specctl @lifecycle
         Feature: Delta add pre-flights repair intent against closed-delta invariants
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-008
     - id: REQ-030
       title: Delta withdraw retracts a non-closed delta with auditable reason

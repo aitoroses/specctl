@@ -398,6 +398,11 @@ func (s *Service) AddDelta(request DeltaAddRequest) (SpecProjection, map[string]
 				}
 			}
 		}
+		if request.Intent == domain.DeltaIntentRepair {
+			if failure := s.repairIntentClosedDeltaConflict(loaded, affectsRequirements); failure != nil {
+				return SpecProjection{}, nil, nil, failure
+			}
+		}
 	default:
 		affectsRequirements = nil
 	}
@@ -447,6 +452,68 @@ func (s *Service) AddDelta(request DeltaAddRequest) (SpecProjection, map[string]
 			return buildDeltaAddNext(request.Target, loaded.tracking, delta, state.FormatTemplate)
 		},
 	)
+}
+
+// repairIntentClosedDeltaConflict enforces the closed-delta invariant at
+// delta add time: a repair intent can only progress via req stale, which
+// retroactively invalidates any closed delta that referenced the target
+// requirement as part of its closure evidence. Detecting the conflict
+// here avoids burning a D-id and leaving deferred residue.
+func (s *Service) repairIntentClosedDeltaConflict(loaded *loadedSpec, affectsRequirements []string) *Failure {
+	conflicts := make([]map[string]any, 0)
+	conflictingRequirements := make([]string, 0)
+	conflictingDeltasSet := make(map[string]struct{})
+	for _, requirementID := range affectsRequirements {
+		hit := false
+		for _, closed := range loaded.tracking.Deltas {
+			if closed.Status != domain.DeltaStatusClosed {
+				continue
+			}
+			for _, affected := range closed.AffectsRequirements {
+				if affected != requirementID {
+					continue
+				}
+				conflicts = append(conflicts, map[string]any{
+					"closed_delta":      closed.ID,
+					"requires_verified": requirementID,
+				})
+				conflictingDeltasSet[closed.ID] = struct{}{}
+				hit = true
+			}
+		}
+		if hit {
+			conflictingRequirements = append(conflictingRequirements, requirementID)
+		}
+	}
+	if len(conflicts) == 0 {
+		return nil
+	}
+	conflictingDeltas := make([]string, 0, len(conflictingDeltasSet))
+	for id := range conflictingDeltasSet {
+		conflictingDeltas = append(conflictingDeltas, id)
+	}
+	slices.Sort(conflictingDeltas)
+	state := loaded.state
+	state.Focus = map[string]any{
+		"delta_add": map[string]any{
+			"reason":    "closed_delta_invariant",
+			"conflicts": conflicts,
+			"suggestion": map[string]any{
+				"intent":    "change",
+				"rationale": "Use --intent change with req replace to preserve closed-delta verification while introducing an updated successor requirement.",
+			},
+		},
+	}
+	return &Failure{
+		Code: "VALIDATION_FAILED",
+		Message: fmt.Sprintf(
+			"Repair intent cannot be applied to %s: closed delta(s) %s require the requirement(s) verified; repair only allows stale, which the closed-delta invariant forbids.",
+			strings.Join(conflictingRequirements, ", "),
+			strings.Join(conflictingDeltas, ", "),
+		),
+		State: state,
+		Next:  []any{},
+	}
 }
 
 func (s *Service) StartDelta(request DeltaTransitionRequest) (SpecProjection, map[string]any, []any, error) {

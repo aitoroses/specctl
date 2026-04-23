@@ -3236,11 +3236,59 @@ moves the check to `delta add` and fails fast.
 - The check applies only to `--intent repair`; other intents retain
   their current validation surface.
 
+### Contracts
+
+Error (`VALIDATION_FAILED`):
+
+```json
+{
+  "state": { "status": "active", ... },
+  "focus": {
+    "delta_add": {
+      "reason": "closed_delta_invariant",
+      "conflicts": [
+        { "closed_delta": "D-002", "requires_verified": "REQ-001" }
+      ],
+      "suggestion": {
+        "intent": "change",
+        "rationale": "Use --intent change with req replace to preserve closed-delta verification while introducing an updated successor requirement."
+      }
+    }
+  },
+  "next": { "mode": "none" },
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Repair intent cannot be applied to REQ-001: closed delta(s) D-002 require the requirement(s) verified; repair only allows stale, which the closed-delta invariant forbids."
+  }
+}
+```
+
 ## Requirement: Delta add pre-flights repair intent against closed-delta invariants
 
 ```gherkin requirement
 @specctl @lifecycle
 Feature: Delta add pre-flights repair intent against closed-delta invariants
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: Repair intent rejected when a closed delta already depends on the requirement
+  Given a spec contains REQ-X active and verified
+  And a closed delta references REQ-X in its affects_requirements
+  When the agent runs delta add --intent repair with affects_requirements including REQ-X
+  Then the response returns VALIDATION_FAILED before allocating a D-id
+  And focus.delta_add.conflicts names the closed delta and REQ-X
+  And focus.delta_add.suggestion advises --intent change
+```
+
+```gherkin scenario
+Scenario: Repair intent allowed when no closed delta depends on the requirement
+  Given a spec contains REQ-X active and verified
+  And no closed delta references REQ-X in its affects_requirements
+  When the agent runs delta add --intent repair with affects_requirements including REQ-X
+  Then the delta is allocated with status open and intent repair
+  And next guides the agent toward req stale
 ```
 
 ---
