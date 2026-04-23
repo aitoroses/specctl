@@ -98,7 +98,8 @@
           ]
         }
       ],
-      "open": 0
+      "open": 0,
+      "withdrawn": 0
     },
     "documents": {
       "primary": "runtime/src/domain/session_execution/SPEC.md"

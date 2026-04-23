@@ -43,6 +43,12 @@ type DeltaTransitionRequest struct {
 	DeltaID string
 }
 
+type DeltaWithdrawRequest struct {
+	Target  string
+	DeltaID string
+	Reason  string
+}
+
 type RequirementAddRequest struct {
 	Target  string
 	DeltaID string
@@ -644,6 +650,56 @@ func (s *Service) CloseDelta(request DeltaTransitionRequest) (SpecProjection, ma
 		"delta": projectDelta(*mutated),
 	}, map[string]any{"delta": projectDelta(*mutated)}, func(state SpecProjection) []any {
 		return buildDeltaCloseNext(request.Target, *mutated, state)
+	})
+}
+
+func (s *Service) WithdrawDelta(request DeltaWithdrawRequest) (SpecProjection, map[string]any, []any, error) {
+	loaded, failure, err := s.loadSpecForMutation(request.Target)
+	if err != nil || failure != nil {
+		return SpecProjection{}, nil, nil, collapseFailure(err, failure)
+	}
+	reason := strings.TrimSpace(request.Reason)
+	if reason == "" {
+		return SpecProjection{}, nil, nil, invalidSpecInputFailure(loaded.state, "--reason is required", "reason")
+	}
+	delta := loaded.tracking.DeltaByID(request.DeltaID)
+	if delta == nil {
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_NOT_FOUND",
+			fmt.Sprintf("delta %s not found", request.DeltaID),
+			map[string]any{"delta": map[string]any{"id": request.DeltaID}},
+			[]any{},
+		)
+	}
+	switch delta.Status {
+	case domain.DeltaStatusOpen, domain.DeltaStatusInProgress, domain.DeltaStatusDeferred:
+		// allowed
+	default:
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_INVALID_STATE",
+			fmt.Sprintf("delta %s cannot transition from %s to withdrawn", request.DeltaID, delta.Status),
+			map[string]any{
+				"delta":      deltaFailureFocus(*delta),
+				"transition": "withdraw",
+			},
+			[]any{},
+		)
+	}
+
+	updated := cloneTracking(loaded.tracking)
+	mutated := updated.DeltaByID(request.DeltaID)
+	mutated.Status = domain.DeltaStatusWithdrawn
+	mutated.WithdrawnReason = reason
+	updated.SyncComputedStatus()
+	updated.Updated = s.todayUTC()
+
+	return s.finalizeSpecMutation(loaded, updated, map[string]any{
+		"kind":  "delta",
+		"delta": projectDelta(*mutated),
+	}, map[string]any{"delta": projectDelta(*mutated)}, func(_ SpecProjection) []any {
+		return []any{}
 	})
 }
 
@@ -1257,7 +1313,8 @@ func (s *Service) BumpRevision(request RevisionBumpRequest) (SpecProjection, map
 	}
 
 	unbumped := closedDeltasNotInChangelog(loaded.tracking)
-	if len(unbumped) == 0 {
+	unbumpedWithdrawn := withdrawnDeltasNotInChangelog(loaded.tracking)
+	if len(unbumped) == 0 && len(unbumpedWithdrawn) == 0 {
 		return SpecProjection{}, nil, nil, revBumpInvalidInputFailure(loaded.state, "rev bump requires closed deltas not yet recorded in the changelog", "no_semantic_changes")
 	}
 
@@ -1273,6 +1330,7 @@ func (s *Service) BumpRevision(request RevisionBumpRequest) (SpecProjection, map
 	// The baseline comparison can miss items that existed before the first checkpoint.
 	// The changelog is the authoritative record — anything not yet in any entry gets recorded.
 	entry.DeltasClosed = unbumped
+	entry.DeltasWithdrawn = unbumpedWithdrawn
 	entry.DeltasOpened = openedDeltasNotInChangelog(loaded.tracking)
 	entry.ReqsAdded = requirementsNotInChangelog(loaded.tracking)
 	entry.ReqsVerified = verifiedRequirementsNotInChangelog(loaded.tracking)
@@ -2717,6 +2775,24 @@ func closedDeltasNotInChangelog(tracking *domain.TrackingFile) []string {
 	return unbumped
 }
 
+func withdrawnDeltasNotInChangelog(tracking *domain.TrackingFile) []string {
+	recorded := make(map[string]struct{})
+	for _, entry := range tracking.Changelog {
+		for _, id := range entry.DeltasWithdrawn {
+			recorded[id] = struct{}{}
+		}
+	}
+	unbumped := make([]string, 0)
+	for _, delta := range tracking.Deltas {
+		if delta.Status == domain.DeltaStatusWithdrawn {
+			if _, ok := recorded[delta.ID]; !ok {
+				unbumped = append(unbumped, delta.ID)
+			}
+		}
+	}
+	return unbumped
+}
+
 func openedDeltasNotInChangelog(tracking *domain.TrackingFile) []string {
 	recorded := make(map[string]struct{})
 	for _, entry := range tracking.Changelog {
@@ -2770,13 +2846,14 @@ func verifiedRequirementsNotInChangelog(tracking *domain.TrackingFile) []string 
 
 func buildChangelogEntry(baseline, current *domain.TrackingFile, rev int, date, summary string) domain.ChangelogEntry {
 	return domain.ChangelogEntry{
-		Rev:          rev,
-		Date:         date,
-		DeltasOpened: deltaIDsNotInBaseline(baseline, current),
-		DeltasClosed: deltaIDsClosedSinceBaseline(baseline, current),
-		ReqsAdded:    requirementIDsNotInBaseline(baseline, current),
-		ReqsVerified: requirementIDsVerifiedSinceBaseline(baseline, current),
-		Summary:      summary,
+		Rev:             rev,
+		Date:            date,
+		DeltasOpened:    deltaIDsNotInBaseline(baseline, current),
+		DeltasClosed:    deltaIDsClosedSinceBaseline(baseline, current),
+		DeltasWithdrawn: deltaIDsWithdrawnSinceBaseline(baseline, current),
+		ReqsAdded:       requirementIDsNotInBaseline(baseline, current),
+		ReqsVerified:    requirementIDsVerifiedSinceBaseline(baseline, current),
+		Summary:         summary,
 	}
 }
 
@@ -2811,6 +2888,26 @@ func deltaIDsClosedSinceBaseline(baseline, current *domain.TrackingFile) []strin
 			continue
 		}
 		if baselineStatus[delta.ID] != domain.DeltaStatusClosed {
+			ids = append(ids, delta.ID)
+		}
+	}
+	return ids
+}
+
+func deltaIDsWithdrawnSinceBaseline(baseline, current *domain.TrackingFile) []string {
+	if baseline == nil {
+		baseline = &domain.TrackingFile{}
+	}
+	baselineStatus := make(map[string]domain.DeltaStatus, len(baseline.Deltas))
+	for _, delta := range baseline.Deltas {
+		baselineStatus[delta.ID] = delta.Status
+	}
+	ids := make([]string, 0)
+	for _, delta := range current.Deltas {
+		if delta.Status != domain.DeltaStatusWithdrawn {
+			continue
+		}
+		if baselineStatus[delta.ID] != domain.DeltaStatusWithdrawn {
 			ids = append(ids, delta.ID)
 		}
 	}

@@ -112,7 +112,7 @@ deltas:
     - id: D-009
       area: Delta withdraw lifecycle transition
       intent: add
-      status: open
+      status: closed
       origin_checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
       current: |-
         No verb exists to retract a delta opened in error. The only workaround
@@ -724,12 +724,16 @@ requirements:
       tags:
         - specctl
         - lifecycle
-      test_files: []
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_ClosedRejected.json
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_MissingReason.json
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_Success.json
+        - internal/cli/testdata/contracts/TestContract_DeltaWithdraw_Success.json
       gherkin: |-
         @specctl @lifecycle
         Feature: Delta withdraw retracts a non-closed delta with auditable reason
       lifecycle: active
-      verification: unverified
+      verification: verified
       introduced_by: D-009
     - id: REQ-031
       title: Requirement rebind keeps open-delta anchors live across supersession

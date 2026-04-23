@@ -16,6 +16,7 @@ const (
 	DeltaStatusInProgress DeltaStatus = "in-progress"
 	DeltaStatusClosed     DeltaStatus = "closed"
 	DeltaStatusDeferred   DeltaStatus = "deferred"
+	DeltaStatusWithdrawn  DeltaStatus = "withdrawn"
 
 	DeltaIntentAdd    DeltaIntent = "add"
 	DeltaIntentChange DeltaIntent = "change"
@@ -36,6 +37,7 @@ type Delta struct {
 	Notes               string      `yaml:"notes" json:"notes"`
 	AffectsRequirements []string    `yaml:"affects_requirements,omitempty" json:"affects_requirements,omitempty"`
 	Updates             []string    `yaml:"updates,omitempty" json:"updates,omitempty"`
+	WithdrawnReason     string      `yaml:"withdrawn_reason,omitempty" json:"withdrawn_reason,omitempty"`
 }
 
 func NewDelta(id string, intent DeltaIntent, area, originCheckpoint, current, target, notes string, affectsRequirements []string) (Delta, error) {
@@ -59,7 +61,7 @@ func NewDelta(id string, intent DeltaIntent, area, originCheckpoint, current, ta
 
 func IsValidDeltaStatus(s string) bool {
 	switch DeltaStatus(s) {
-	case DeltaStatusOpen, DeltaStatusInProgress, DeltaStatusClosed, DeltaStatusDeferred:
+	case DeltaStatusOpen, DeltaStatusInProgress, DeltaStatusClosed, DeltaStatusDeferred, DeltaStatusWithdrawn:
 		return true
 	default:
 		return false
@@ -150,6 +152,13 @@ func validateDelta(delta Delta) error {
 	}
 	if delta.Intent != "" && !IsValidDeltaIntent(string(delta.Intent)) {
 		return fmt.Errorf("delta %s has invalid intent %q", delta.ID, delta.Intent)
+	}
+	if delta.Status == DeltaStatusWithdrawn {
+		if strings.TrimSpace(delta.WithdrawnReason) == "" {
+			return fmt.Errorf("delta %s withdrawn_reason is required when status is withdrawn", delta.ID)
+		}
+	} else if strings.TrimSpace(delta.WithdrawnReason) != "" {
+		return fmt.Errorf("delta %s withdrawn_reason is only valid when status is withdrawn", delta.ID)
 	}
 	return nil
 }

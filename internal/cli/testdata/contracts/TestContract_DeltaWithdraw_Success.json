@@ -1,29 +1,43 @@
 {
-  "focus": {},
+  "focus": {
+    "delta": {
+      "affects_requirements": [],
+      "area": "Compensation stage 4",
+      "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+      "id": "D-001",
+      "intent": "add",
+      "notes": "Needs explicit acceptance criteria",
+      "origin_checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+      "status": "withdrawn",
+      "target": "Document ordering and verify failure cleanup",
+      "updates": [
+        "add_requirement"
+      ]
+    }
+  },
   "next": {
     "mode": "none"
   },
+  "result": {
+    "delta": {
+      "affects_requirements": [],
+      "area": "Compensation stage 4",
+      "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+      "id": "D-001",
+      "intent": "add",
+      "notes": "Needs explicit acceptance criteria",
+      "origin_checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+      "status": "withdrawn",
+      "target": "Document ordering and verify failure cleanup",
+      "updates": [
+        "add_requirement"
+      ]
+    },
+    "kind": "delta"
+  },
   "state": {
     "actionable_unverified_requirements": [],
-    "changelog": [
-      {
-        "date": "2026-03-28",
-        "deltas_closed": [
-          "D-001"
-        ],
-        "deltas_opened": [
-          "D-001"
-        ],
-        "reqs_added": [
-          "REQ-001"
-        ],
-        "reqs_verified": [
-          "REQ-001"
-        ],
-        "rev": 2,
-        "summary": "Closed the compensation cleanup work"
-      }
-    ],
+    "changelog": [],
     "charter": "runtime",
     "charter_membership": {
       "depends_on": [],
@@ -33,10 +47,10 @@
       "notes": "Session FSM and cleanup behavior",
       "order": 20
     },
-    "checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
+    "checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
     "created": "2026-03-05",
     "deltas": {
-      "closed": 1,
+      "closed": 0,
       "deferred": 0,
       "in_progress": 0,
       "items": [
@@ -46,17 +60,18 @@
           "current": "Stage 4 compensation exists in code but failure ordering is unclear",
           "id": "D-001",
           "intent": "add",
-          "notes": "Multi-agent implementation split between runtime and workflow work",
-          "origin_checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
-          "status": "closed",
+          "notes": "Needs explicit acceptance criteria",
+          "origin_checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+          "status": "withdrawn",
           "target": "Document ordering and verify failure cleanup",
           "updates": [
             "add_requirement"
-          ]
+          ],
+          "withdrawn_reason": "Opened in error; replacement tracked separately"
         }
       ],
       "open": 0,
-      "withdrawn": 0
+      "withdrawn": 1
     },
     "documents": {
       "primary": "runtime/src/domain/session_execution/SPEC.md"
@@ -66,41 +81,14 @@
     "inactive_unverified_requirements": [],
     "last_verified_at": "2026-03-28",
     "open_deltas": [],
-    "requirements": [
-      {
-        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
-        "id": "REQ-001",
-        "introduced_by": "D-001",
-        "lifecycle": "active",
-        "match": {
-          "heading": "Requirement: Compensation stage 4 failure cleanup",
-          "status": "matched"
-        },
-        "spec_context": {
-          "scenarios": [
-            "Cleanup runs after stage 4 failure"
-          ]
-        },
-        "superseded_by": null,
-        "supersedes": null,
-        "tags": [
-          "runtime",
-          "e2e"
-        ],
-        "test_files": [
-          "runtime/tests/domain/test_compensation_cleanup.py"
-        ],
-        "title": "Compensation stage 4 failure cleanup",
-        "verification": "verified"
-      }
-    ],
-    "rev": 3,
+    "requirements": [],
+    "rev": 1,
     "scope": [
       "runtime/src/domain/session_execution/",
       "runtime/src/application/commands/"
     ],
     "scope_drift": {
-      "checkpoint": "151fab7af14cd163a5da5e60fca7cb8891b08d6a",
+      "checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
       "drift_source": null,
       "files_changed_since_checkpoint": [],
       "last_verified_at": "2026-03-28",
@@ -108,7 +96,7 @@
       "tracked_by": []
     },
     "slug": "session-lifecycle",
-    "status": "verified",
+    "status": "draft",
     "tags": [
       "runtime",
       "domain"
@@ -116,7 +104,7 @@
     "title": "Session Lifecycle",
     "tracking_file": ".specs/runtime/session-lifecycle.yaml",
     "uncommitted_changes": [],
-    "updated": "2026-03-30",
+    "updated": "__TODAY__",
     "validation": {
       "findings": [],
       "valid": true

@@ -1,71 +1,20 @@
 {
+  "error": {
+    "code": "DELTA_INVALID_STATE",
+    "message": "delta D-001 cannot transition from closed to withdrawn"
+  },
   "focus": {
-    "blocking_requirement": {
-      "id": "REQ-001",
-      "lifecycle": "active",
-      "title": "Compensation stage 4 failure cleanup",
-      "verification": "stale"
-    }
+    "delta": {
+      "id": "D-001",
+      "status": "closed"
+    },
+    "transition": "withdraw"
   },
   "next": {
-    "mode": "choose_then_sequence",
-    "options": [
-      {
-        "action": "delta_add_repair",
-        "choose_when": "Requirement remains true but evidence is not trusted.",
-        "kind": "run_command",
-        "priority": 1,
-        "template": {
-          "argv": [
-            "specctl",
-            "delta",
-            "add",
-            "runtime:session-lifecycle",
-            "--intent",
-            "repair",
-            "--area",
-            "\u003carea\u003e"
-          ],
-          "required_fields": [
-            {
-              "description": "Short delta area label",
-              "name": "area"
-            },
-            {
-              "description": "Current state",
-              "name": "current"
-            },
-            {
-              "description": "Target state",
-              "name": "target"
-            },
-            {
-              "description": "Why this delta exists",
-              "name": "notes"
-            }
-          ],
-          "stdin_format": "yaml",
-          "stdin_template": "current: \u003ccurrent\u003e\ntarget: \u003ctarget\u003e\nnotes: \u003cnotes\u003e\naffects_requirements:\n  - REQ-001\n"
-        },
-        "why": "Choose this when the requirement remains correct and only fresh evidence is needed."
-      }
-    ]
+    "mode": "none"
   },
   "state": {
-    "actionable_unverified_requirements": [
-      {
-        "id": "REQ-001",
-        "introduced_by": "D-001",
-        "lifecycle": "active",
-        "tags": [
-          "runtime",
-          "e2e"
-        ],
-        "test_files": [],
-        "title": "Compensation stage 4 failure cleanup",
-        "verification": "stale"
-      }
-    ],
+    "actionable_unverified_requirements": [],
     "changelog": [
       {
         "date": "2026-03-28",
@@ -90,12 +39,12 @@
       "notes": "Session FSM and cleanup behavior",
       "order": 20
     },
-    "checkpoint": "c2a70bd4d2d946994a849548b71e20e5eade1ae7",
+    "checkpoint": "a1b2c3f",
     "created": "2026-03-05",
     "deltas": {
-      "closed": 0,
+      "closed": 1,
       "deferred": 0,
-      "in_progress": 1,
+      "in_progress": 0,
       "items": [
         {
           "affects_requirements": [],
@@ -104,8 +53,8 @@
           "id": "D-001",
           "intent": "add",
           "notes": "Multi-agent implementation split between runtime and workflow work",
-          "origin_checkpoint": "c2a70bd4d2d946994a849548b71e20e5eade1ae7",
-          "status": "in-progress",
+          "origin_checkpoint": "a1b2c3f",
+          "status": "closed",
           "target": "Document ordering and verify failure cleanup",
           "updates": [
             "add_requirement"
@@ -122,13 +71,7 @@
     "format_template": null,
     "inactive_unverified_requirements": [],
     "last_verified_at": "2026-03-28",
-    "open_deltas": [
-      {
-        "area": "Compensation stage 4",
-        "id": "D-001",
-        "status": "in-progress"
-      }
-    ],
+    "open_deltas": [],
     "requirements": [
       {
         "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
@@ -150,9 +93,11 @@
           "runtime",
           "e2e"
         ],
-        "test_files": [],
+        "test_files": [
+          "runtime/tests/domain/test_compensation_cleanup.py"
+        ],
         "title": "Compensation stage 4 failure cleanup",
-        "verification": "stale"
+        "verification": "verified"
       }
     ],
     "rev": 2,
@@ -161,15 +106,15 @@
       "runtime/src/application/commands/"
     ],
     "scope_drift": {
-      "checkpoint": "c2a70bd4d2d946994a849548b71e20e5eade1ae7",
+      "checkpoint": "a1b2c3f",
       "drift_source": null,
       "files_changed_since_checkpoint": [],
       "last_verified_at": "2026-03-28",
-      "status": "clean",
+      "status": "unavailable",
       "tracked_by": []
     },
     "slug": "session-lifecycle",
-    "status": "active",
+    "status": "verified",
     "tags": [
       "runtime",
       "domain"
@@ -179,8 +124,16 @@
     "uncommitted_changes": [],
     "updated": "2026-03-30",
     "validation": {
-      "findings": [],
-      "valid": true
+      "findings": [
+        {
+          "code": "CHECKPOINT_UNAVAILABLE",
+          "message": "git metadata is unavailable for scope drift detection",
+          "path": ".specs/runtime/session-lifecycle.yaml",
+          "severity": "warning",
+          "target": "checkpoint"
+        }
+      ],
+      "valid": false
     }
   }
 }

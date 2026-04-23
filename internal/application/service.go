@@ -1296,7 +1296,7 @@ func trackedDeltaIDs(state SpecProjection, tracking *domain.TrackingFile) []stri
 		return ids
 	}
 	for _, delta := range tracking.Deltas {
-		if delta.Status == domain.DeltaStatusDeferred {
+		if delta.Status == domain.DeltaStatusDeferred || delta.Status == domain.DeltaStatusWithdrawn {
 			continue
 		}
 		ids = append(ids, delta.ID)

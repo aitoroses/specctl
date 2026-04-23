@@ -445,6 +445,50 @@ func TestContract_DeltaTransitions_ValidationFailed(t *testing.T) {
 	}
 }
 
+func TestContract_DeltaWithdraw_Success(t *testing.T) {
+	repoRoot := copyApplicationFixtureRepo(t, "ready-spec")
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.WithdrawDelta(DeltaWithdrawRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-001",
+			Reason:  "Opened in error; supersession planned in a separate delta.",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
+func TestContract_DeltaWithdraw_MissingReason(t *testing.T) {
+	repoRoot := copyApplicationFixtureRepo(t, "ready-spec")
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.WithdrawDelta(DeltaWithdrawRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-001",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
+func TestContract_DeltaWithdraw_ClosedRejected(t *testing.T) {
+	repoRoot := contractActiveRequirementRepo(t)
+	replaceTrackedRequirementBlockOnly(t, repoRoot, "verified")
+	replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "status: in-progress", "status: closed")
+	replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "status: active", "status: verified")
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.WithdrawDelta(DeltaWithdrawRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-001",
+			Reason:  "Attempting to withdraw a closed delta should fail",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
 func TestContract_DeltaClose_RepairTerminal(t *testing.T) {
 	repoRoot := contractRepairTerminalRepo(t)
 	service := newApplicationContractService(repoRoot)

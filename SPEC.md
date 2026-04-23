@@ -3315,11 +3315,92 @@ and the tool should stop treating it as live work.
 - Withdrawn deltas do not contribute to `DEFERRED_SUPERSEDED_RESIDUE`
   and cannot be resumed; a change of mind requires a fresh `delta add`.
 
+### Contracts
+
+Success (`delta withdraw`):
+
+```json
+{
+  "state": { "status": "...", "deltas": { "withdrawn": 1, "items": [
+    { "id": "D-001", "status": "withdrawn",
+      "withdrawn_reason": "Opened in error; replacement tracked separately" }
+  ] } },
+  "focus": { "delta": { "id": "D-001", "status": "withdrawn", ... } },
+  "result": { "kind": "delta", "delta": { "id": "D-001", "status": "withdrawn", ... } },
+  "next": { "mode": "none" }
+}
+```
+
+Error (`INVALID_INPUT`, missing reason):
+
+```json
+{
+  "error": { "code": "INVALID_INPUT", "message": "--reason is required" },
+  "focus": { "input": { "missing_fields": ["reason"] } },
+  "next": { "mode": "none" }
+}
+```
+
+Error (`DELTA_INVALID_STATE`, closed delta):
+
+```json
+{
+  "error": {
+    "code": "DELTA_INVALID_STATE",
+    "message": "delta D-001 cannot transition from closed to withdrawn"
+  },
+  "focus": { "delta": { "id": "D-001", "status": "closed" },
+             "transition": "withdraw" },
+  "next": { "mode": "none" }
+}
+```
+
 ## Requirement: Delta withdraw retracts a non-closed delta with auditable reason
 
 ```gherkin requirement
 @specctl @lifecycle
 Feature: Delta withdraw retracts a non-closed delta with auditable reason
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: Withdraw an open delta with an auditable reason
+  Given a spec contains an open delta D-X
+  When the agent runs delta withdraw with --reason
+  Then the delta status becomes withdrawn
+  And withdrawn_reason records the supplied text
+  And the deltas.withdrawn count increments
+```
+
+```gherkin scenario
+Scenario: Withdraw is rejected on a closed delta
+  Given a spec contains a closed delta D-X
+  When the agent runs delta withdraw on D-X
+  Then the response returns DELTA_INVALID_STATE
+  And the delta remains closed
+```
+
+```gherkin scenario
+Scenario: Withdraw requires a reason
+  Given the agent runs delta withdraw without --reason
+  Then the response returns INVALID_INPUT
+  And focus.input.missing_fields lists reason
+```
+
+```gherkin scenario
+Scenario: Withdrawn deltas do not emit DEFERRED_SUPERSEDED_RESIDUE
+  Given a withdrawn delta whose affects_requirements only names superseded requirements
+  When the agent runs context on the spec
+  Then the context warnings do not include DEFERRED_SUPERSEDED_RESIDUE for the withdrawn delta
+```
+
+```gherkin scenario
+Scenario: Rev bump records withdrawn deltas in the changelog
+  Given a spec has withdrawn deltas not yet recorded in any changelog entry
+  When the agent runs rev bump
+  Then the new entry lists them under deltas_withdrawn
+  And rev bump proceeds even if no new closed deltas exist
 ```
 
 ---
