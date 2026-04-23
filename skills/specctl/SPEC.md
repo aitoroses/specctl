@@ -94,3 +94,34 @@ Scenario: Re-running setup repairs stale specctl config
   And unrelated config is preserved
 ```
 ```
+
+## Retract, Rebind, and Repair-Intent Guidance
+
+The packaged skill must teach the agent how to react to three
+lifecycle states that today lack clean escape hatches: a delta opened
+in error, a delta whose affected requirements were superseded under
+it, and a `delta add --intent repair` that collides with closed-delta
+invariants. Without skill-level guidance, the agent falls back to
+`defer` plus a second `delta add`, which burns a D-id and creates
+permanent residue in the tracking YAML.
+
+### Invariants
+
+- The skill documents `delta withdraw` as the verb to retract a
+  non-closed delta opened in error, and explicitly contrasts it with
+  `delta defer` ("not now, maybe later").
+- The skill documents `delta rebind-requirements` for explicit
+  re-anchoring and describes the `auto_rebind_on_replace` config that
+  gates automatic rebinding on `req replace`.
+- The skill documents the `VALIDATION_FAILED` response shape emitted
+  by `delta add --intent repair` when closed-delta invariants would
+  block the resulting `req stale`, including the suggested
+  `--intent change` redirect.
+
+## Requirement: Skill guides retraction rebind and repair-intent validation
+
+```gherkin requirement
+@specctl @manual
+Feature: Skill guides retraction rebind and repair-intent validation
+```
+

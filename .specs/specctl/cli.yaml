@@ -1,10 +1,10 @@
 slug: cli
 charter: specctl
 title: specctl CLI Behavioral Spec
-status: verified
+status: active
 rev: 6
 created: "2026-04-01"
-updated: "2026-04-21"
+updated: "2026-04-23"
 last_verified_at: "2026-04-21"
 checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
 tags: []
@@ -88,6 +88,79 @@ deltas:
         - REQ-007
         - REQ-015
         - REQ-020
+    - id: D-008
+      area: Eager validation of repair intent against closed-delta invariants
+      intent: add
+      status: open
+      origin_checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
+      current: |-
+        delta add --intent repair accepts a delta even when closed-delta
+        invariants will block the only legal update path (req stale), forcing
+        the caller to defer and reopen with a different intent. Each round
+        burns a D-id and leaves permanent residue in state.deltas.deferred.
+      target: |-
+        delta add pre-flights repair intent against closed-delta invariants
+        and rejects with VALIDATION_FAILED before allocating a D-id when any
+        entry in affects_requirements is referenced by a closed delta that
+        requires it verified. The error payload names the conflicting closed
+        deltas and suggests --intent change.
+      notes: |
+        Origin: terrarium-runtime-v2 D-015 to D-016 dogfood 2026-04-22.
+        Prevents DEFERRED_SUPERSEDED_RESIDUE at its source by failing fast.
+      updates:
+        - add_requirement
+    - id: D-009
+      area: Delta withdraw lifecycle transition
+      intent: add
+      status: open
+      origin_checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
+      current: |-
+        No verb exists to retract a delta opened in error. The only workaround
+        is permanent defer, which burns a D-id and earns DEFERRED_SUPERSEDED_RESIDUE
+        warnings once the affected requirements are superseded downstream.
+      target: |-
+        specctl delta withdraw <charter:slug> <D-id> --reason <text> transitions
+        open | in-progress | deferred to a new withdrawn state. Withdrawn deltas
+        persist in the tracking YAML as auditable history (withdrawn_reason
+        recorded), are listed under deltas_withdrawn in the rev changelog, do
+        not emit DEFERRED_SUPERSEDED_RESIDUE, and cannot be resumed. Closed
+        deltas are out of scope (a revert would be a compensating delta).
+      notes: |
+        Origin: runtime-v2 D-015 residue 2026-04-22. First-class retraction;
+        pairs with Delta A to eliminate both the creation and the existence
+        of delta-residue. Retroactive cleanup path: resume then withdraw.
+      updates:
+        - add_requirement
+    - id: D-010
+      area: Rebind affects_requirements across supersession
+      intent: add
+      status: open
+      origin_checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
+      current: |-
+        affects_requirements freezes at delta add. When a referenced REQ is
+        later replaced via req replace, the delta remains anchored to a dead
+        REQ id. DEFERRED_SUPERSEDED_RESIDUE correctly detects this but no
+        verb resolves it — governance forbids hand-editing the tracking YAML.
+      target: |-
+        Two composable mechanisms. (A) req replace auto-rebinds open,
+        in-progress, or deferred deltas whose affects_requirements entry
+        matches the replaced REQ, when the replacement is scope-preserving
+        (same charter, same slug, same match status). Gated by a new config
+        key auto_rebind_on_replace (default false for existing installs,
+        true for new inits). Each auto-rebind emits AUTO_REBIND_APPLIED in
+        context warnings and is recorded in the rev changelog. (B) specctl
+        delta rebind-requirements <charter:slug> <D-id> --from REQ-X --to
+        REQ-Y (or --remove REQ-X --reason <text>) explicitly updates
+        affects_requirements for open, in-progress, or deferred deltas.
+        Does not touch status, intent, or any requirement lifecycle or
+        verification. Invariant: closed-delta affects_requirements remain
+        immutable.
+      notes: |
+        Origin: runtime-v2 D-002 residue 2026-04-22 (5 generations of drift
+        without a resolution path). Keeps valuable deferred deltas anchored
+        across real-world spec evolution. Pairs with Deltas A and B.
+      updates:
+        - add_requirement
 requirements:
     - id: REQ-001
       title: Context reports spec status and drift state
@@ -633,6 +706,42 @@ requirements:
       verification: verified
       introduced_by: D-007
       supersedes: REQ-020
+    - id: REQ-029
+      title: Delta add pre-flights repair intent against closed-delta invariants
+      tags:
+        - specctl
+        - lifecycle
+      test_files: []
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta add pre-flights repair intent against closed-delta invariants
+      lifecycle: active
+      verification: unverified
+      introduced_by: D-008
+    - id: REQ-030
+      title: Delta withdraw retracts a non-closed delta with auditable reason
+      tags:
+        - specctl
+        - lifecycle
+      test_files: []
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta withdraw retracts a non-closed delta with auditable reason
+      lifecycle: active
+      verification: unverified
+      introduced_by: D-009
+    - id: REQ-031
+      title: Requirement rebind keeps open-delta anchors live across supersession
+      tags:
+        - specctl
+        - write
+      test_files: []
+      gherkin: |-
+        @specctl @write
+        Feature: Requirement rebind keeps open-delta anchors live across supersession
+      lifecycle: active
+      verification: unverified
+      introduced_by: D-010
 changelog:
     - rev: 2
       date: "2026-04-02"

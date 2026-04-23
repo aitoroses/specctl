@@ -3212,6 +3212,110 @@ Scenario: specctl example requires no flags or filesystem state
 
 ---
 
+## 26. Delta Add Eager Validation of Repair Intent
+
+`delta add --intent repair` is valid only when the requirements named in
+`affects_requirements` can legally be transitioned to `stale`. The
+closed-delta invariant forbids staling a requirement that a closed
+delta depends on being `verified`, so a repair delta whose only update
+path is `req stale` against such a requirement cannot ever be closed.
+Before this surface, specctl detected the conflict only at `req stale`
+time, after a D-id had been allocated; the caller had to `defer` the
+allocated delta and re-open with `--intent change`, burning the D-id
+and leaving permanent residue in `state.deltas.deferred`. This surface
+moves the check to `delta add` and fails fast.
+
+### Invariants
+
+- A `delta add` with `--intent repair` must reject with
+  `VALIDATION_FAILED` before allocating a D-id when any entry in
+  `affects_requirements` is referenced by a closed delta requiring it
+  `verified`.
+- The rejection payload enumerates the conflicting closed deltas and
+  suggests `--intent change` as the structural alternative.
+- The check applies only to `--intent repair`; other intents retain
+  their current validation surface.
+
+## Requirement: Delta add pre-flights repair intent against closed-delta invariants
+
+```gherkin requirement
+@specctl @lifecycle
+Feature: Delta add pre-flights repair intent against closed-delta invariants
+```
+
+---
+
+## 27. Delta Withdraw Lifecycle Transition
+
+`delta withdraw` is a first-class retraction verb for deltas opened in
+error. Without it, the only workaround is to `defer` the delta
+permanently, which (a) burns a D-id, (b) leaves a `deferred` entry in
+the tracking YAML forever, and (c) earns `DEFERRED_SUPERSEDED_RESIDUE`
+warnings once the delta's affected requirements are superseded
+downstream, because the tool assumes a `deferred` delta still matters.
+Withdraw expresses the opposite signal: this delta will never happen
+and the tool should stop treating it as live work.
+
+### Invariants
+
+- `delta withdraw` transitions `open | in-progress | deferred` →
+  `withdrawn`; it is rejected on `closed` deltas (that concept is a
+  compensating / revert delta, not a withdraw).
+- Withdrawn deltas persist in the tracking YAML with `withdrawn_reason`
+  recorded and appear under `deltas_withdrawn` in the rev changelog
+  entry for the rev in which the transition happens.
+- Withdrawn deltas do not contribute to `DEFERRED_SUPERSEDED_RESIDUE`
+  and cannot be resumed; a change of mind requires a fresh `delta add`.
+
+## Requirement: Delta withdraw retracts a non-closed delta with auditable reason
+
+```gherkin requirement
+@specctl @lifecycle
+Feature: Delta withdraw retracts a non-closed delta with auditable reason
+```
+
+---
+
+## 28. Requirement Rebind Across Supersession
+
+A delta's `affects_requirements` list freezes at `delta add` time.
+When a referenced requirement is later superseded through `req
+replace`, open and deferred deltas remain anchored to dead requirement
+IDs. Today specctl correctly raises `DEFERRED_SUPERSEDED_RESIDUE`
+for this case but offers no resolution path — governance forbids
+hand-editing the tracking YAML, and the only escape is to withdraw
+(or defer-forever) the entire delta, losing information the team may
+still want to track. This surface introduces two composable paths to
+keep anchors live.
+
+### Invariants
+
+- Automatic rebind: when `req replace REQ-X --delta D-new` runs with a
+  scope-preserving replacement, every `open | in-progress | deferred`
+  delta whose `affects_requirements` contains `REQ-X` has that entry
+  updated to the replacement ID. Gated by a new config key
+  `auto_rebind_on_replace` (default `false` for existing installs,
+  `true` for `specctl init`). Each rebind emits `AUTO_REBIND_APPLIED`
+  in context warnings and is recorded in the rev changelog.
+- Explicit rebind: `specctl delta rebind-requirements <charter:slug>
+  <D-id> --from REQ-X --to REQ-Y` (or `--remove REQ-X --reason
+  <text>`) updates `affects_requirements` for `open | in-progress |
+  deferred` deltas. It does not change the delta's `status` or
+  `intent`, and it does not change any requirement's lifecycle or
+  verification.
+- Closed-delta invariant: `affects_requirements` of `closed` deltas is
+  immutable. Neither the automatic nor the explicit path may modify
+  it.
+
+## Requirement: Requirement rebind keeps open-delta anchors live across supersession
+
+```gherkin requirement
+@specctl @write
+Feature: Requirement rebind keeps open-delta anchors live across supersession
+```
+
+---
+
 ## Appendix A: YAML Schemas
 
 Reference schemas for the three specctl-managed stores. Sourced from SPEC.md section 3.

@@ -1,10 +1,10 @@
 slug: skill
 charter: specctl
 title: specctl Packaged Skill
-status: verified
+status: active
 rev: 3
 created: "2026-04-17"
-updated: "2026-04-21"
+updated: "2026-04-23"
 last_verified_at: "2026-04-21"
 checkpoint: 6e63dbe47c2e63eef195d590d3522f69792961ca
 tags: []
@@ -45,6 +45,29 @@ deltas:
       notes: The public skill workflow should configure the shipped agent tool coherently across supported clients
       affects_requirements:
         - REQ-002
+    - id: D-004
+      area: Agent guidance for retract rebind and repair-intent validation
+      intent: add
+      status: open
+      origin_checkpoint: 6e63dbe47c2e63eef195d590d3522f69792961ca
+      current: |-
+        Skill teaches the generic governance workflow but does not cover
+        when to use delta withdraw vs defer, when to use
+        delta rebind-requirements (or how auto-rebind on req replace
+        behaves), or how to interpret VALIDATION_FAILED from
+        delta add --intent repair. Agents facing those states fall back
+        to defer/reopen, producing residue.
+      target: |-
+        Skill documents the three new escape hatches. (1) delta withdraw
+        semantics and when to prefer it over defer. (2) delta
+        rebind-requirements plus the auto_rebind_on_replace config. (3)
+        Reading and acting on the new VALIDATION_FAILED payload
+        (conflicts list plus intent suggestion).
+      notes: |
+        Companion to specctl:cli Deltas D-008, D-009, D-010 (2026-04-22).
+        Keeps the agent-facing surface coherent per CONTRIBUTING.md.
+      updates:
+        - add_requirement
 requirements:
     - id: REQ-001
       title: Packaged skill teaches the agent-first governance workflow
@@ -84,6 +107,18 @@ requirements:
       verification: verified
       introduced_by: D-003
       supersedes: REQ-002
+    - id: REQ-004
+      title: Skill guides retraction rebind and repair-intent validation
+      tags:
+        - specctl
+        - manual
+      test_files: []
+      gherkin: |-
+        @specctl @manual
+        Feature: Skill guides retraction rebind and repair-intent validation
+      lifecycle: active
+      verification: unverified
+      introduced_by: D-004
 changelog:
     - rev: 2
       date: "2026-04-17"
