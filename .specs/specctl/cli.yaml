@@ -2,11 +2,11 @@ slug: cli
 charter: specctl
 title: specctl CLI Behavioral Spec
 status: verified
-rev: 7
+rev: 8
 created: "2026-04-01"
 updated: "2026-04-24"
-last_verified_at: "2026-04-23"
-checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
+last_verified_at: "2026-04-24"
+checkpoint: 2b27d56ff5b69b5537eada95c47d558f9cda511a
 tags: []
 documents:
     primary: SPEC.md
@@ -961,3 +961,18 @@ changelog:
         - REQ-030
         - REQ-031
       summary: Introduce delta withdraw, rebind-requirements, and eager repair validation as first-class governance verbs.
+    - rev: 8
+      date: "2026-04-24"
+      deltas_opened:
+        - D-011
+        - D-012
+      deltas_closed:
+        - D-011
+        - D-012
+      reqs_added:
+        - REQ-032
+        - REQ-033
+      reqs_verified:
+        - REQ-032
+        - REQ-033
+      summary: Harden withdraw projections and rebind audit trail with contract-pinned regressions and diff coverage.

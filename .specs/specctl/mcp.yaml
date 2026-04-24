@@ -2,11 +2,11 @@ slug: mcp
 charter: specctl
 title: specctl MCP Adapter
 status: verified
-rev: 2
+rev: 3
 created: "2026-04-17"
 updated: "2026-04-24"
-last_verified_at: "2026-04-17"
-checkpoint: 7012af709cf0a1bacf6dfa2e1f9c75892ea5066a
+last_verified_at: "2026-04-24"
+checkpoint: 2b27d56ff5b69b5537eada95c47d558f9cda511a
 tags:
     - mcp
 documents:
@@ -118,3 +118,14 @@ changelog:
         - REQ-002
         - REQ-003
       summary: Add the initial MCP adapter subspec for transport-specific governance.
+    - rev: 3
+      date: "2026-04-24"
+      deltas_opened:
+        - D-002
+      deltas_closed:
+        - D-002
+      reqs_added:
+        - REQ-004
+      reqs_verified:
+        - REQ-004
+      summary: Register delta withdraw and delta rebind-requirements as first-class MCP tools.

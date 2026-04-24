@@ -2,11 +2,11 @@ slug: skill
 charter: specctl
 title: specctl Packaged Skill
 status: verified
-rev: 4
+rev: 5
 created: "2026-04-17"
 updated: "2026-04-24"
-last_verified_at: "2026-04-23"
-checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
+last_verified_at: "2026-04-24"
+checkpoint: 2b27d56ff5b69b5537eada95c47d558f9cda511a
 tags: []
 documents:
     primary: skills/specctl/SPEC.md
@@ -197,3 +197,14 @@ changelog:
       reqs_verified:
         - REQ-004
       summary: Document the delta withdraw, rebind-requirements, and repair-intent validation escape hatches in the packaged skill.
+    - rev: 5
+      date: "2026-04-24"
+      deltas_opened:
+        - D-005
+      deltas_closed:
+        - D-005
+      reqs_added:
+        - REQ-005
+      reqs_verified:
+        - REQ-005
+      summary: Document observable reason fields and the auto_rebind_on_replace config default divergence.
