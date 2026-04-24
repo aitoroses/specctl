@@ -12,7 +12,8 @@
       "target": "Document ordering and verify failure cleanup",
       "updates": [
         "add_requirement"
-      ]
+      ],
+      "withdrawn_reason": "Opened in error; replacement tracked separately"
     }
   },
   "next": {
@@ -31,7 +32,8 @@
       "target": "Document ordering and verify failure cleanup",
       "updates": [
         "add_requirement"
-      ]
+      ],
+      "withdrawn_reason": "Opened in error; replacement tracked separately"
     },
     "kind": "delta"
   },

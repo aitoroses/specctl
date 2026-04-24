@@ -84,7 +84,8 @@
             "target": "Track the committed design-doc change"
           }
         ],
-        "resumed": []
+        "resumed": [],
+        "withdrawn": []
       },
       "documents": {
         "primary_from": "runtime/src/domain/session_execution/SPEC.md",

@@ -1036,6 +1036,26 @@ func TestContract_RevBump_Success(t *testing.T) {
 	assertContractFixture(t, output, placeholders)
 }
 
+func TestContract_RevBump_WithDeltasWithdrawn(t *testing.T) {
+	repoRoot := contractDeferredSupersededResidueRepo(t)
+	trackingPath := filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml")
+	replaceFileText(t, trackingPath, "area: Deferred cleanup residue\n    intent: change\n    status: deferred", "area: Deferred cleanup residue\n    intent: change\n    status: withdrawn\n    withdrawn_reason: Retroactively retracted; decomposition is no longer planned.")
+	initGitRepoAtDate(t, repoRoot, "2026-03-30T09:36:00Z")
+	headSHA := strings.TrimSpace(runGitAtDate(t, repoRoot, "2026-03-30T09:36:00Z", "rev-parse", "HEAD"))
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.BumpRevision(RevisionBumpRequest{
+			Target:     "runtime:session-lifecycle",
+			Checkpoint: "HEAD",
+			Summary:    "Record the withdrawn follow-up in the changelog.",
+		})
+	})
+	placeholders := contractPlaceholders()
+	placeholders["__HEAD_SHA__"] = headSHA
+	assertContractFixture(t, output, placeholders)
+}
+
 func TestContract_RevBump_StatusNotVerified(t *testing.T) {
 	repoRoot := copyApplicationFixtureRepo(t, "active-spec")
 	service := newApplicationContractService(repoRoot)

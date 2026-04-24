@@ -4,7 +4,7 @@ title: specctl CLI Behavioral Spec
 status: verified
 rev: 7
 created: "2026-04-01"
-updated: "2026-04-23"
+updated: "2026-04-24"
 last_verified_at: "2026-04-23"
 checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
 tags: []
@@ -161,6 +161,32 @@ deltas:
         across real-world spec evolution. Pairs with Deltas A and B.
       updates:
         - add_requirement
+    - id: D-011
+      area: Withdrawn deltas surface uniformly across projection, diff, and residue
+      intent: change
+      status: closed
+      origin_checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
+      current: |-
+        Withdrawn deltas are surfaced inconsistently across the cli read
+        surfaces. projectDelta omits withdrawn_reason from result.delta
+        payloads though buildDeltaItemProjections includes it in state
+        counts and items; diffDeltas buckets only Opened/Closed/Deferred/
+        Resumed so a withdrawn transition disappears from the diff output;
+        and two scenarios claimed in the SPEC ("withdrawn deltas do not
+        emit DEFERRED_SUPERSEDED_RESIDUE" and "rev bump records withdrawn
+        deltas") are not yet pinned by contract goldens.
+      target: |-
+        projectDelta carries withdrawn_reason so result.delta and state
+        items match; diffDeltas includes a Withdrawn bucket projected
+        through to SpecDiffDeltaModel and the diff JSON envelope; contract
+        goldens lock the residue-silence and rev-bump-with-withdrawn
+        scenarios.
+      notes: |
+        Review feedback on PR #10. Strengthens REQ-030 without altering
+        lifecycle semantics. Pairs with D-012 (rebind reason parity) in
+        the second governance cycle on this branch.
+      affects_requirements:
+        - REQ-030
 requirements:
     - id: REQ-001
       title: Context reports spec status and drift state
@@ -732,9 +758,10 @@ requirements:
       gherkin: |-
         @specctl @lifecycle
         Feature: Delta withdraw retracts a non-closed delta with auditable reason
-      lifecycle: active
+      lifecycle: superseded
       verification: verified
       introduced_by: D-009
+      superseded_by: REQ-032
     - id: REQ-031
       title: Requirement rebind keeps open-delta anchors live across supersession
       tags:
@@ -750,6 +777,22 @@ requirements:
       lifecycle: active
       verification: verified
       introduced_by: D-010
+    - id: REQ-032
+      title: Delta withdraw records an auditable reason visible across projections, diff, and residue
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_Context_WithdrawnDeltaSilencesResidue.json
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_Success.json
+        - internal/application/testdata/contracts/TestContract_RevBump_WithDeltasWithdrawn.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta withdraw records an auditable reason visible across projections, diff, and residue
+      lifecycle: active
+      verification: verified
+      introduced_by: D-011
+      supersedes: REQ-030
 changelog:
     - rev: 2
       date: "2026-04-02"

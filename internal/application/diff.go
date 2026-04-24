@@ -85,10 +85,11 @@ type SpecDiffModel struct {
 }
 
 type SpecDiffDeltaModel struct {
-	Opened   []DiffDeltaSummary `json:"opened"`
-	Closed   []DiffDeltaSummary `json:"closed"`
-	Deferred []DiffDeltaSummary `json:"deferred"`
-	Resumed  []DiffDeltaSummary `json:"resumed"`
+	Opened    []DiffDeltaSummary `json:"opened"`
+	Closed    []DiffDeltaSummary `json:"closed"`
+	Deferred  []DiffDeltaSummary `json:"deferred"`
+	Resumed   []DiffDeltaSummary `json:"resumed"`
+	Withdrawn []DiffDeltaSummary `json:"withdrawn"`
 }
 
 type SpecDiffRequirementModel struct {
@@ -420,10 +421,11 @@ func initialBaselineSpecDiffModel(current *domain.TrackingFile, currentStatus do
 		Documents: DiffDocumentsModel{PrimaryFrom: nil, PrimaryTo: current.Documents.Primary},
 		Scope:     diffStringSet(nil, current.Scope),
 		Deltas: SpecDiffDeltaModel{
-			Opened:   []DiffDeltaSummary{},
-			Closed:   []DiffDeltaSummary{},
-			Deferred: []DiffDeltaSummary{},
-			Resumed:  []DiffDeltaSummary{},
+			Opened:    []DiffDeltaSummary{},
+			Closed:    []DiffDeltaSummary{},
+			Deferred:  []DiffDeltaSummary{},
+			Resumed:   []DiffDeltaSummary{},
+			Withdrawn: []DiffDeltaSummary{},
 		},
 		Requirements: SpecDiffRequirementModel{
 			Added:    []DiffRequirementSummary{},
@@ -669,10 +671,11 @@ func diffDeltas(previous, current []domain.Delta) SpecDiffDeltaModel {
 		prev[delta.ID] = delta
 	}
 	model := SpecDiffDeltaModel{
-		Opened:   []DiffDeltaSummary{},
-		Closed:   []DiffDeltaSummary{},
-		Deferred: []DiffDeltaSummary{},
-		Resumed:  []DiffDeltaSummary{},
+		Opened:    []DiffDeltaSummary{},
+		Closed:    []DiffDeltaSummary{},
+		Deferred:  []DiffDeltaSummary{},
+		Resumed:   []DiffDeltaSummary{},
+		Withdrawn: []DiffDeltaSummary{},
 	}
 	for _, delta := range current {
 		if old, exists := prev[delta.ID]; !exists {
@@ -686,6 +689,9 @@ func diffDeltas(previous, current []domain.Delta) SpecDiffDeltaModel {
 			}
 			if old.Status == domain.DeltaStatusDeferred && delta.Status == domain.DeltaStatusOpen {
 				model.Resumed = append(model.Resumed, summarizeDelta(delta))
+			}
+			if old.Status != domain.DeltaStatusWithdrawn && delta.Status == domain.DeltaStatusWithdrawn {
+				model.Withdrawn = append(model.Withdrawn, summarizeDelta(delta))
 			}
 		}
 	}

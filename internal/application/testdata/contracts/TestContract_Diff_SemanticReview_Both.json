@@ -334,7 +334,8 @@
         "closed": [],
         "deferred": [],
         "opened": [],
-        "resumed": []
+        "resumed": [],
+        "withdrawn": []
       },
       "documents": {
         "primary_from": "runtime/src/domain/session_execution/SPEC.md",

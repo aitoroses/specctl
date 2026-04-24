@@ -2430,6 +2430,7 @@ func projectDelta(delta domain.Delta) DeltaItemProjection {
 		Notes:               delta.Notes,
 		AffectsRequirements: append([]string{}, delta.AffectsRequirements...),
 		Updates:             updates,
+		WithdrawnReason:     delta.WithdrawnReason,
 	}
 }
 

@@ -3317,7 +3317,8 @@ and the tool should stop treating it as live work.
 
 ### Contracts
 
-Success (`delta withdraw`):
+Success (`delta withdraw`) — `withdrawn_reason` appears **both** in the
+state projection and the result envelope:
 
 ```json
 {
@@ -3325,11 +3326,37 @@ Success (`delta withdraw`):
     { "id": "D-001", "status": "withdrawn",
       "withdrawn_reason": "Opened in error; replacement tracked separately" }
   ] } },
-  "focus": { "delta": { "id": "D-001", "status": "withdrawn", ... } },
-  "result": { "kind": "delta", "delta": { "id": "D-001", "status": "withdrawn", ... } },
+  "focus": { "delta": { "id": "D-001", "status": "withdrawn",
+             "withdrawn_reason": "Opened in error; replacement tracked separately" } },
+  "result": { "kind": "delta", "delta": { "id": "D-001", "status": "withdrawn",
+             "withdrawn_reason": "Opened in error; replacement tracked separately" } },
   "next": { "mode": "none" }
 }
 ```
+
+Diff projection (`specctl diff`) — a transition into `withdrawn` appears in the
+new `withdrawn` bucket, parallel to `opened | closed | deferred | resumed`:
+
+```json
+{
+  "deltas": {
+    "opened": [],
+    "closed": [],
+    "deferred": [],
+    "resumed": [],
+    "withdrawn": [{ "id": "D-002", "area": "...", "status": "withdrawn" }]
+  }
+}
+```
+
+Context (`specctl context`) — withdrawn deltas are counted separately from
+deferred and do not produce `DEFERRED_SUPERSEDED_RESIDUE` warnings, even when
+their `affects_requirements` only names superseded requirements. A withdrawn
+delta is inert for residue calculation by design.
+
+Rev bump — withdrawn deltas not yet recorded in any changelog entry are listed
+under `deltas_withdrawn` in the new entry, and `rev bump` proceeds even when
+the only unbumped work is a withdrawal.
 
 Error (`INVALID_INPUT`, missing reason):
 
@@ -3355,11 +3382,11 @@ Error (`DELTA_INVALID_STATE`, closed delta):
 }
 ```
 
-## Requirement: Delta withdraw retracts a non-closed delta with auditable reason
+## Requirement: Delta withdraw records an auditable reason visible across projections, diff, and residue
 
 ```gherkin requirement
 @specctl @lifecycle
-Feature: Delta withdraw retracts a non-closed delta with auditable reason
+Feature: Delta withdraw records an auditable reason visible across projections, diff, and residue
 ```
 
 ### Scenarios
@@ -3401,6 +3428,23 @@ Scenario: Rev bump records withdrawn deltas in the changelog
   When the agent runs rev bump
   Then the new entry lists them under deltas_withdrawn
   And rev bump proceeds even if no new closed deltas exist
+```
+
+```gherkin scenario
+Scenario: Withdrawn reason is visible in both the state projection and the result envelope
+  Given an open delta D-X
+  When the agent runs delta withdraw D-X --reason <text>
+  Then state.deltas.items[] entry for D-X records withdrawn_reason
+  And result.delta records withdrawn_reason
+  And focus.delta records withdrawn_reason
+```
+
+```gherkin scenario
+Scenario: Diff surfaces open-to-withdrawn transitions in the withdrawn bucket
+  Given a prior checkpoint where D-X was open|in-progress|deferred
+  And the current tracking file has D-X as withdrawn
+  When the agent runs diff
+  Then deltas.withdrawn lists D-X alongside any opened, closed, deferred, resumed buckets
 ```
 
 ---
