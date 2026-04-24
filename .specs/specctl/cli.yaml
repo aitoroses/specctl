@@ -2,11 +2,11 @@ slug: cli
 charter: specctl
 title: specctl CLI Behavioral Spec
 status: verified
-rev: 9
+rev: 10
 created: "2026-04-01"
 updated: "2026-04-24"
 last_verified_at: "2026-04-24"
-checkpoint: f22aac7e0a7f6c5e6830722b29e027983929c014
+checkpoint: a0c6aced47c59f00cb29b18d7903450150f2a957
 tags: []
 documents:
     primary: SPEC.md
@@ -1161,3 +1161,18 @@ changelog:
         - REQ-034
         - REQ-035
       summary: Make auto-rebind unconditional and emit guidance next steps after withdraw, rebind, and replace-with-rebinds.
+    - rev: 10
+      date: "2026-04-24"
+      deltas_opened:
+        - D-015
+        - D-016
+      deltas_closed:
+        - D-015
+        - D-016
+      reqs_added:
+        - REQ-036
+        - REQ-037
+      reqs_verified:
+        - REQ-036
+        - REQ-037
+      summary: 'Close the inverse-direction validation gap: detect orphan gherkin blocks as advisory and reject delta withdraw when introduced requirements are still active.'
