@@ -155,3 +155,37 @@ to configure a flag.
 @specctl @manual
 Feature: Skill documents observable reason fields and repair-intent retry walkthrough
 ```
+
+## Rev-Bump Ordering and Post-Bump Sync
+
+`specctl rev bump --checkpoint HEAD` captures the current HEAD SHA at call
+time and records it in the tracking YAML. The bump itself is a new commit
+that writes only `.specs/**/*.yaml` (outside the governed scope), so the
+bump commit does not create drift against itself. However, any subsequent
+commit that touches a scope path — even one the agent classifies as
+"non-governed" test infrastructure — leaves a real content diff between
+the recorded checkpoint and the new HEAD. `specctl context` will report
+that diff on the next read.
+
+The skill must warn the agent to either fold the late change into a new
+delta cycle whose own bump captures it, or run `specctl sync
+--checkpoint HEAD` before push to re-anchor the checkpoint. Classifying a
+change as "out of governance" does not exempt it from drift detection —
+drift is content-based.
+
+### Invariants
+
+- The skill names `specctl sync --checkpoint HEAD` as the canonical
+  fix for a post-bump in-scope commit.
+- The skill warns against the "just test infra, no governance" frame
+  of mind that tempts the agent to skip the sync.
+- The skill positions the warning next to the existing "Sync vs
+  delta add" gotcha so both appear at the point where an agent is
+  choosing between sync, delta, or do-nothing.
+
+## Requirement: Skill warns about rev-bump ordering and post-bump sync
+
+```gherkin requirement
+@specctl @manual
+Feature: Skill warns about rev-bump ordering and post-bump sync
+```
