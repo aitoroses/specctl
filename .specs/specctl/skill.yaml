@@ -2,11 +2,11 @@ slug: skill
 charter: specctl
 title: specctl Packaged Skill
 status: verified
-rev: 6
+rev: 7
 created: "2026-04-17"
 updated: "2026-04-24"
 last_verified_at: "2026-04-24"
-checkpoint: f22aac7e0a7f6c5e6830722b29e027983929c014
+checkpoint: f1b40e017ff9bfdaf2579bda1190750765e7e75a
 tags: []
 documents:
     primary: skills/specctl/SPEC.md
@@ -26,7 +26,7 @@ deltas:
     - id: D-002
       area: Cross-client setup path
       intent: change
-      status: deferred
+      status: withdrawn
       origin_checkpoint: 7012af709cf0a1bacf6dfa2e1f9c75892ea5066a
       current: The packaged setup path only handled Claude-style JSON config and was not truly idempotent on rerun
       target: The packaged setup path supports Claude Code JSON config, Codex TOML config, and converges stale entries idempotently
@@ -35,6 +35,7 @@ deltas:
         - REQ-002
       updates:
         - replace_requirement
+      withdrawn_reason: Cross-client setup was superseded by D-003 (REQ-002 replaced by REQ-003); retroactively retracted to clean DEFERRED_SUPERSEDED_RESIDUE residue and demonstrate the new verb on its own footgun.
     - id: D-003
       area: Cross-client setup path
       intent: change
@@ -255,3 +256,12 @@ changelog:
       reqs_verified:
         - REQ-006
       summary: Drop the auto_rebind_on_replace config callout now that auto-rebind is unconditional.
+    - rev: 7
+      date: "2026-04-24"
+      deltas_opened: []
+      deltas_closed: []
+      deltas_withdrawn:
+        - D-002
+      reqs_added: []
+      reqs_verified: []
+      summary: Withdraw legacy D-002 residue to demonstrate the new delta withdraw verb clearing its own footgun.
