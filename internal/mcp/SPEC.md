@@ -235,3 +235,56 @@ Scenario: Unsupported agent-owned prerequisites stay explicit
   When the MCP client receives the envelope
   Then the step remains present with `mcp.available` set to false
 ```
+
+
+## Delta Withdraw and Rebind Tool Surface
+
+The MCP bridge uses an explicit allowlist in `registerTools` and a parallel
+stub list in `registerUninitializedTools`. New CLI verbs do not appear in the
+MCP surface until they are registered there by hand. Keeping the surfaces
+aligned is a governance obligation on `specctl:mcp`.
+
+### Data Model
+
+Two new tools:
+
+- `specctl_delta_withdraw` with input `{ spec, delta_id, reason }` wraps
+  `application.Service.WithdrawDelta`. `reason` is required.
+- `specctl_delta_rebind_requirements` with input
+  `{ spec, delta_id, from, to?, remove?, reason? }` wraps
+  `application.Service.RebindDeltaRequirements`. Either `to` or `remove`
+  must be set. `reason` is required when `remove` is true and optional
+  (but carried through) when `to` is set.
+
+### Invariants
+
+- Every CLI subcommand that agents are expected to reach through MCP has a
+  corresponding entry in both `registerTools` and
+  `registerUninitializedTools`.
+- Tool input JSON Schemas mirror the CLI flags one-for-one, including
+  optionality and the mutual exclusion between `to` and `remove`.
+- `TestListTools` in `server_test.go` is updated whenever a tool is added or
+  removed; the expected list is sorted and exhaustive.
+
+## Requirement: MCP exposes delta withdraw and rebind-requirements as first-class tools
+
+```gherkin requirement
+@specctl @mcp
+Feature: MCP exposes delta withdraw and rebind-requirements as first-class tools
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: specctl_delta_withdraw appears in the MCP tool list
+  Given the MCP server is initialized
+  When the client calls ListTools
+  Then the returned names include specctl_delta_withdraw
+```
+
+```gherkin scenario
+Scenario: specctl_delta_rebind_requirements appears in the MCP tool list
+  Given the MCP server is initialized
+  When the client calls ListTools
+  Then the returned names include specctl_delta_rebind_requirements
+```

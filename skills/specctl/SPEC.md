@@ -125,3 +125,35 @@ permanent residue in the tracking YAML.
 Feature: Skill guides retraction rebind and repair-intent validation
 ```
 
+
+## Observable Reason Fields and Config Defaults
+
+The skill's high-level escape-hatch guidance (REQ-004) tells agents when to
+use withdraw, rebind, and repair-intent validation. This requirement
+layers on top of it: it pins the exact observable shape of the reason
+fields for each verb, documents the `auto_rebind_on_replace` default
+divergence between `specctl init` and pre-existing repos, and gives a
+concrete retry walkthrough for the closed-delta-invariant rejection.
+
+### Invariants
+
+- The skill names the exact JSON paths where a withdrawal reason is
+  observable on both the write result and the state projection.
+- The skill calls out that `result.rebind.reason` is emitted on both
+  `--to` and `--remove` paths when a reason is supplied, and that its
+  absence on `--to` without a reason is intentional.
+- The skill tells the agent that the absence of `result.auto_rebinds`
+  after `req replace` is the signal that `auto_rebind_on_replace` is
+  off.
+- The skill documents the `auto_rebind_on_replace` default divergence
+  (`specctl init` → `true`, pre-existing repos → `false`) with an
+  inspection-and-flip recipe.
+- The skill includes a concrete retry walkthrough for the repair-intent
+  `VALIDATION_FAILED` payload, naming the exact `focus.delta_add` keys.
+
+## Requirement: Skill documents observable reason fields and config defaults for governance verbs
+
+```gherkin requirement
+@specctl @manual
+Feature: Skill documents observable reason fields and config defaults for governance verbs
+```

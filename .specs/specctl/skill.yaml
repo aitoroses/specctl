@@ -4,7 +4,7 @@ title: specctl Packaged Skill
 status: verified
 rev: 4
 created: "2026-04-17"
-updated: "2026-04-23"
+updated: "2026-04-24"
 last_verified_at: "2026-04-23"
 checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
 tags: []
@@ -68,6 +68,35 @@ deltas:
         Keeps the agent-facing surface coherent per CONTRIBUTING.md.
       updates:
         - add_requirement
+    - id: D-005
+      area: Skill documents observable reason fields and config defaults for governance verbs
+      intent: add
+      status: closed
+      origin_checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
+      current: |-
+        The skill section "Delta escape hatches" introduced in rev 4 tells
+        agents WHEN to use withdraw, rebind, and repair validation but does
+        not tell them WHERE to observe the reason fields they pass in (both
+        result.delta and state.deltas.items for withdraw; result.rebind for
+        rebind). It also soft-pedals the auto_rebind_on_replace config
+        divergence between fresh specctl init (true) and existing repos
+        (false) as a parenthetical, which an upgrading agent is likely to
+        miss.
+      target: |-
+        Skill guidance calls out (1) the exact observable fields for each
+        reason payload — state.deltas.items[].withdrawn_reason plus
+        result.delta.withdrawn_reason for withdraw; result.rebind.reason
+        for rebind on both --to and --remove paths; (2) the config
+        divergence as a first-class callout with the recommended inspection
+        and flip steps; (3) a concrete walkthrough of the repair-intent
+        VALIDATION_FAILED payload — how to read focus.delta_add.conflicts
+        and focus.delta_add.suggestion.intent, and the exact retry shape.
+      notes: |
+        Review feedback on PR #10. Layered on top of REQ-004; the
+        high-level workflow guide stays intact and this delta adds a
+        details REQ covering observability.
+      updates:
+        - add_requirement
 requirements:
     - id: REQ-001
       title: Packaged skill teaches the agent-first governance workflow
@@ -119,6 +148,18 @@ requirements:
       lifecycle: active
       verification: verified
       introduced_by: D-004
+    - id: REQ-005
+      title: Skill documents observable reason fields and config defaults for governance verbs
+      tags:
+        - specctl
+        - manual
+      test_files: []
+      gherkin: |-
+        @specctl @manual
+        Feature: Skill documents observable reason fields and config defaults for governance verbs
+      lifecycle: active
+      verification: verified
+      introduced_by: D-005
 changelog:
     - rev: 2
       date: "2026-04-17"

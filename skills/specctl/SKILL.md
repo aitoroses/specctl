@@ -359,6 +359,61 @@ force misuse of `defer` and create permanent residue:
   and follow `req replace` to preserve closed-delta verification while
   introducing an updated successor requirement.
 
+### Observable reason fields
+
+When you pass a reason to these verbs, inspect the response envelope to
+confirm it was recorded. The audit data lives on both the write result and
+the state projection:
+
+- `specctl delta withdraw` → `result.delta.withdrawn_reason` **and**
+  `state.deltas.items[].withdrawn_reason` **and** `focus.delta.withdrawn_reason`.
+  All three carry the same string. The state field is what survives into
+  future `specctl context` calls; the result field is what you observe
+  immediately. The diff surface also records the transition under
+  `deltas.withdrawn[]`.
+- `specctl delta rebind-requirements --to ... --reason ...` →
+  `result.rebind.reason`. `--reason` is optional on `--to` (useful for the
+  audit trail) and required on `--remove`. Both paths write to the same
+  `result.rebind.reason` field; the absence of the key in `--to` without a
+  reason is intentional, not a bug.
+- `specctl req replace ...` with `auto_rebind_on_replace: true` →
+  `result.auto_rebinds[]`, one entry per rebound delta with
+  `code: "AUTO_REBIND_APPLIED"`, `delta`, `from`, `to`. When the config is
+  off or absent, `result.auto_rebinds` is **not emitted at all** — its
+  absence is the signal that rebinding was skipped.
+
+### Config divergence (upgrade callout)
+
+`auto_rebind_on_replace` defaults **differently** by install path:
+
+- Fresh `specctl init` writes the key as `true` in `.specs/specctl.yaml`.
+- Existing repos whose `specctl.yaml` predates the key get `false` at load
+  time (backwards-compatible).
+
+Before running `req replace` in an existing repo where you expect
+auto-rebind to fire, `grep auto_rebind_on_replace .specs/specctl.yaml` and
+either flip the flag explicitly or use `specctl delta rebind-requirements`
+for each affected delta. Absence of `result.auto_rebinds` after a replace
+is the confirmation that the flag is off; flip it and retry, or go the
+explicit route.
+
+### Repair-intent validation walkthrough
+
+The `VALIDATION_FAILED` payload from `delta add --intent repair` is structured
+so the agent can retry without interaction:
+
+```
+focus.delta_add.reason                = "closed_delta_invariant"
+focus.delta_add.conflicts[]           = [ { closed_delta, requires_verified }, ... ]
+focus.delta_add.suggestion.intent     = "change"
+focus.delta_add.suggestion.rationale  = "<human-readable>"
+```
+
+Retry with the suggested intent: the same `area` and `notes`, `intent: change`
+instead of `repair`, the same `affects_requirements`. Then follow the write
+spec section guidance and `req replace` the conflict-named requirement(s)
+with updated successors so closed-delta verification evidence stays valid.
+
 ## Recommended Tools
 
 - **oh-my-claudecode** — multi-agent orchestration plugin for Claude Code. Provides ralph (persistent execution loops), and ralphplan (convergence planning) and much more. Install via `npx skills find oh-my-claudecode`.

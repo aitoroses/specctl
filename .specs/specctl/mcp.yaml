@@ -4,7 +4,7 @@ title: specctl MCP Adapter
 status: verified
 rev: 2
 created: "2026-04-17"
-updated: "2026-04-17"
+updated: "2026-04-24"
 last_verified_at: "2026-04-17"
 checkpoint: 7012af709cf0a1bacf6dfa2e1f9c75892ea5066a
 tags:
@@ -22,6 +22,31 @@ deltas:
       current: MCP transport behavior is implemented but governed only implicitly by the broad CLI spec
       target: A narrow MCP adapter spec governs tool exposure, uninitialized fallback, and next-action hint translation
       notes: Smallest safe split — transport-specific MCP behavior gets its own subspec while core governance semantics remain in specctl:cli
+      updates:
+        - add_requirement
+    - id: D-002
+      area: Expose delta withdraw and rebind-requirements through the MCP tool surface
+      intent: add
+      status: closed
+      origin_checkpoint: 7012af709cf0a1bacf6dfa2e1f9c75892ea5066a
+      current: |-
+        The MCP bridge registers tools via an explicit allowlist (server.go
+        registerTools and registerUninitializedTools). New cli verbs added
+        by D-009 (delta withdraw) and D-010 (delta rebind-requirements)
+        reach the cli entrypoint but are not surfaced as MCP tools, so
+        agents driving specctl through MCP cannot use the new escape
+        hatches even though the CLI accepts them.
+      target: |-
+        specctl_delta_withdraw and specctl_delta_rebind_requirements are
+        registered in both the initialized and uninitialized tool lists.
+        Each has a JSON Schema input struct mirroring the CLI flags and a
+        handler that wraps the application service method and returns the
+        standard write envelope. TestListTools is updated to include the
+        new tool names.
+      notes: |
+        Follow-up to specctl:cli D-009 and D-010 surfaced by PR #10
+        review. Keeps the MCP surface aligned with the CLI surface so
+        agents have the same escape hatches regardless of transport.
       updates:
         - add_requirement
 requirements:
@@ -64,6 +89,19 @@ requirements:
       lifecycle: active
       verification: verified
       introduced_by: D-001
+    - id: REQ-004
+      title: MCP exposes delta withdraw and rebind-requirements as first-class tools
+      tags:
+        - specctl
+        - mcp
+      test_files:
+        - internal/mcp/server_test.go
+      gherkin: |-
+        @specctl @mcp
+        Feature: MCP exposes delta withdraw and rebind-requirements as first-class tools
+      lifecycle: active
+      verification: verified
+      introduced_by: D-002
 changelog:
     - rev: 2
       date: "2026-04-17"
