@@ -121,7 +121,7 @@ func newDeltaCloseCmd() *cobra.Command {
 }
 
 func newDeltaWithdrawCmd() *cobra.Command {
-	errorCodes := []string{"INVALID_INPUT", "VALIDATION_FAILED", "SPEC_NOT_FOUND", "DELTA_NOT_FOUND", "DELTA_INVALID_STATE"}
+	errorCodes := []string{"INVALID_INPUT", "VALIDATION_FAILED", "SPEC_NOT_FOUND", "DELTA_NOT_FOUND", "DELTA_INVALID_STATE", "DELTA_INTRODUCES_ACTIVE_REQUIREMENTS"}
 	cmd := &cobra.Command{
 		Use:   "withdraw <charter:slug> <delta-id>",
 		Short: "Retract an open|in-progress|deferred delta opened in error",

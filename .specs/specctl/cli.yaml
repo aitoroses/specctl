@@ -299,6 +299,31 @@ deltas:
         side.
       updates:
         - add_requirement
+    - id: D-016
+      area: Delta withdraw rejects deltas that introduced active requirements
+      intent: add
+      status: closed
+      origin_checkpoint: f22aac7e0a7f6c5e6830722b29e027983929c014
+      current: |-
+        delta withdraw today only validates status (must be open, in-progress,
+        or deferred) and reason. It does not check whether the delta
+        introduced requirements that are still active. Retracting such a
+        delta leaves active REQs whose introduced_by points at a withdrawn
+        delta — a semantic inconsistency that the system does not detect.
+      target: |-
+        WithdrawDelta rejects with DELTA_INTRODUCES_ACTIVE_REQUIREMENTS when
+        tracking.TracingRequirements(deltaID) contains any active REQ.
+        Error payload enumerates the blocking REQs under
+        focus.blocking_requirements and emits next.steps with one entry per
+        REQ suggesting specctl req withdraw as the remediation. Mirrors the
+        UNVERIFIED_REQUIREMENTS pattern in delta close.
+      notes: |
+        Follow-up to D-015 closing the other half of the inverse-direction
+        gap. BLOCK (not CASCADE) per user decision: forces the agent to
+        reason explicitly about each active REQ rather than changing
+        lifecycle by a new ungoverned path.
+      updates:
+        - add_requirement
 requirements:
     - id: REQ-001
       title: Context reports spec status and drift state
@@ -968,6 +993,19 @@ requirements:
       lifecycle: active
       verification: verified
       introduced_by: D-015
+    - id: REQ-037
+      title: Delta withdraw rejects deltas that introduced active requirements
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_IntroducesActiveRequirements.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta withdraw rejects deltas that introduced active requirements
+      lifecycle: active
+      verification: verified
+      introduced_by: D-016
 changelog:
     - rev: 2
       date: "2026-04-02"

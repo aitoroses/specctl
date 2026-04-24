@@ -3826,6 +3826,109 @@ Scenario: Superseded requirement blocks are not flagged as orphans
 
 ---
 
+## 31. Delta Withdraw Rejects Deltas That Introduced Active Requirements
+
+`delta withdraw` today validates only status (open | in-progress | deferred)
+and a non-empty `--reason`. It does not look at whether the delta introduced
+requirements that are still active. Retracting such a delta leaves those
+REQs alive with an `introduced_by` field pointing at a withdrawn delta —
+a semantic inconsistency that had no guardrail.
+
+This section makes the precondition explicit: before a delta can be
+withdrawn, every requirement it introduced must already be in a non-active
+lifecycle (superseded or withdrawn). The error payload enumerates the
+blocking requirements and emits one `run_command` next step per REQ so the
+agent can follow the chain: `specctl req withdraw <target> REQ-X --delta D-X`
+for each, then retry the delta withdraw.
+
+### Contracts
+
+Error (`DELTA_INTRODUCES_ACTIVE_REQUIREMENTS`) — blocking REQs enumerated with
+remediation commands:
+
+```json
+{
+  "error": {
+    "code": "DELTA_INTRODUCES_ACTIVE_REQUIREMENTS",
+    "message": "Cannot withdraw D-001: 1 active requirement(s) introduced by this delta must be withdrawn first"
+  },
+  "focus": {
+    "delta": { "id": "D-001", ... },
+    "blocking_requirements": [
+      { "id": "REQ-001", "title": "...", "introduced_by": "D-001" }
+    ]
+  },
+  "next": {
+    "mode": "sequence",
+    "steps": [
+      {
+        "priority": 1,
+        "action": "req_withdraw",
+        "kind": "run_command",
+        "why": "Requirement REQ-001 is active and was introduced by D-001. Withdraw it explicitly before retrying delta withdraw.",
+        "template": {
+          "argv": ["specctl", "req", "withdraw", "runtime:session-lifecycle", "REQ-001", "--delta", "D-001"],
+          "required_fields": []
+        }
+      }
+    ]
+  }
+}
+```
+
+### Invariants
+
+- A delta with **no** REQs introduced (common intent=repair case) is
+  unaffected — the check sees an empty list and falls through to the
+  existing withdraw path.
+- A delta whose introduced REQs are all **superseded or withdrawn** is
+  allowed to withdraw — those REQs already left active lifecycle through
+  a governed path (req replace, req withdraw) and the withdraw of the
+  introducing delta is a safe cleanup.
+- A delta with at least **one active REQ** introduced rejects with
+  `DELTA_INTRODUCES_ACTIVE_REQUIREMENTS`. `next.steps` names each blocker
+  in priority order.
+- The check is read-only; no state is mutated when the error fires.
+- BLOCK (not CASCADE): specctl never implicitly flips REQ lifecycle as
+  part of delta withdraw. Changing lifecycle must go through the explicit
+  `req withdraw` verb with its own tracking delta.
+
+## Requirement: Delta withdraw rejects deltas that introduced active requirements
+
+```gherkin requirement
+@specctl @lifecycle
+Feature: Delta withdraw rejects deltas that introduced active requirements
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: Withdraw is rejected while an introduced requirement is still active
+  Given delta D-X is open and introduced REQ-Y with lifecycle=active
+  When the agent runs delta withdraw D-X --reason "<text>"
+  Then the response returns DELTA_INTRODUCES_ACTIVE_REQUIREMENTS
+  And focus.blocking_requirements lists REQ-Y
+  And next.steps contains a req_withdraw command naming REQ-Y and D-X
+  And D-X status remains unchanged
+```
+
+```gherkin scenario
+Scenario: Withdraw succeeds after the introduced requirement is withdrawn
+  Given delta D-X introduced REQ-Y and REQ-Y is now lifecycle=withdrawn
+  When the agent runs delta withdraw D-X --reason "<text>"
+  Then the delta status becomes withdrawn
+  And withdrawn_reason records the supplied text
+```
+
+```gherkin scenario
+Scenario: Withdraw without introduced requirements is unaffected
+  Given delta D-X is open and introduced no requirements
+  When the agent runs delta withdraw D-X --reason "<text>"
+  Then the delta status becomes withdrawn without any active-requirement check firing
+```
+
+---
+
 ## Appendix A: YAML Schemas
 
 Reference schemas for the three specctl-managed stores. Sourced from SPEC.md section 3.

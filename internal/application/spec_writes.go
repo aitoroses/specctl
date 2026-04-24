@@ -798,6 +798,25 @@ func (s *Service) WithdrawDelta(request DeltaWithdrawRequest) (SpecProjection, m
 		)
 	}
 
+	activeIntroduced := make([]domain.Requirement, 0)
+	for _, req := range loaded.tracking.TracingRequirements(request.DeltaID) {
+		if req.IsActive() {
+			activeIntroduced = append(activeIntroduced, req)
+		}
+	}
+	if len(activeIntroduced) > 0 {
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_INTRODUCES_ACTIVE_REQUIREMENTS",
+			fmt.Sprintf("Cannot withdraw %s: %d active requirement(s) introduced by this delta must be withdrawn first", request.DeltaID, len(activeIntroduced)),
+			map[string]any{
+				"delta":                 deltaFailureFocus(*delta),
+				"blocking_requirements": blockingRequirementsFocus(activeIntroduced),
+			},
+			buildDeltaWithdrawBlockingNext(request.Target, request.DeltaID, activeIntroduced),
+		)
+	}
+
 	updated := cloneTracking(loaded.tracking)
 	mutated := updated.DeltaByID(request.DeltaID)
 	mutated.Status = domain.DeltaStatusWithdrawn
@@ -2147,6 +2166,43 @@ func buildDeltaTransitionNext(target string, delta domain.Delta) []any {
 // changing, or stop. Withdrawn deltas cannot be resumed — the guidance
 // exists so the agent does not leave the cycle thinking the retraction
 // is the last step when the actual work was never done.
+// blockingRequirementsFocus projects each active-introduced requirement
+// into a compact focus entry (id, title, introduced_by) for inclusion in
+// the DELTA_INTRODUCES_ACTIVE_REQUIREMENTS error payload. Mirrors the
+// shape used by delta close's UNVERIFIED_REQUIREMENTS.
+func blockingRequirementsFocus(reqs []domain.Requirement) []map[string]any {
+	out := make([]map[string]any, 0, len(reqs))
+	for _, req := range reqs {
+		out = append(out, map[string]any{
+			"id":            req.ID,
+			"title":         req.Title,
+			"introduced_by": req.IntroducedBy,
+		})
+	}
+	return out
+}
+
+// buildDeltaWithdrawBlockingNext emits one run_command step per blocking
+// requirement suggesting specctl req withdraw with the original
+// introducing delta. The agent can follow the steps in order and retry
+// the delta withdraw once every REQ's lifecycle has moved off active.
+func buildDeltaWithdrawBlockingNext(target, deltaID string, reqs []domain.Requirement) []any {
+	steps := make([]any, 0, len(reqs))
+	for i, req := range reqs {
+		steps = append(steps, map[string]any{
+			"priority":     i + 1,
+			"action":       "req_withdraw",
+			"kind":         "run_command",
+			"instructions": fmt.Sprintf("Requirement %s is active and was introduced by %s. Withdraw it explicitly before retrying delta withdraw.", req.ID, deltaID),
+			"template": map[string]any{
+				"argv":            []string{"specctl", "req", "withdraw", target, req.ID, "--delta", deltaID},
+				"required_fields": []map[string]any{},
+			},
+		})
+	}
+	return steps
+}
+
 func buildDeltaWithdrawNext(target string, delta domain.Delta) []any {
 	return []any{
 		map[string]any{

@@ -472,6 +472,25 @@ func TestContract_DeltaWithdraw_MissingReason(t *testing.T) {
 	assertContractFixture(t, output, contractPlaceholders())
 }
 
+func TestContract_DeltaWithdraw_IntroducesActiveRequirements(t *testing.T) {
+	// Fixture: REQ-001 is active+unverified, introduced by D-001 which is
+	// currently in-progress. Flip D-001 to open so the status check
+	// doesn't intercept, then try to withdraw — the new check should
+	// reject because REQ-001 is still active.
+	repoRoot := contractActiveRequirementRepo(t)
+	replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "status: in-progress", "status: open")
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.WithdrawDelta(DeltaWithdrawRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-001",
+			Reason:  "Attempted retraction; D-016 should block because REQ-001 is still active.",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
 func TestContract_DeltaWithdraw_ClosedRejected(t *testing.T) {
 	repoRoot := contractActiveRequirementRepo(t)
 	replaceTrackedRequirementBlockOnly(t, repoRoot, "verified")
