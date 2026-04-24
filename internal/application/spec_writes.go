@@ -1045,6 +1045,16 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 // replace is skipped — it keeps the old id so its trace survives.
 // Gated by config.AutoRebindOnReplace; returns the list of rebinds made
 // for inclusion in the response.
+//
+// Scope-preservation note: the D-010 proposal scoped auto-rebind to
+// "scope-preserving replacements (same charter, same slug, same match
+// status)". Same charter + same slug is implicit because we iterate the
+// tracking file of the spec that owns the replace. Match-status
+// preservation (whether the gherkin content narrowed vs. stayed
+// equivalent) is deliberately not checked in this slice — agents can
+// override per-delta via `specctl delta rebind-requirements` when the
+// replace genuinely narrowed scope. Revisit if a future requirement
+// demands stricter gating.
 func autoRebindAffectsRequirements(tracking *domain.TrackingFile, parentDeltaID, fromReq, toReq string, config *infrastructure.ProjectConfig) []map[string]any {
 	if config == nil || !config.AutoRebindOnReplace {
 		return nil

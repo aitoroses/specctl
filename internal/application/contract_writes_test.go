@@ -2081,6 +2081,14 @@ func appendDeltaBeforeRequirements(t *testing.T, repoRoot, deltaYAML string) {
 	writeApplicationTestFile(t, trackingPath, []byte(updated))
 }
 
+// appendDelta is retained for existing callers that expect its
+// side-effect of forcing status to "ready" after appending an open
+// delta. New tests should prefer appendDeltaBeforeRequirements, which
+// matches `\nrequirements:` (not the bare substring) and leaves the
+// computed spec status untouched. The bare-substring match here can
+// splice into an inner `affects_requirements:` field when an earlier
+// delta carries one — `appendDeltaBeforeRequirements` is immune to
+// that because of the leading newline.
 func appendDelta(t *testing.T, repoRoot, deltaYAML string) {
 	t.Helper()
 
