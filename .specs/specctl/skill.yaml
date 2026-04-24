@@ -2,11 +2,11 @@ slug: skill
 charter: specctl
 title: specctl Packaged Skill
 status: verified
-rev: 7
+rev: 8
 created: "2026-04-17"
 updated: "2026-04-24"
 last_verified_at: "2026-04-24"
-checkpoint: f1b40e017ff9bfdaf2579bda1190750765e7e75a
+checkpoint: 236d89154249d7ed77f5b88300a602c9b7167a50
 tags: []
 documents:
     primary: skills/specctl/SPEC.md
@@ -120,6 +120,33 @@ deltas:
         agent-facing story coherent.
       affects_requirements:
         - REQ-005
+    - id: D-007
+      area: Skill warns about rev-bump ordering and post-bump sync
+      intent: add
+      status: closed
+      origin_checkpoint: f1b40e017ff9bfdaf2579bda1190750765e7e75a
+      current: |-
+        The skill explains the workflow (context -> delta add -> edit SPEC -> req
+        add/replace -> verify -> delta close -> rev bump) but does not warn
+        about the common post-bump footgun: if a commit that touches an
+        in-scope file lands AFTER the rev bump commit (e.g. a test-infra
+        fix discovered at the end of a cycle), the bump's recorded
+        checkpoint SHA does not include that change. specctl context
+        then reports real drift even though the change is intentional.
+        Discovered while merging #10 to main.
+      target: |-
+        Skill gains a terse Gotcha: if any in-scope file changes after
+        rev bump, either fold it into a new delta cycle whose own bump
+        captures it, or run specctl sync --checkpoint HEAD before push
+        to re-anchor the checkpoint. The sync is canonical for drift
+        that has been reviewed and deemed clarification-only or
+        checkpoint-repair.
+      notes: |
+        Dogfood: caught on merge of #10 when a non-governed test-infra
+        fix landed after the rev 10 bump. The delta captures the lesson
+        so the next agent does not repeat it.
+      updates:
+        - add_requirement
 requirements:
     - id: REQ-001
       title: Packaged skill teaches the agent-first governance workflow
@@ -197,6 +224,18 @@ requirements:
       verification: verified
       introduced_by: D-006
       supersedes: REQ-005
+    - id: REQ-007
+      title: Skill warns about rev-bump ordering and post-bump sync
+      tags:
+        - specctl
+        - manual
+      test_files: []
+      gherkin: |-
+        @specctl @manual
+        Feature: Skill warns about rev-bump ordering and post-bump sync
+      lifecycle: active
+      verification: verified
+      introduced_by: D-007
 changelog:
     - rev: 2
       date: "2026-04-17"
@@ -265,3 +304,14 @@ changelog:
       reqs_added: []
       reqs_verified: []
       summary: Withdraw legacy D-002 residue to demonstrate the new delta withdraw verb clearing its own footgun.
+    - rev: 8
+      date: "2026-04-24"
+      deltas_opened:
+        - D-007
+      deltas_closed:
+        - D-007
+      reqs_added:
+        - REQ-007
+      reqs_verified:
+        - REQ-007
+      summary: 'Warn about rev-bump ordering and post-bump sync to prevent future instances of the footgun hit during #10 merge.'
