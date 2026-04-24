@@ -265,6 +265,22 @@ func TestContract_DeltaResume_Success(t *testing.T) {
 	})
 }
 
+func TestContract_DeltaWithdraw_Success(t *testing.T) {
+	repoRoot := copyFixtureRepoWithRegistry(t, "ready-spec")
+
+	withWorkingDir(t, repoRoot, func() {
+		stdout, stderr, exitCode := executeCLI("delta", "withdraw", "runtime:session-lifecycle", "D-001", "--reason", "Opened in error; replacement tracked separately")
+		if exitCode != 0 {
+			t.Fatalf("delta withdraw failed: exit=%d stderr=%s stdout=%s", exitCode, stderr, stdout)
+		}
+		if stderr != "" {
+			t.Fatalf("stderr = %q", stderr)
+		}
+
+		assertContractFixture(t, stdout, nil)
+	})
+}
+
 func TestContract_ReqAdd_Success(t *testing.T) {
 	repoRoot := copyFixtureRepoWithRegistry(t, "ready-spec")
 	gherkin := "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup\n\n  Scenario: Cleanup runs after stage 4 failure\n    Given stage 4 fails during compensation\n    When recovery completes\n    Then cleanup steps run in documented order\n"

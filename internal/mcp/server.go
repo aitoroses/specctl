@@ -104,6 +104,8 @@ func (s *Server) registerUninitializedTools() {
 		{"specctl_delta_defer", "Move open or in-progress delta to deferred."},
 		{"specctl_delta_resume", "Move deferred delta back to open."},
 		{"specctl_delta_close", "Close a delta when its obligations are satisfied."},
+		{"specctl_delta_withdraw", "Retract an open, in-progress, or deferred delta with an auditable reason."},
+		{"specctl_delta_rebind_requirements", "Rebind affects_requirements of an open, in-progress, or deferred delta."},
 		{"specctl_requirement_add", "Add a tracked requirement from Gherkin."},
 		{"specctl_requirement_replace", "Replace one tracked requirement with a new active requirement."},
 		{"specctl_requirement_refresh", "Refresh the stored requirement block in place."},
@@ -176,6 +178,21 @@ type deltaTransitionInput struct {
 	DeltaID string `json:"delta_id" jsonschema:"delta ID"`
 }
 
+type deltaWithdrawInput struct {
+	Spec    string `json:"spec" jsonschema:"spec identifier charter:slug"`
+	DeltaID string `json:"delta_id" jsonschema:"delta ID to retract"`
+	Reason  string `json:"reason" jsonschema:"auditable reason recorded with the withdrawal"`
+}
+
+type deltaRebindInput struct {
+	Spec    string `json:"spec" jsonschema:"spec identifier charter:slug"`
+	DeltaID string `json:"delta_id" jsonschema:"delta ID whose affects_requirements is rebound"`
+	From    string `json:"from" jsonschema:"requirement ID currently in affects_requirements"`
+	To      string `json:"to,omitempty" jsonschema:"replacement requirement ID; required unless remove is true"`
+	Remove  bool   `json:"remove,omitempty" jsonschema:"drop the from anchor instead of rebinding; requires reason"`
+	Reason  string `json:"reason,omitempty" jsonschema:"auditable reason; required when remove is true, optional on rebinds"`
+}
+
 type requirementAddInput struct {
 	Spec    string `json:"spec" jsonschema:"spec identifier charter:slug"`
 	DeltaID string `json:"delta_id" jsonschema:"introducing delta ID"`
@@ -240,6 +257,8 @@ func (s *Server) registerTools() {
 	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_defer", Description: "Move open or in-progress delta to deferred."}, s.handleDeltaDefer)
 	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_resume", Description: "Move deferred delta back to open."}, s.handleDeltaResume)
 	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_close", Description: "Close a delta when its obligations are satisfied."}, s.handleDeltaClose)
+	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_withdraw", Description: "Retract an open, in-progress, or deferred delta with an auditable reason."}, s.handleDeltaWithdraw)
+	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_rebind_requirements", Description: "Rebind affects_requirements of an open, in-progress, or deferred delta."}, s.handleDeltaRebind)
 	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_requirement_add", Description: "Add a tracked requirement from Gherkin."}, s.handleRequirementAdd)
 	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_requirement_replace", Description: "Replace one tracked requirement with a new active requirement."}, s.handleRequirementReplace)
 	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_requirement_refresh", Description: "Refresh the stored requirement block in place."}, s.handleRequirementRefresh)
@@ -368,6 +387,37 @@ func (s *Server) handleDeltaResume(ctx context.Context, req *sdk.CallToolRequest
 
 func (s *Server) handleDeltaClose(ctx context.Context, req *sdk.CallToolRequest, in deltaTransitionInput) (*sdk.CallToolResult, any, error) {
 	return s.handleDeltaTransition(s.service.CloseDelta, in)
+}
+
+func (s *Server) handleDeltaWithdraw(ctx context.Context, req *sdk.CallToolRequest, in deltaWithdrawInput) (*sdk.CallToolResult, any, error) {
+	state, result, next, err := s.service.WithdrawDelta(application.DeltaWithdrawRequest{
+		Target:  in.Spec,
+		DeltaID: in.DeltaID,
+		Reason:  in.Reason,
+	})
+	if err != nil {
+		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+	}
+	responseState, focus := presenter.SplitStateFocus(state)
+	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
+	return s.toolResult(envelope), nil, nil
+}
+
+func (s *Server) handleDeltaRebind(ctx context.Context, req *sdk.CallToolRequest, in deltaRebindInput) (*sdk.CallToolResult, any, error) {
+	state, result, next, err := s.service.RebindDeltaRequirements(application.DeltaRebindRequest{
+		Target:  in.Spec,
+		DeltaID: in.DeltaID,
+		From:    in.From,
+		To:      in.To,
+		Remove:  in.Remove,
+		Reason:  in.Reason,
+	})
+	if err != nil {
+		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+	}
+	responseState, focus := presenter.SplitStateFocus(state)
+	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
+	return s.toolResult(envelope), nil, nil
 }
 
 func (s *Server) handleDeltaTransition(fn func(application.DeltaTransitionRequest) (application.SpecProjection, map[string]any, []any, error), in deltaTransitionInput) (*sdk.CallToolResult, any, error) {

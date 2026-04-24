@@ -286,6 +286,42 @@ func TestContract_DeltaAdd_RepairSuccess(t *testing.T) {
 	assertContractFixture(t, output, contractPlaceholders())
 }
 
+func TestContract_DeltaAdd_RepairClosedDeltaConflict(t *testing.T) {
+	repoRoot := contractActiveRequirementRepo(t)
+	replaceTrackedRequirementBlockOnly(t, repoRoot, "verified")
+	appendDelta(t, repoRoot, `  - id: D-002
+    area: Compensation cleanup first repair
+    intent: repair
+    status: closed
+    origin_checkpoint: a1b2c3f
+    current: Evidence gap after a regression
+    target: Re-verify the tracked cleanup behavior
+    notes: Prior repair is historical; REQ-001 stayed active and verified
+    affects_requirements:
+      - REQ-001
+    updates:
+      - stale_requirement
+`)
+	replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "status: ready", "status: active")
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.AddDelta(DeltaAddRequest{
+			Target:              "runtime:session-lifecycle",
+			Intent:              domain.DeltaIntentRepair,
+			Area:                "Compensation cleanup second repair",
+			Current:             "Evidence stale again",
+			CurrentPresent:      true,
+			Targets:             "Re-verify against new fixtures",
+			TargetPresent:       true,
+			Notes:               "Should be rejected before allocation",
+			NotesPresent:        true,
+			AffectsRequirements: []string{"REQ-001"},
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
 func TestContract_DeltaAdd_ValidationFailed(t *testing.T) {
 	repoRoot := copyApplicationFixtureRepo(t, "ready-spec")
 	replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "id: D-001", "id: D-003")
@@ -407,6 +443,69 @@ func TestContract_DeltaTransitions_ValidationFailed(t *testing.T) {
 			assertContractFixture(t, output, contractPlaceholders())
 		})
 	}
+}
+
+func TestContract_DeltaWithdraw_Success(t *testing.T) {
+	repoRoot := copyApplicationFixtureRepo(t, "ready-spec")
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.WithdrawDelta(DeltaWithdrawRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-001",
+			Reason:  "Opened in error; supersession planned in a separate delta.",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
+func TestContract_DeltaWithdraw_MissingReason(t *testing.T) {
+	repoRoot := copyApplicationFixtureRepo(t, "ready-spec")
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.WithdrawDelta(DeltaWithdrawRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-001",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
+func TestContract_DeltaWithdraw_IntroducesActiveRequirements(t *testing.T) {
+	// Fixture: REQ-001 is active+unverified, introduced by D-001 which is
+	// currently in-progress. Flip D-001 to open so the status check
+	// doesn't intercept, then try to withdraw — the new check should
+	// reject because REQ-001 is still active.
+	repoRoot := contractActiveRequirementRepo(t)
+	replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "status: in-progress", "status: open")
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.WithdrawDelta(DeltaWithdrawRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-001",
+			Reason:  "Attempted retraction; D-016 should block because REQ-001 is still active.",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
+func TestContract_DeltaWithdraw_ClosedRejected(t *testing.T) {
+	repoRoot := contractActiveRequirementRepo(t)
+	replaceTrackedRequirementBlockOnly(t, repoRoot, "verified")
+	replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "status: in-progress", "status: closed")
+	replaceFileText(t, filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml"), "status: active", "status: verified")
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.WithdrawDelta(DeltaWithdrawRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-001",
+			Reason:  "Attempting to withdraw a closed delta should fail",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
 }
 
 func TestContract_DeltaClose_RepairTerminal(t *testing.T) {
@@ -781,6 +880,83 @@ func TestContract_ReqAdd_WithdrawnAllowsReuse(t *testing.T) {
 	assertContractFixture(t, output, contractPlaceholders())
 }
 
+func TestContract_ReqReplace_AutoRebindOtherDeltas(t *testing.T) {
+	repoRoot := contractReplaceFlowRepo(t)
+	appendDeltaBeforeRequirements(t, repoRoot, `  - id: D-003
+    area: Downstream cleanup follow-up
+    intent: repair
+    status: open
+    origin_checkpoint: a1b2c3f
+    current: Evidence is soft
+    target: Firm up evidence after the replacement lands
+    notes: Independent delta that still anchors to REQ-001
+    affects_requirements:
+      - REQ-001
+    updates:
+      - stale_requirement
+`)
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.ReplaceRequirement(RequirementReplaceRequest{
+			Target:        "runtime:session-lifecycle",
+			RequirementID: "REQ-001",
+			DeltaID:       "D-002",
+			Gherkin:       contractReplacementRequirementBlock(),
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
+func TestContract_DeltaRebind_Success(t *testing.T) {
+	// Post-supersession state: REQ-001 is already superseded by REQ-002
+	// (via a previously-closed replace). An independent deferred delta
+	// D-004 predates the supersession and still anchors on REQ-001 — the
+	// case the explicit rebind verb exists for when auto-rebind no
+	// longer applies.
+	repoRoot := contractInactiveSupersededRequirementRepo(t)
+	appendDeltaBeforeRequirements(t, repoRoot, `  - id: D-003
+    area: Downstream cleanup follow-up
+    intent: repair
+    status: deferred
+    origin_checkpoint: a1b2c3f
+    current: Evidence is soft
+    target: Firm up evidence after the replacement lands
+    notes: Legacy deferred delta still anchored to the superseded REQ-001
+    affects_requirements:
+      - REQ-001
+    updates:
+      - stale_requirement
+`)
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.RebindDeltaRequirements(DeltaRebindRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-003",
+			From:    "REQ-001",
+			To:      "REQ-002",
+			Reason:  "Scope preserved; anchor rebound explicitly because auto-rebind had already missed this delta.",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
+func TestContract_DeltaRebind_ClosedRejected(t *testing.T) {
+	repoRoot := contractInactiveSupersededRequirementRepo(t)
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.RebindDeltaRequirements(DeltaRebindRequest{
+			Target:  "runtime:session-lifecycle",
+			DeltaID: "D-002",
+			From:    "REQ-001",
+			To:      "REQ-002",
+		})
+	})
+	assertContractFixture(t, output, contractPlaceholders())
+}
+
 func TestContract_ReqReplace_RequirementNotInSpec(t *testing.T) {
 	repoRoot := contractChangeDeltaRepo(t)
 	service := newApplicationContractService(repoRoot)
@@ -869,6 +1045,26 @@ func TestContract_RevBump_Success(t *testing.T) {
 			Target:     "runtime:session-lifecycle",
 			Checkpoint: "HEAD",
 			Summary:    "Track the reviewed drift in a new revision.",
+		})
+	})
+	placeholders := contractPlaceholders()
+	placeholders["__HEAD_SHA__"] = headSHA
+	assertContractFixture(t, output, placeholders)
+}
+
+func TestContract_RevBump_WithDeltasWithdrawn(t *testing.T) {
+	repoRoot := contractDeferredSupersededResidueRepo(t)
+	trackingPath := filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml")
+	replaceFileText(t, trackingPath, "area: Deferred cleanup residue\n    intent: change\n    status: deferred", "area: Deferred cleanup residue\n    intent: change\n    status: withdrawn\n    withdrawn_reason: Retroactively retracted; decomposition is no longer planned.")
+	initGitRepoAtDate(t, repoRoot, "2026-03-30T09:36:00Z")
+	headSHA := strings.TrimSpace(runGitAtDate(t, repoRoot, "2026-03-30T09:36:00Z", "rev-parse", "HEAD"))
+	service := newApplicationContractService(repoRoot)
+
+	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
+		return service.BumpRevision(RevisionBumpRequest{
+			Target:     "runtime:session-lifecycle",
+			Checkpoint: "HEAD",
+			Summary:    "Record the withdrawn follow-up in the changelog.",
 		})
 	})
 	placeholders := contractPlaceholders()
@@ -1851,6 +2047,35 @@ func contractCodeOnlyDriftRepo(t *testing.T) string {
 	return repoRoot
 }
 
+// appendDeltaBeforeRequirements inserts the delta YAML immediately before
+// the top-level `requirements:` section. Unlike appendDelta it matches
+// `\nrequirements:` so it does not accidentally splice into an inner
+// `affects_requirements:` field on a preceding delta, and it leaves the
+// spec status untouched so callers can assert the post-append computed state.
+func appendDeltaBeforeRequirements(t *testing.T, repoRoot, deltaYAML string) {
+	t.Helper()
+
+	trackingPath := filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml")
+	data, err := os.ReadFile(trackingPath)
+	if err != nil {
+		t.Fatalf("read tracking file: %v", err)
+	}
+	marker := "\nrequirements:"
+	if !strings.Contains(string(data), marker) {
+		t.Fatalf("%s does not contain top-level requirements section", trackingPath)
+	}
+	updated := strings.Replace(string(data), marker, "\n"+strings.TrimRight(deltaYAML, "\n")+marker, 1)
+	writeApplicationTestFile(t, trackingPath, []byte(updated))
+}
+
+// appendDelta is retained for existing callers that expect its
+// side-effect of forcing status to "ready" after appending an open
+// delta. New tests should prefer appendDeltaBeforeRequirements, which
+// matches `\nrequirements:` (not the bare substring) and leaves the
+// computed spec status untouched. The bare-substring match here can
+// splice into an inner `affects_requirements:` field when an earlier
+// delta carries one — `appendDeltaBeforeRequirements` is immune to
+// that because of the leading newline.
 func appendDelta(t *testing.T, repoRoot, deltaYAML string) {
 	t.Helper()
 

@@ -46,6 +46,41 @@ func TestContract_Context_CleanReviewWarnings(t *testing.T) {
 	})
 }
 
+func TestContract_Context_OrphanGherkinBlockWarning(t *testing.T) {
+	repoRoot := copyApplicationFixtureRepo(t, "verified-spec")
+	// Append an extra requirement section to SPEC.md that no tracking
+	// requirement claims — the inverse of missing_in_spec.
+	replaceSessionLifecycleDoc(t, repoRoot,
+		contractRequirementSection("Compensation stage 4 failure cleanup", contractRequirementBlock("@runtime @e2e", "Compensation stage 4 failure cleanup"))+
+			"\n"+
+			contractRequirementSection("Orphan block written before req add", contractRequirementBlock("@runtime @e2e", "Orphan block written before req add")),
+	)
+	initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+	headSHA := strings.TrimSpace(runGitAtDate(t, repoRoot, "2026-03-28T12:00:00Z", "rev-parse", "HEAD"))
+	service := newApplicationContractService(repoRoot)
+
+	placeholders := contractPlaceholders()
+	placeholders["__HEAD_SHA__"] = headSHA
+	assertReadContractFixtureCall(t, placeholders, func() (any, []any, error) {
+		return service.ReadContext("runtime:session-lifecycle", "")
+	})
+}
+
+func TestContract_Context_WithdrawnDeltaSilencesResidue(t *testing.T) {
+	repoRoot := contractDeferredSupersededResidueRepo(t)
+	trackingPath := filepath.Join(repoRoot, ".specs", "runtime", "session-lifecycle.yaml")
+	replaceFileText(t, trackingPath, "area: Deferred cleanup residue\n    intent: change\n    status: deferred", "area: Deferred cleanup residue\n    intent: change\n    status: withdrawn\n    withdrawn_reason: Retroactively retracted; decomposition is no longer planned.")
+	initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")
+	headSHA := strings.TrimSpace(runGitAtDate(t, repoRoot, "2026-03-28T12:00:00Z", "rev-parse", "HEAD"))
+	service := newApplicationContractService(repoRoot)
+
+	placeholders := contractPlaceholders()
+	placeholders["__HEAD_SHA__"] = headSHA
+	assertReadContractFixtureCall(t, placeholders, func() (any, []any, error) {
+		return service.ReadContext("runtime:session-lifecycle", "")
+	})
+}
+
 func TestContract_Context_WarningsSuppressedByStrongerNext(t *testing.T) {
 	repoRoot := contractDeferredSupersededResidueRepo(t)
 	initGitRepoAtDate(t, repoRoot, "2026-03-28T12:00:00Z")

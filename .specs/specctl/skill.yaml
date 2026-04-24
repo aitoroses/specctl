@@ -2,11 +2,11 @@ slug: skill
 charter: specctl
 title: specctl Packaged Skill
 status: verified
-rev: 3
+rev: 7
 created: "2026-04-17"
-updated: "2026-04-21"
-last_verified_at: "2026-04-21"
-checkpoint: 6e63dbe47c2e63eef195d590d3522f69792961ca
+updated: "2026-04-24"
+last_verified_at: "2026-04-24"
+checkpoint: f1b40e017ff9bfdaf2579bda1190750765e7e75a
 tags: []
 documents:
     primary: skills/specctl/SPEC.md
@@ -26,7 +26,7 @@ deltas:
     - id: D-002
       area: Cross-client setup path
       intent: change
-      status: deferred
+      status: withdrawn
       origin_checkpoint: 7012af709cf0a1bacf6dfa2e1f9c75892ea5066a
       current: The packaged setup path only handled Claude-style JSON config and was not truly idempotent on rerun
       target: The packaged setup path supports Claude Code JSON config, Codex TOML config, and converges stale entries idempotently
@@ -35,6 +35,7 @@ deltas:
         - REQ-002
       updates:
         - replace_requirement
+      withdrawn_reason: Cross-client setup was superseded by D-003 (REQ-002 replaced by REQ-003); retroactively retracted to clean DEFERRED_SUPERSEDED_RESIDUE residue and demonstrate the new verb on its own footgun.
     - id: D-003
       area: Cross-client setup path
       intent: change
@@ -45,6 +46,80 @@ deltas:
       notes: The public skill workflow should configure the shipped agent tool coherently across supported clients
       affects_requirements:
         - REQ-002
+    - id: D-004
+      area: Agent guidance for retract rebind and repair-intent validation
+      intent: add
+      status: closed
+      origin_checkpoint: 6e63dbe47c2e63eef195d590d3522f69792961ca
+      current: |-
+        Skill teaches the generic governance workflow but does not cover
+        when to use delta withdraw vs defer, when to use
+        delta rebind-requirements (or how auto-rebind on req replace
+        behaves), or how to interpret VALIDATION_FAILED from
+        delta add --intent repair. Agents facing those states fall back
+        to defer/reopen, producing residue.
+      target: |-
+        Skill documents the three new escape hatches. (1) delta withdraw
+        semantics and when to prefer it over defer. (2) delta
+        rebind-requirements plus the auto_rebind_on_replace config. (3)
+        Reading and acting on the new VALIDATION_FAILED payload
+        (conflicts list plus intent suggestion).
+      notes: |
+        Companion to specctl:cli Deltas D-008, D-009, D-010 (2026-04-22).
+        Keeps the agent-facing surface coherent per CONTRIBUTING.md.
+      updates:
+        - add_requirement
+    - id: D-005
+      area: Skill documents observable reason fields and config defaults for governance verbs
+      intent: add
+      status: closed
+      origin_checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
+      current: |-
+        The skill section "Delta escape hatches" introduced in rev 4 tells
+        agents WHEN to use withdraw, rebind, and repair validation but does
+        not tell them WHERE to observe the reason fields they pass in (both
+        result.delta and state.deltas.items for withdraw; result.rebind for
+        rebind). It also soft-pedals the auto_rebind_on_replace config
+        divergence between fresh specctl init (true) and existing repos
+        (false) as a parenthetical, which an upgrading agent is likely to
+        miss.
+      target: |-
+        Skill guidance calls out (1) the exact observable fields for each
+        reason payload — state.deltas.items[].withdrawn_reason plus
+        result.delta.withdrawn_reason for withdraw; result.rebind.reason
+        for rebind on both --to and --remove paths; (2) the config
+        divergence as a first-class callout with the recommended inspection
+        and flip steps; (3) a concrete walkthrough of the repair-intent
+        VALIDATION_FAILED payload — how to read focus.delta_add.conflicts
+        and focus.delta_add.suggestion.intent, and the exact retry shape.
+      notes: |
+        Review feedback on PR #10. Layered on top of REQ-004; the
+        high-level workflow guide stays intact and this delta adds a
+        details REQ covering observability.
+      updates:
+        - add_requirement
+    - id: D-006
+      area: Skill drops config divergence callout; auto-rebind is always on
+      intent: change
+      status: closed
+      origin_checkpoint: 2b27d56ff5b69b5537eada95c47d558f9cda511a
+      current: |-
+        Skill REQ-005 documents the auto_rebind_on_replace config key and a
+        default-divergence callout that tells agents to grep the config and
+        flip the flag. With the cli removing the flag in D-013, this
+        guidance becomes wrong and actively misleads agents into looking
+        for a key that no longer exists.
+      target: |-
+        Skill keeps the observable-reason-fields and repair-intent-retry
+        walkthrough subsections but drops the config-divergence callout.
+        Presence of result.auto_rebinds[] in a req replace response is now
+        the only signal that rebinding happened; absence means no delta
+        matched the replaced REQ.
+      notes: |
+        Companion to cli D-013; both land in the same commit to keep the
+        agent-facing story coherent.
+      affects_requirements:
+        - REQ-005
 requirements:
     - id: REQ-001
       title: Packaged skill teaches the agent-first governance workflow
@@ -84,6 +159,44 @@ requirements:
       verification: verified
       introduced_by: D-003
       supersedes: REQ-002
+    - id: REQ-004
+      title: Skill guides retraction rebind and repair-intent validation
+      tags:
+        - specctl
+        - manual
+      test_files: []
+      gherkin: |-
+        @specctl @manual
+        Feature: Skill guides retraction rebind and repair-intent validation
+      lifecycle: active
+      verification: verified
+      introduced_by: D-004
+    - id: REQ-005
+      title: Skill documents observable reason fields and config defaults for governance verbs
+      tags:
+        - specctl
+        - manual
+      test_files: []
+      gherkin: |-
+        @specctl @manual
+        Feature: Skill documents observable reason fields and config defaults for governance verbs
+      lifecycle: superseded
+      verification: verified
+      introduced_by: D-005
+      superseded_by: REQ-006
+    - id: REQ-006
+      title: Skill documents observable reason fields and repair-intent retry walkthrough
+      tags:
+        - specctl
+        - manual
+      test_files: []
+      gherkin: |-
+        @specctl @manual
+        Feature: Skill documents observable reason fields and repair-intent retry walkthrough
+      lifecycle: active
+      verification: verified
+      introduced_by: D-006
+      supersedes: REQ-005
 changelog:
     - rev: 2
       date: "2026-04-17"
@@ -110,3 +223,45 @@ changelog:
       reqs_verified:
         - REQ-003
       summary: Clarify packaged-skill guidance so review-required drift routes through review_diff before sync or delta work.
+    - rev: 4
+      date: "2026-04-23"
+      deltas_opened:
+        - D-004
+      deltas_closed:
+        - D-004
+      reqs_added:
+        - REQ-004
+      reqs_verified:
+        - REQ-004
+      summary: Document the delta withdraw, rebind-requirements, and repair-intent validation escape hatches in the packaged skill.
+    - rev: 5
+      date: "2026-04-24"
+      deltas_opened:
+        - D-005
+      deltas_closed:
+        - D-005
+      reqs_added:
+        - REQ-005
+      reqs_verified:
+        - REQ-005
+      summary: Document observable reason fields and the auto_rebind_on_replace config default divergence.
+    - rev: 6
+      date: "2026-04-24"
+      deltas_opened:
+        - D-006
+      deltas_closed:
+        - D-006
+      reqs_added:
+        - REQ-006
+      reqs_verified:
+        - REQ-006
+      summary: Drop the auto_rebind_on_replace config callout now that auto-rebind is unconditional.
+    - rev: 7
+      date: "2026-04-24"
+      deltas_opened: []
+      deltas_closed: []
+      deltas_withdrawn:
+        - D-002
+      reqs_added: []
+      reqs_verified: []
+      summary: Withdraw legacy D-002 residue to demonstrate the new delta withdraw verb clearing its own footgun.

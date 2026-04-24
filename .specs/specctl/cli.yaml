@@ -2,11 +2,11 @@ slug: cli
 charter: specctl
 title: specctl CLI Behavioral Spec
 status: verified
-rev: 6
+rev: 10
 created: "2026-04-01"
-updated: "2026-04-21"
-last_verified_at: "2026-04-21"
-checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
+updated: "2026-04-24"
+last_verified_at: "2026-04-24"
+checkpoint: a0c6aced47c59f00cb29b18d7903450150f2a957
 tags: []
 documents:
     primary: SPEC.md
@@ -88,6 +88,242 @@ deltas:
         - REQ-007
         - REQ-015
         - REQ-020
+    - id: D-008
+      area: Eager validation of repair intent against closed-delta invariants
+      intent: add
+      status: closed
+      origin_checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
+      current: |-
+        delta add --intent repair accepts a delta even when closed-delta
+        invariants will block the only legal update path (req stale), forcing
+        the caller to defer and reopen with a different intent. Each round
+        burns a D-id and leaves permanent residue in state.deltas.deferred.
+      target: |-
+        delta add pre-flights repair intent against closed-delta invariants
+        and rejects with VALIDATION_FAILED before allocating a D-id when any
+        entry in affects_requirements is referenced by a closed delta that
+        requires it verified. The error payload names the conflicting closed
+        deltas and suggests --intent change.
+      notes: |
+        Origin: terrarium-runtime-v2 D-015 to D-016 dogfood 2026-04-22.
+        Prevents DEFERRED_SUPERSEDED_RESIDUE at its source by failing fast.
+      updates:
+        - add_requirement
+    - id: D-009
+      area: Delta withdraw lifecycle transition
+      intent: add
+      status: closed
+      origin_checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
+      current: |-
+        No verb exists to retract a delta opened in error. The only workaround
+        is permanent defer, which burns a D-id and earns DEFERRED_SUPERSEDED_RESIDUE
+        warnings once the affected requirements are superseded downstream.
+      target: |-
+        specctl delta withdraw <charter:slug> <D-id> --reason <text> transitions
+        open | in-progress | deferred to a new withdrawn state. Withdrawn deltas
+        persist in the tracking YAML as auditable history (withdrawn_reason
+        recorded), are listed under deltas_withdrawn in the rev changelog, do
+        not emit DEFERRED_SUPERSEDED_RESIDUE, and cannot be resumed. Closed
+        deltas are out of scope (a revert would be a compensating delta).
+      notes: |
+        Origin: runtime-v2 D-015 residue 2026-04-22. First-class retraction;
+        pairs with Delta A to eliminate both the creation and the existence
+        of delta-residue. Retroactive cleanup path: resume then withdraw.
+      updates:
+        - add_requirement
+    - id: D-010
+      area: Rebind affects_requirements across supersession
+      intent: add
+      status: closed
+      origin_checkpoint: 367d7c6335c3c985d05bd70569bb649150dc4169
+      current: |-
+        affects_requirements freezes at delta add. When a referenced REQ is
+        later replaced via req replace, the delta remains anchored to a dead
+        REQ id. DEFERRED_SUPERSEDED_RESIDUE correctly detects this but no
+        verb resolves it — governance forbids hand-editing the tracking YAML.
+      target: |-
+        Two composable mechanisms. (A) req replace auto-rebinds open,
+        in-progress, or deferred deltas whose affects_requirements entry
+        matches the replaced REQ, when the replacement is scope-preserving
+        (same charter, same slug, same match status). Gated by a new config
+        key auto_rebind_on_replace (default false for existing installs,
+        true for new inits). Each auto-rebind emits AUTO_REBIND_APPLIED in
+        context warnings and is recorded in the rev changelog. (B) specctl
+        delta rebind-requirements <charter:slug> <D-id> --from REQ-X --to
+        REQ-Y (or --remove REQ-X --reason <text>) explicitly updates
+        affects_requirements for open, in-progress, or deferred deltas.
+        Does not touch status, intent, or any requirement lifecycle or
+        verification. Invariant: closed-delta affects_requirements remain
+        immutable.
+      notes: |
+        Origin: runtime-v2 D-002 residue 2026-04-22 (5 generations of drift
+        without a resolution path). Keeps valuable deferred deltas anchored
+        across real-world spec evolution. Pairs with Deltas A and B.
+      updates:
+        - add_requirement
+    - id: D-011
+      area: Withdrawn deltas surface uniformly across projection, diff, and residue
+      intent: change
+      status: closed
+      origin_checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
+      current: |-
+        Withdrawn deltas are surfaced inconsistently across the cli read
+        surfaces. projectDelta omits withdrawn_reason from result.delta
+        payloads though buildDeltaItemProjections includes it in state
+        counts and items; diffDeltas buckets only Opened/Closed/Deferred/
+        Resumed so a withdrawn transition disappears from the diff output;
+        and two scenarios claimed in the SPEC ("withdrawn deltas do not
+        emit DEFERRED_SUPERSEDED_RESIDUE" and "rev bump records withdrawn
+        deltas") are not yet pinned by contract goldens.
+      target: |-
+        projectDelta carries withdrawn_reason so result.delta and state
+        items match; diffDeltas includes a Withdrawn bucket projected
+        through to SpecDiffDeltaModel and the diff JSON envelope; contract
+        goldens lock the residue-silence and rev-bump-with-withdrawn
+        scenarios.
+      notes: |
+        Review feedback on PR #10. Strengthens REQ-030 without altering
+        lifecycle semantics. Pairs with D-012 (rebind reason parity) in
+        the second governance cycle on this branch.
+      affects_requirements:
+        - REQ-030
+    - id: D-012
+      area: Rebind --to records reason for audit parity and auto-rebind-off is contract-pinned
+      intent: change
+      status: closed
+      origin_checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
+      current: |-
+        Rebind asymmetrically records its reason: --remove includes reason
+        in result.rebind, --to does not, even when the CLI accepts --reason
+        on both paths. Auto-rebind-off (the default for existing installs)
+        is not pinned by any contract golden; regressions would go
+        unnoticed. The rebind verb's audit trail is therefore weaker than
+        delta withdraw's and relies on implicit test coverage.
+      target: |-
+        RebindDeltaRequirements includes reason in result.rebind on both
+        --to and --remove paths when the caller supplies one. A new
+        contract golden locks auto-rebind-off behavior on req replace:
+        with the default config (auto_rebind_on_replace absent or false),
+        independent open deltas keep their anchors and result.auto_rebinds
+        is not emitted.
+      notes: |
+        Review feedback on PR #10. Strengthens REQ-031 without altering
+        rebind semantics for open/in-progress/deferred deltas or the
+        closed-delta immutability invariant. Pairs with D-011 in the
+        review-feedback cycle.
+      affects_requirements:
+        - REQ-031
+    - id: D-013
+      area: Auto-rebind on req replace is always on; remove the auto_rebind_on_replace config gate
+      intent: change
+      status: closed
+      origin_checkpoint: 2b27d56ff5b69b5537eada95c47d558f9cda511a
+      current: |-
+        req replace auto-rebind is gated by auto_rebind_on_replace in
+        specctl.yaml with divergent defaults (specctl init writes true,
+        pre-existing configs read false). The flag was added to preserve
+        backwards compatibility for any repo that wanted to keep the old
+        behavior, but the feature is new, no production repos depend on the
+        old behavior, and the flag adds documentation surface (README
+        upgrade note, SKILL config callout) plus per-cohort behavior that
+        exceeds the value it provides.
+      target: |-
+        req replace auto-rebinds independent open/in-progress/deferred
+        deltas unconditionally whenever the replaced REQ matches an
+        affects_requirements entry. The AutoRebindOnReplace config key is
+        removed from ProjectConfig. InitWorkspace no longer writes the key.
+        The README "Upgrading existing repos" section and the SKILL.md
+        "Config divergence" callout are removed. Rebinds remain observable
+        via result.auto_rebinds[] and per-delta opt-out is still possible
+        via specctl delta rebind-requirements --remove.
+      notes: |
+        Breaking change for any repo that had auto_rebind_on_replace set
+        explicitly; no such repo exists in the wild. runtime-v2 is the only
+        known existing consumer and its config has no auto-rebind key, so
+        this is a no-op for it. Preferred over the divergent-defaults
+        pattern now while the user base is us.
+      affects_requirements:
+        - REQ-033
+    - id: D-014
+      area: Write surface emits guidance next steps after withdraw, rebind, and auto-rebinding replace
+      intent: add
+      status: closed
+      origin_checkpoint: 2b27d56ff5b69b5537eada95c47d558f9cda511a
+      current: |-
+        Three write verbs return an empty or terminal-sync next envelope
+        even when follow-up guidance would help the agent: delta withdraw
+        leaves the caller without a hint to open a fresh delta if the work
+        still matters; delta rebind-requirements leaves no hint to review
+        the delta's scenarios against the new anchor; req replace with a
+        non-empty auto_rebinds list points the caller at the new
+        requirement's verification but says nothing about the rebound
+        deltas that may now need scenario review.
+      target: |-
+        Each of the three verbs emits a priority-appropriate next step of
+        kind guidance (for withdraw and rebind) or adds a review step to
+        the existing next sequence (for req replace when rebinds occurred).
+        The guidance names the exact follow-up action, the affected delta
+        IDs where applicable, and the choose_when condition for when the
+        agent should act on it. Steps are advisory — the skill already
+        teaches agents to treat guidance kinds as optional by convention.
+      notes: |
+        Review-feedback follow-up surfaced during the Option D audit. The
+        skill guidance already tells agents to follow result.auto_rebinds
+        and to read withdraw/rebind result fields; this closes the loop by
+        having the write surface nominate the follow-up itself.
+      updates:
+        - add_requirement
+    - id: D-015
+      area: Spec context detects gherkin blocks in SPEC.md without a tracking requirement
+      intent: add
+      status: closed
+      origin_checkpoint: f22aac7e0a7f6c5e6830722b29e027983929c014
+      current: |-
+        MatchRequirementContexts in internal/infrastructure/design_doc_reader.go
+        iterates only from tracking toward SPEC.md. A ## Requirement: heading
+        plus gherkin requirement block written to SPEC.md that is not tracked
+        by any REQ in the YAML is silently discarded. This is the typical
+        write_spec_section-then-withdraw-delta residue and today specctl
+        provides no warning, match issue, or linting signal.
+      target: |-
+        Spec context emits an advisory warning SPEC_ORPHAN_GHERKIN_BLOCK in
+        state.warnings[] enumerating each SPEC.md block with no tracking
+        counterpart. Severity advisory, kind structural_anomaly. Never
+        blocks writes. Details carry heading, title, and gherkin so the
+        agent can grep/remove the block without line-number tooling.
+      notes: |
+        Review-discussion follow-up from PR #10 on the bi-directional gap
+        in SPEC.md validation. Detects the orphan case that delta withdraw,
+        req withdraw, or premature write_spec_section can create. Paired
+        with D-016 which blocks the semantic inconsistency on the tracking
+        side.
+      updates:
+        - add_requirement
+    - id: D-016
+      area: Delta withdraw rejects deltas that introduced active requirements
+      intent: add
+      status: closed
+      origin_checkpoint: f22aac7e0a7f6c5e6830722b29e027983929c014
+      current: |-
+        delta withdraw today only validates status (must be open, in-progress,
+        or deferred) and reason. It does not check whether the delta
+        introduced requirements that are still active. Retracting such a
+        delta leaves active REQs whose introduced_by points at a withdrawn
+        delta — a semantic inconsistency that the system does not detect.
+      target: |-
+        WithdrawDelta rejects with DELTA_INTRODUCES_ACTIVE_REQUIREMENTS when
+        tracking.TracingRequirements(deltaID) contains any active REQ.
+        Error payload enumerates the blocking REQs under
+        focus.blocking_requirements and emits next.steps with one entry per
+        REQ suggesting specctl req withdraw as the remediation. Mirrors the
+        UNVERIFIED_REQUIREMENTS pattern in delta close.
+      notes: |
+        Follow-up to D-015 closing the other half of the inverse-direction
+        gap. BLOCK (not CASCADE) per user decision: forces the agent to
+        reason explicitly about each active REQ rather than changing
+        lifecycle by a new ungoverned path.
+      updates:
+        - add_requirement
 requirements:
     - id: REQ-001
       title: Context reports spec status and drift state
@@ -633,6 +869,143 @@ requirements:
       verification: verified
       introduced_by: D-007
       supersedes: REQ-020
+    - id: REQ-029
+      title: Delta add pre-flights repair intent against closed-delta invariants
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaAdd_RepairClosedDeltaConflict.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta add pre-flights repair intent against closed-delta invariants
+      lifecycle: active
+      verification: verified
+      introduced_by: D-008
+    - id: REQ-030
+      title: Delta withdraw retracts a non-closed delta with auditable reason
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_ClosedRejected.json
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_MissingReason.json
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_Success.json
+        - internal/cli/testdata/contracts/TestContract_DeltaWithdraw_Success.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta withdraw retracts a non-closed delta with auditable reason
+      lifecycle: superseded
+      verification: verified
+      introduced_by: D-009
+      superseded_by: REQ-032
+    - id: REQ-031
+      title: Requirement rebind keeps open-delta anchors live across supersession
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_ClosedRejected.json
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_AutoRebindOtherDeltas.json
+      gherkin: |-
+        @specctl @write
+        Feature: Requirement rebind keeps open-delta anchors live across supersession
+      lifecycle: superseded
+      verification: verified
+      introduced_by: D-010
+      superseded_by: REQ-033
+    - id: REQ-032
+      title: Delta withdraw records an auditable reason visible across projections, diff, and residue
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_Context_WithdrawnDeltaSilencesResidue.json
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_Success.json
+        - internal/application/testdata/contracts/TestContract_RevBump_WithDeltasWithdrawn.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta withdraw records an auditable reason visible across projections, diff, and residue
+      lifecycle: active
+      verification: verified
+      introduced_by: D-011
+      supersedes: REQ-030
+    - id: REQ-033
+      title: Requirement rebind keeps open-delta anchors live across supersession with audit parity
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_AutoRebindDisabledByDefault.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_AutoRebindOtherDeltas.json
+      gherkin: |-
+        @specctl @write
+        Feature: Requirement rebind keeps open-delta anchors live across supersession with audit parity
+      lifecycle: superseded
+      verification: verified
+      introduced_by: D-012
+      supersedes: REQ-031
+      superseded_by: REQ-034
+    - id: REQ-034
+      title: Requirement rebind keeps open-delta anchors live across supersession unconditionally with audit parity
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_ClosedRejected.json
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_AutoRebindOtherDeltas.json
+      gherkin: |-
+        @specctl @write
+        Feature: Requirement rebind keeps open-delta anchors live across supersession unconditionally with audit parity
+      lifecycle: active
+      verification: verified
+      introduced_by: D-013
+      supersedes: REQ-033
+    - id: REQ-035
+      title: Write surface emits guidance after retract, rebind, and replace with rebinds
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_Success.json
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_AutoRebindOtherDeltas.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_RequirementNotInSpec.json
+      gherkin: |-
+        @specctl @write
+        Feature: Write surface emits guidance after retract, rebind, and replace with rebinds
+      lifecycle: active
+      verification: verified
+      introduced_by: D-014
+    - id: REQ-036
+      title: Spec context detects gherkin blocks without a tracking requirement
+      tags:
+        - specctl
+        - read
+      test_files:
+        - internal/application/testdata/contracts/TestContract_Context_OrphanGherkinBlockWarning.json
+      gherkin: |-
+        @specctl @read
+        Feature: Spec context detects gherkin blocks without a tracking requirement
+      lifecycle: active
+      verification: verified
+      introduced_by: D-015
+    - id: REQ-037
+      title: Delta withdraw rejects deltas that introduced active requirements
+      tags:
+        - specctl
+        - lifecycle
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_IntroducesActiveRequirements.json
+      gherkin: |-
+        @specctl @lifecycle
+        Feature: Delta withdraw rejects deltas that introduced active requirements
+      lifecycle: active
+      verification: verified
+      introduced_by: D-016
 changelog:
     - rev: 2
       date: "2026-04-02"
@@ -739,3 +1112,67 @@ changelog:
         - REQ-027
         - REQ-028
       summary: Complete the embedded example surface and re-anchor self-governance in the standalone OSS repo.
+    - rev: 7
+      date: "2026-04-23"
+      deltas_opened:
+        - D-008
+        - D-009
+        - D-010
+      deltas_closed:
+        - D-008
+        - D-009
+        - D-010
+      reqs_added:
+        - REQ-029
+        - REQ-030
+        - REQ-031
+      reqs_verified:
+        - REQ-029
+        - REQ-030
+        - REQ-031
+      summary: Introduce delta withdraw, rebind-requirements, and eager repair validation as first-class governance verbs.
+    - rev: 8
+      date: "2026-04-24"
+      deltas_opened:
+        - D-011
+        - D-012
+      deltas_closed:
+        - D-011
+        - D-012
+      reqs_added:
+        - REQ-032
+        - REQ-033
+      reqs_verified:
+        - REQ-032
+        - REQ-033
+      summary: Harden withdraw projections and rebind audit trail with contract-pinned regressions and diff coverage.
+    - rev: 9
+      date: "2026-04-24"
+      deltas_opened:
+        - D-013
+        - D-014
+      deltas_closed:
+        - D-013
+        - D-014
+      reqs_added:
+        - REQ-034
+        - REQ-035
+      reqs_verified:
+        - REQ-034
+        - REQ-035
+      summary: Make auto-rebind unconditional and emit guidance next steps after withdraw, rebind, and replace-with-rebinds.
+    - rev: 10
+      date: "2026-04-24"
+      deltas_opened:
+        - D-015
+        - D-016
+      deltas_closed:
+        - D-015
+        - D-016
+      reqs_added:
+        - REQ-036
+        - REQ-037
+      reqs_verified:
+        - REQ-036
+        - REQ-037
+      summary: 'Close the inverse-direction validation gap: detect orphan gherkin blocks as advisory and reject delta withdraw when introduced requirements are still active.'

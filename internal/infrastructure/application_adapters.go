@@ -80,10 +80,11 @@ type ResolvedDesignDocMetadata struct {
 }
 
 type SpecProjectionInputs struct {
-	ScopeDrift         ScopeDriftSnapshot
-	ScopeDriftFindings []ValidationFinding
-	DesignDoc          *ResolvedDesignDocMetadata
-	Requirements       map[string]RequirementDocContext
+	ScopeDrift          ScopeDriftSnapshot
+	ScopeDriftFindings  []ValidationFinding
+	DesignDoc           *ResolvedDesignDocMetadata
+	Requirements        map[string]RequirementDocContext
+	OrphanGherkinBlocks []RequirementContext
 }
 
 type RequirementDocContext struct {

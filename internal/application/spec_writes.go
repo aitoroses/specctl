@@ -43,6 +43,21 @@ type DeltaTransitionRequest struct {
 	DeltaID string
 }
 
+type DeltaWithdrawRequest struct {
+	Target  string
+	DeltaID string
+	Reason  string
+}
+
+type DeltaRebindRequest struct {
+	Target  string
+	DeltaID string
+	From    string
+	To      string
+	Remove  bool
+	Reason  string
+}
+
 type RequirementAddRequest struct {
 	Target  string
 	DeltaID string
@@ -398,6 +413,11 @@ func (s *Service) AddDelta(request DeltaAddRequest) (SpecProjection, map[string]
 				}
 			}
 		}
+		if request.Intent == domain.DeltaIntentRepair {
+			if failure := s.repairIntentClosedDeltaConflict(loaded, affectsRequirements); failure != nil {
+				return SpecProjection{}, nil, nil, failure
+			}
+		}
 	default:
 		affectsRequirements = nil
 	}
@@ -447,6 +467,68 @@ func (s *Service) AddDelta(request DeltaAddRequest) (SpecProjection, map[string]
 			return buildDeltaAddNext(request.Target, loaded.tracking, delta, state.FormatTemplate)
 		},
 	)
+}
+
+// repairIntentClosedDeltaConflict enforces the closed-delta invariant at
+// delta add time: a repair intent can only progress via req stale, which
+// retroactively invalidates any closed delta that referenced the target
+// requirement as part of its closure evidence. Detecting the conflict
+// here avoids burning a D-id and leaving deferred residue.
+func (s *Service) repairIntentClosedDeltaConflict(loaded *loadedSpec, affectsRequirements []string) *Failure {
+	conflicts := make([]map[string]any, 0)
+	conflictingRequirements := make([]string, 0)
+	conflictingDeltasSet := make(map[string]struct{})
+	for _, requirementID := range affectsRequirements {
+		hit := false
+		for _, closed := range loaded.tracking.Deltas {
+			if closed.Status != domain.DeltaStatusClosed {
+				continue
+			}
+			for _, affected := range closed.AffectsRequirements {
+				if affected != requirementID {
+					continue
+				}
+				conflicts = append(conflicts, map[string]any{
+					"closed_delta":      closed.ID,
+					"requires_verified": requirementID,
+				})
+				conflictingDeltasSet[closed.ID] = struct{}{}
+				hit = true
+			}
+		}
+		if hit {
+			conflictingRequirements = append(conflictingRequirements, requirementID)
+		}
+	}
+	if len(conflicts) == 0 {
+		return nil
+	}
+	conflictingDeltas := make([]string, 0, len(conflictingDeltasSet))
+	for id := range conflictingDeltasSet {
+		conflictingDeltas = append(conflictingDeltas, id)
+	}
+	slices.Sort(conflictingDeltas)
+	state := loaded.state
+	state.Focus = map[string]any{
+		"delta_add": map[string]any{
+			"reason":    "closed_delta_invariant",
+			"conflicts": conflicts,
+			"suggestion": map[string]any{
+				"intent":    "change",
+				"rationale": "Use --intent change with req replace to preserve closed-delta verification while introducing an updated successor requirement.",
+			},
+		},
+	}
+	return &Failure{
+		Code: "VALIDATION_FAILED",
+		Message: fmt.Sprintf(
+			"Repair intent cannot be applied to %s: closed delta(s) %s require the requirement(s) verified; repair only allows stale, which the closed-delta invariant forbids.",
+			strings.Join(conflictingRequirements, ", "),
+			strings.Join(conflictingDeltas, ", "),
+		),
+		State: state,
+		Next:  []any{},
+	}
 }
 
 func (s *Service) StartDelta(request DeltaTransitionRequest) (SpecProjection, map[string]any, []any, error) {
@@ -577,6 +659,176 @@ func (s *Service) CloseDelta(request DeltaTransitionRequest) (SpecProjection, ma
 		"delta": projectDelta(*mutated),
 	}, map[string]any{"delta": projectDelta(*mutated)}, func(state SpecProjection) []any {
 		return buildDeltaCloseNext(request.Target, *mutated, state)
+	})
+}
+
+func (s *Service) RebindDeltaRequirements(request DeltaRebindRequest) (SpecProjection, map[string]any, []any, error) {
+	loaded, failure, err := s.loadSpecForMutation(request.Target)
+	if err != nil || failure != nil {
+		return SpecProjection{}, nil, nil, collapseFailure(err, failure)
+	}
+	from := strings.TrimSpace(request.From)
+	if from == "" {
+		return SpecProjection{}, nil, nil, invalidSpecInputFailure(loaded.state, "--from is required", "from")
+	}
+	to := strings.TrimSpace(request.To)
+	if request.Remove {
+		if to != "" {
+			return SpecProjection{}, nil, nil, invalidSpecInputFailure(loaded.state, "--remove is mutually exclusive with --to", "to")
+		}
+		if strings.TrimSpace(request.Reason) == "" {
+			return SpecProjection{}, nil, nil, invalidSpecInputFailure(loaded.state, "--reason is required with --remove", "reason")
+		}
+	} else if to == "" {
+		return SpecProjection{}, nil, nil, invalidSpecInputFailure(loaded.state, "--to or --remove is required", "to")
+	}
+	delta := loaded.tracking.DeltaByID(request.DeltaID)
+	if delta == nil {
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_NOT_FOUND",
+			fmt.Sprintf("delta %s not found", request.DeltaID),
+			map[string]any{"delta": map[string]any{"id": request.DeltaID}},
+			[]any{},
+		)
+	}
+	switch delta.Status {
+	case domain.DeltaStatusOpen, domain.DeltaStatusInProgress, domain.DeltaStatusDeferred:
+		// allowed
+	default:
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_INVALID_STATE",
+			fmt.Sprintf("delta %s cannot be rebound while status is %s", request.DeltaID, delta.Status),
+			map[string]any{
+				"delta":      deltaFailureFocus(*delta),
+				"transition": "rebind",
+			},
+			[]any{},
+		)
+	}
+	if !slices.Contains(delta.AffectsRequirements, from) {
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_REQUIREMENT_NOT_AFFECTED",
+			fmt.Sprintf("delta %s does not list %s in affects_requirements", request.DeltaID, from),
+			map[string]any{"req_rebind": map[string]any{"reason": "requirement_not_in_delta"}},
+			[]any{},
+		)
+	}
+	if !request.Remove {
+		if loaded.tracking.RequirementByID(to) == nil {
+			return SpecProjection{}, nil, nil, s.specFailure(
+				loaded,
+				"INVALID_INPUT",
+				fmt.Sprintf("replacement requirement %s not found", to),
+				map[string]any{"req_rebind": map[string]any{"reason": "replacement_not_found"}},
+				[]any{},
+			)
+		}
+	}
+
+	updated := cloneTracking(loaded.tracking)
+	mutated := updated.DeltaByID(request.DeltaID)
+	newAR := make([]string, 0, len(mutated.AffectsRequirements))
+	for _, id := range mutated.AffectsRequirements {
+		if id != from {
+			newAR = append(newAR, id)
+			continue
+		}
+		if !request.Remove {
+			newAR = append(newAR, to)
+		}
+	}
+	mutated.AffectsRequirements = newAR
+	updated.SyncComputedStatus()
+	updated.Updated = s.todayUTC()
+
+	detail := map[string]any{"from": from}
+	if request.Remove {
+		detail["removed"] = true
+		detail["reason"] = strings.TrimSpace(request.Reason)
+	} else {
+		detail["to"] = to
+		if reason := strings.TrimSpace(request.Reason); reason != "" {
+			detail["reason"] = reason
+		}
+	}
+	return s.finalizeSpecMutation(loaded, updated, map[string]any{
+		"kind":   "delta",
+		"delta":  projectDelta(*mutated),
+		"rebind": detail,
+	}, map[string]any{"delta": projectDelta(*mutated)}, func(_ SpecProjection) []any {
+		return buildDeltaRebindNext(*mutated, from, to, request.Remove)
+	})
+}
+
+func (s *Service) WithdrawDelta(request DeltaWithdrawRequest) (SpecProjection, map[string]any, []any, error) {
+	loaded, failure, err := s.loadSpecForMutation(request.Target)
+	if err != nil || failure != nil {
+		return SpecProjection{}, nil, nil, collapseFailure(err, failure)
+	}
+	reason := strings.TrimSpace(request.Reason)
+	if reason == "" {
+		return SpecProjection{}, nil, nil, invalidSpecInputFailure(loaded.state, "--reason is required", "reason")
+	}
+	delta := loaded.tracking.DeltaByID(request.DeltaID)
+	if delta == nil {
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_NOT_FOUND",
+			fmt.Sprintf("delta %s not found", request.DeltaID),
+			map[string]any{"delta": map[string]any{"id": request.DeltaID}},
+			[]any{},
+		)
+	}
+	switch delta.Status {
+	case domain.DeltaStatusOpen, domain.DeltaStatusInProgress, domain.DeltaStatusDeferred:
+		// allowed
+	default:
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_INVALID_STATE",
+			fmt.Sprintf("delta %s cannot transition from %s to withdrawn", request.DeltaID, delta.Status),
+			map[string]any{
+				"delta":      deltaFailureFocus(*delta),
+				"transition": "withdraw",
+			},
+			[]any{},
+		)
+	}
+
+	activeIntroduced := make([]domain.Requirement, 0)
+	for _, req := range loaded.tracking.TracingRequirements(request.DeltaID) {
+		if req.IsActive() {
+			activeIntroduced = append(activeIntroduced, req)
+		}
+	}
+	if len(activeIntroduced) > 0 {
+		return SpecProjection{}, nil, nil, s.specFailure(
+			loaded,
+			"DELTA_INTRODUCES_ACTIVE_REQUIREMENTS",
+			fmt.Sprintf("Cannot withdraw %s: %d active requirement(s) introduced by this delta must be withdrawn first", request.DeltaID, len(activeIntroduced)),
+			map[string]any{
+				"delta":                 deltaFailureFocus(*delta),
+				"blocking_requirements": blockingRequirementsFocus(activeIntroduced),
+			},
+			buildDeltaWithdrawBlockingNext(request.Target, request.DeltaID, activeIntroduced),
+		)
+	}
+
+	updated := cloneTracking(loaded.tracking)
+	mutated := updated.DeltaByID(request.DeltaID)
+	mutated.Status = domain.DeltaStatusWithdrawn
+	mutated.WithdrawnReason = reason
+	updated.SyncComputedStatus()
+	updated.Updated = s.todayUTC()
+
+	return s.finalizeSpecMutation(loaded, updated, map[string]any{
+		"kind":  "delta",
+		"delta": projectDelta(*mutated),
+	}, map[string]any{"delta": projectDelta(*mutated)}, func(_ SpecProjection) []any {
+		return buildDeltaWithdrawNext(request.Target, *mutated)
 	})
 }
 
@@ -770,6 +1022,8 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 		mutatedDelta.Updates = nil
 	}
 
+	rebinds := autoRebindAffectsRequirements(updated, delta.ID, request.RequirementID, newRequirement.ID)
+
 	updated.SyncComputedStatus()
 	updated.Updated = s.todayUTC()
 
@@ -778,6 +1032,9 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 		"kind":        "requirement",
 		"requirement": resultRequirement,
 		"allocation":  map[string]any{"previous_max": len(loaded.tracking.Requirements), "allocated": newRequirement.ID},
+	}
+	if len(rebinds) > 0 {
+		result["auto_rebinds"] = rebinds
 	}
 	return s.finalizeSpecMutation(
 		loaded,
@@ -788,7 +1045,7 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 			"new_requirement":      resultRequirement,
 		},
 		func(_ SpecProjection) []any {
-			return buildImplementAndVerifyNext(
+			next := buildImplementAndVerifyNext(
 				request.Target,
 				updated,
 				newRequirement,
@@ -796,8 +1053,56 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 				"Replacement requirement is registered but not yet verified. Implement the changed behavior and write tests before verifying.",
 				"Update the implementation and tests to match the new requirement. Each scenario maps to a test case.",
 			)
+			if review := buildRebindReviewNext(request.Target, rebinds, len(next)+1); review != nil {
+				next = append(next, review)
+			}
+			return next
 		},
 	)
+}
+
+// autoRebindAffectsRequirements updates the affects_requirements list of
+// every open | in-progress | deferred delta that still references the
+// superseded requirement, replacing it with the new requirement id.
+// Closed and withdrawn deltas are never touched. The parent delta of the
+// replace is skipped — it keeps the old id so its trace survives.
+// Returns the list of rebinds made for inclusion in the response;
+// absence of a return value means no matching delta existed, not that
+// rebinding was disabled. Per-delta opt-out is available through
+// specctl delta rebind-requirements --remove.
+//
+// Scope-preservation note: the D-010 proposal scoped auto-rebind to
+// "scope-preserving replacements (same charter, same slug, same match
+// status)". Same charter + same slug is implicit because we iterate the
+// tracking file of the spec that owns the replace. Match-status
+// preservation (whether the gherkin content narrowed vs. stayed
+// equivalent) is deliberately not checked in this slice — agents can
+// override per-delta via `specctl delta rebind-requirements` when the
+// replace genuinely narrowed scope. Revisit if a future requirement
+// demands stricter gating.
+func autoRebindAffectsRequirements(tracking *domain.TrackingFile, parentDeltaID, fromReq, toReq string) []map[string]any {
+	rebinds := make([]map[string]any, 0)
+	for i := range tracking.Deltas {
+		d := &tracking.Deltas[i]
+		if d.ID == parentDeltaID {
+			continue
+		}
+		if d.Status != domain.DeltaStatusOpen && d.Status != domain.DeltaStatusInProgress && d.Status != domain.DeltaStatusDeferred {
+			continue
+		}
+		for j, req := range d.AffectsRequirements {
+			if req == fromReq {
+				d.AffectsRequirements[j] = toReq
+				rebinds = append(rebinds, map[string]any{
+					"code":  "AUTO_REBIND_APPLIED",
+					"delta": d.ID,
+					"from":  fromReq,
+					"to":    toReq,
+				})
+			}
+		}
+	}
+	return rebinds
 }
 
 func (s *Service) WithdrawRequirement(request RequirementDeltaRequest) (SpecProjection, map[string]any, []any, error) {
@@ -1190,7 +1495,8 @@ func (s *Service) BumpRevision(request RevisionBumpRequest) (SpecProjection, map
 	}
 
 	unbumped := closedDeltasNotInChangelog(loaded.tracking)
-	if len(unbumped) == 0 {
+	unbumpedWithdrawn := withdrawnDeltasNotInChangelog(loaded.tracking)
+	if len(unbumped) == 0 && len(unbumpedWithdrawn) == 0 {
 		return SpecProjection{}, nil, nil, revBumpInvalidInputFailure(loaded.state, "rev bump requires closed deltas not yet recorded in the changelog", "no_semantic_changes")
 	}
 
@@ -1206,6 +1512,7 @@ func (s *Service) BumpRevision(request RevisionBumpRequest) (SpecProjection, map
 	// The baseline comparison can miss items that existed before the first checkpoint.
 	// The changelog is the authoritative record — anything not yet in any entry gets recorded.
 	entry.DeltasClosed = unbumped
+	entry.DeltasWithdrawn = unbumpedWithdrawn
 	entry.DeltasOpened = openedDeltasNotInChangelog(loaded.tracking)
 	entry.ReqsAdded = requirementsNotInChangelog(loaded.tracking)
 	entry.ReqsVerified = verifiedRequirementsNotInChangelog(loaded.tracking)
@@ -1854,6 +2161,115 @@ func buildDeltaTransitionNext(target string, delta domain.Delta) []any {
 	}
 }
 
+// buildDeltaWithdrawNext nominates the follow-up action after a withdraw:
+// either open a fresh delta if the observable behavior still needs
+// changing, or stop. Withdrawn deltas cannot be resumed — the guidance
+// exists so the agent does not leave the cycle thinking the retraction
+// is the last step when the actual work was never done.
+// blockingRequirementsFocus projects each active-introduced requirement
+// into a compact focus entry (id, title, introduced_by) for inclusion in
+// the DELTA_INTRODUCES_ACTIVE_REQUIREMENTS error payload. Mirrors the
+// shape used by delta close's UNVERIFIED_REQUIREMENTS.
+func blockingRequirementsFocus(reqs []domain.Requirement) []map[string]any {
+	out := make([]map[string]any, 0, len(reqs))
+	for _, req := range reqs {
+		out = append(out, map[string]any{
+			"id":            req.ID,
+			"title":         req.Title,
+			"introduced_by": req.IntroducedBy,
+		})
+	}
+	return out
+}
+
+// buildDeltaWithdrawBlockingNext emits one run_command step per blocking
+// requirement suggesting specctl req withdraw with the original
+// introducing delta. The agent can follow the steps in order and retry
+// the delta withdraw once every REQ's lifecycle has moved off active.
+func buildDeltaWithdrawBlockingNext(target, deltaID string, reqs []domain.Requirement) []any {
+	steps := make([]any, 0, len(reqs))
+	for i, req := range reqs {
+		steps = append(steps, map[string]any{
+			"priority":     i + 1,
+			"action":       "req_withdraw",
+			"kind":         "run_command",
+			"instructions": fmt.Sprintf("Requirement %s is active and was introduced by %s. Withdraw it explicitly before retrying delta withdraw.", req.ID, deltaID),
+			"template": map[string]any{
+				"argv":            []string{"specctl", "req", "withdraw", target, req.ID, "--delta", deltaID},
+				"required_fields": []map[string]any{},
+			},
+		})
+	}
+	return steps
+}
+
+func buildDeltaWithdrawNext(target string, delta domain.Delta) []any {
+	return []any{
+		map[string]any{
+			"priority":    1,
+			"action":      "consider_followup_delta",
+			"kind":        "guidance",
+			"choose_when": "The observable behavior change the retracted delta was meant to make still needs to happen. Open a fresh delta with specctl delta add using the correct intent; withdrawn deltas cannot be resumed.",
+			"details": map[string]any{
+				"withdrawn_delta":  delta.ID,
+				"withdrawn_reason": delta.WithdrawnReason,
+			},
+		},
+	}
+}
+
+// buildDeltaRebindNext tells the agent the anchor shifted and nominates a
+// scenario-review step. The new anchor may narrow or widen scope, so the
+// delta's SPEC.md scenarios may drift relative to the rebound requirement
+// — the guidance names the exact rebind to make the review concrete.
+func buildDeltaRebindNext(delta domain.Delta, from, to string, removed bool) []any {
+	details := map[string]any{
+		"delta": delta.ID,
+		"from":  from,
+	}
+	if removed {
+		details["removed"] = true
+	} else {
+		details["to"] = to
+	}
+	return []any{
+		map[string]any{
+			"priority":    1,
+			"action":      "review_delta_scenarios",
+			"kind":        "guidance",
+			"choose_when": "The delta's affects_requirements changed. Read the delta's scenarios in SPEC.md and confirm they still match the rebound requirement's scope; rebind or remove further anchors if the scope drifted.",
+			"details":     details,
+		},
+	}
+}
+
+// buildRebindReviewNext appends a review-step to the req replace next
+// sequence when auto-rebind rewrote at least one independent delta's
+// affects_requirements. Returns nil when nothing was rebound so the
+// caller can cheaply skip appending.
+func buildRebindReviewNext(target string, rebinds []map[string]any, priority int) any {
+	if len(rebinds) == 0 {
+		return nil
+	}
+	summaries := make([]map[string]any, 0, len(rebinds))
+	for _, r := range rebinds {
+		summaries = append(summaries, map[string]any{
+			"delta": r["delta"],
+			"from":  r["from"],
+			"to":    r["to"],
+		})
+	}
+	return map[string]any{
+		"priority":    priority,
+		"action":      "review_rebound_deltas",
+		"kind":        "guidance",
+		"choose_when": "auto-rebind updated one or more open deltas' affects_requirements as part of this replace. Review each rebound delta's scenarios in SPEC.md to confirm the new requirement still matches its intended scope; use specctl delta rebind-requirements --remove with a reason to drop anchors whose scope genuinely narrowed.",
+		"details": map[string]any{
+			"rebinds": summaries,
+		},
+	}
+}
+
 func buildDeltaCloseNext(target string, delta domain.Delta, state SpecProjection) []any {
 	if delta.Intent == domain.DeltaIntentRepair {
 		if state.Status != domain.SpecStatusVerified {
@@ -2158,6 +2574,7 @@ func projectDelta(delta domain.Delta) DeltaItemProjection {
 		Notes:               delta.Notes,
 		AffectsRequirements: append([]string{}, delta.AffectsRequirements...),
 		Updates:             updates,
+		WithdrawnReason:     delta.WithdrawnReason,
 	}
 }
 
@@ -2650,6 +3067,24 @@ func closedDeltasNotInChangelog(tracking *domain.TrackingFile) []string {
 	return unbumped
 }
 
+func withdrawnDeltasNotInChangelog(tracking *domain.TrackingFile) []string {
+	recorded := make(map[string]struct{})
+	for _, entry := range tracking.Changelog {
+		for _, id := range entry.DeltasWithdrawn {
+			recorded[id] = struct{}{}
+		}
+	}
+	unbumped := make([]string, 0)
+	for _, delta := range tracking.Deltas {
+		if delta.Status == domain.DeltaStatusWithdrawn {
+			if _, ok := recorded[delta.ID]; !ok {
+				unbumped = append(unbumped, delta.ID)
+			}
+		}
+	}
+	return unbumped
+}
+
 func openedDeltasNotInChangelog(tracking *domain.TrackingFile) []string {
 	recorded := make(map[string]struct{})
 	for _, entry := range tracking.Changelog {
@@ -2703,13 +3138,14 @@ func verifiedRequirementsNotInChangelog(tracking *domain.TrackingFile) []string 
 
 func buildChangelogEntry(baseline, current *domain.TrackingFile, rev int, date, summary string) domain.ChangelogEntry {
 	return domain.ChangelogEntry{
-		Rev:          rev,
-		Date:         date,
-		DeltasOpened: deltaIDsNotInBaseline(baseline, current),
-		DeltasClosed: deltaIDsClosedSinceBaseline(baseline, current),
-		ReqsAdded:    requirementIDsNotInBaseline(baseline, current),
-		ReqsVerified: requirementIDsVerifiedSinceBaseline(baseline, current),
-		Summary:      summary,
+		Rev:             rev,
+		Date:            date,
+		DeltasOpened:    deltaIDsNotInBaseline(baseline, current),
+		DeltasClosed:    deltaIDsClosedSinceBaseline(baseline, current),
+		DeltasWithdrawn: deltaIDsWithdrawnSinceBaseline(baseline, current),
+		ReqsAdded:       requirementIDsNotInBaseline(baseline, current),
+		ReqsVerified:    requirementIDsVerifiedSinceBaseline(baseline, current),
+		Summary:         summary,
 	}
 }
 
@@ -2744,6 +3180,26 @@ func deltaIDsClosedSinceBaseline(baseline, current *domain.TrackingFile) []strin
 			continue
 		}
 		if baselineStatus[delta.ID] != domain.DeltaStatusClosed {
+			ids = append(ids, delta.ID)
+		}
+	}
+	return ids
+}
+
+func deltaIDsWithdrawnSinceBaseline(baseline, current *domain.TrackingFile) []string {
+	if baseline == nil {
+		baseline = &domain.TrackingFile{}
+	}
+	baselineStatus := make(map[string]domain.DeltaStatus, len(baseline.Deltas))
+	for _, delta := range baseline.Deltas {
+		baselineStatus[delta.ID] = delta.Status
+	}
+	ids := make([]string, 0)
+	for _, delta := range current.Deltas {
+		if delta.Status != domain.DeltaStatusWithdrawn {
+			continue
+		}
+		if baselineStatus[delta.ID] != domain.DeltaStatusWithdrawn {
 			ids = append(ids, delta.ID)
 		}
 	}

@@ -1,0 +1,267 @@
+{
+  "focus": {
+    "changelog_entry": {
+      "date": "__TODAY__",
+      "deltas_closed": [],
+      "deltas_opened": [],
+      "deltas_withdrawn": [
+        "D-002"
+      ],
+      "reqs_added": [],
+      "reqs_verified": [],
+      "rev": 6,
+      "summary": "Record the withdrawn follow-up in the changelog."
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "result": {
+    "changelog_entry": {
+      "date": "__TODAY__",
+      "deltas_closed": [],
+      "deltas_opened": [],
+      "deltas_withdrawn": [
+        "D-002"
+      ],
+      "reqs_added": [],
+      "reqs_verified": [],
+      "rev": 6,
+      "summary": "Record the withdrawn follow-up in the changelog."
+    },
+    "checkpoint": "__HEAD_SHA__",
+    "kind": "revision",
+    "previous_checkpoint": "a5ebbda43aa09d38ad09a73b7f0dd1c26c6977d8",
+    "previous_rev": 5,
+    "rev": 6
+  },
+  "state": {
+    "actionable_unverified_requirements": [],
+    "changelog": [
+      {
+        "date": "2026-03-28",
+        "deltas_closed": [
+          "D-001"
+        ],
+        "deltas_opened": [
+          "D-001"
+        ],
+        "reqs_added": [
+          "REQ-001"
+        ],
+        "reqs_verified": [
+          "REQ-001"
+        ],
+        "rev": 2,
+        "summary": "Closed the compensation cleanup work"
+      },
+      {
+        "date": "2026-03-29",
+        "deltas_closed": [],
+        "deltas_opened": [
+          "D-002"
+        ],
+        "reqs_added": [],
+        "reqs_verified": [],
+        "rev": 3,
+        "summary": "Deferred a follow-up against the original cleanup requirement"
+      },
+      {
+        "date": "2026-03-30",
+        "deltas_closed": [
+          "D-003"
+        ],
+        "deltas_opened": [
+          "D-003"
+        ],
+        "reqs_added": [
+          "REQ-002"
+        ],
+        "reqs_verified": [
+          "REQ-002"
+        ],
+        "rev": 4,
+        "summary": "Verified the replacement cleanup requirement while preserving the superseded predecessor as history"
+      },
+      {
+        "date": "__TODAY__",
+        "deltas_closed": [],
+        "deltas_opened": [],
+        "deltas_withdrawn": [
+          "D-002"
+        ],
+        "reqs_added": [],
+        "reqs_verified": [],
+        "rev": 6,
+        "summary": "Record the withdrawn follow-up in the changelog."
+      }
+    ],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "__HEAD_SHA__",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 2,
+      "deferred": 0,
+      "in_progress": 0,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Initial tracked behavior",
+          "origin_checkpoint": "a5ebbda43aa09d38ad09a73b7f0dd1c26c6977d8",
+          "status": "closed",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ]
+        },
+        {
+          "affects_requirements": [
+            "REQ-001"
+          ],
+          "area": "Deferred cleanup residue",
+          "current": "Deferred follow-up still points at the old cleanup contract",
+          "id": "D-002",
+          "intent": "change",
+          "notes": "Historical residue kept after replacement landed",
+          "origin_checkpoint": "a5ebbda43aa09d38ad09a73b7f0dd1c26c6977d8",
+          "status": "withdrawn",
+          "target": "Revisit whether more cleanup is needed",
+          "updates": [
+            "replace_requirement"
+          ],
+          "withdrawn_reason": "Retroactively retracted; decomposition is no longer planned."
+        },
+        {
+          "affects_requirements": [
+            "REQ-001"
+          ],
+          "area": "Compensation cleanup rewrite",
+          "current": "Cleanup wording is outdated",
+          "id": "D-003",
+          "intent": "change",
+          "notes": "Replacement requirement is verified; predecessor remains historical only",
+          "origin_checkpoint": "a5ebbda43aa09d38ad09a73b7f0dd1c26c6977d8",
+          "status": "closed",
+          "target": "Replace the tracked cleanup contract",
+          "updates": [
+            "replace_requirement"
+          ]
+        }
+      ],
+      "open": 0,
+      "withdrawn": 1
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "inactive_unverified_requirements": [
+      {
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "superseded",
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      }
+    ],
+    "last_verified_at": "__TODAY__",
+    "open_deltas": [],
+    "requirements": [
+      {
+        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
+        "id": "REQ-001",
+        "introduced_by": "D-001",
+        "lifecycle": "superseded",
+        "match": {
+          "heading": "Requirement: Compensation stage 4 failure cleanup",
+          "status": "matched"
+        },
+        "spec_context": {
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ]
+        },
+        "superseded_by": "REQ-002",
+        "supersedes": null,
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [],
+        "title": "Compensation stage 4 failure cleanup",
+        "verification": "unverified"
+      },
+      {
+        "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup replacement",
+        "id": "REQ-002",
+        "introduced_by": "D-003",
+        "lifecycle": "active",
+        "match": {
+          "heading": "Requirement: Compensation stage 4 failure cleanup replacement",
+          "status": "matched"
+        },
+        "spec_context": {
+          "scenarios": [
+            "Cleanup runs after stage 4 failure"
+          ]
+        },
+        "superseded_by": null,
+        "supersedes": "REQ-001",
+        "tags": [
+          "runtime",
+          "e2e"
+        ],
+        "test_files": [
+          "runtime/tests/domain/test_compensation_cleanup_replacement.py"
+        ],
+        "title": "Compensation stage 4 failure cleanup replacement",
+        "verification": "verified"
+      }
+    ],
+    "rev": 6,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "__HEAD_SHA__",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "__TODAY__",
+      "status": "clean",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "verified",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "updated": "__TODAY__",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

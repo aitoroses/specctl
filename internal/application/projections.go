@@ -72,6 +72,14 @@ type SpecProjection struct {
 	Warnings                         []SpecContextWarningProjection `json:"warnings,omitempty"`
 	Validation                       ValidationProjection           `json:"validation"`
 	Focus                            any                            `json:"focus,omitempty"`
+
+	// OrphanGherkinBlocks is the raw list of SPEC.md gherkin blocks
+	// parsed from the design doc that did not match any tracking
+	// requirement by gherkin or title. Carried on the projection so
+	// buildSpecContextWarnings can emit SPEC_ORPHAN_GHERKIN_BLOCK
+	// advisories; not serialized directly because the user-visible
+	// surface is the aggregated warning, not the raw blocks.
+	OrphanGherkinBlocks []infrastructure.RequirementContext `json:"-"`
 }
 
 type SpecContextWarningProjection struct {
@@ -98,6 +106,7 @@ type DeltaCountsProjection struct {
 	InProgress int `json:"in_progress"`
 	Closed     int `json:"closed"`
 	Deferred   int `json:"deferred"`
+	Withdrawn  int `json:"withdrawn"`
 }
 
 type DeltaProjection struct {
@@ -105,6 +114,7 @@ type DeltaProjection struct {
 	InProgress int                   `json:"in_progress"`
 	Closed     int                   `json:"closed"`
 	Deferred   int                   `json:"deferred"`
+	Withdrawn  int                   `json:"withdrawn"`
 	Items      []DeltaItemProjection `json:"items"`
 }
 
@@ -119,6 +129,7 @@ type DeltaItemProjection struct {
 	Notes               string             `json:"notes"`
 	AffectsRequirements []string           `json:"affects_requirements"`
 	Updates             []string           `json:"updates"`
+	WithdrawnReason     string             `json:"withdrawn_reason,omitempty"`
 }
 
 type OpenDeltaProjection struct {
@@ -321,8 +332,9 @@ func newSpecProjection(repoRoot string, tracking *domain.TrackingFile, charter *
 			FilesChangedSinceCheckpoint: append([]string{}, inputs.ScopeDrift.FilesChangedSinceCheckpoint...),
 		},
 		UncommittedChanges: append([]string{}, inputs.ScopeDrift.UncommittedChanges...),
-		Warnings:           []SpecContextWarningProjection{},
-		Validation:         projectionFromFindings(validationFindings),
+		Warnings:            []SpecContextWarningProjection{},
+		Validation:          projectionFromFindings(validationFindings),
+		OrphanGherkinBlocks: append([]infrastructure.RequirementContext{}, inputs.OrphanGherkinBlocks...),
 	}
 
 	if inputs.DesignDoc != nil {
@@ -465,6 +477,7 @@ func buildDeltaProjection(deltas []domain.Delta) DeltaProjection {
 		InProgress: counts.InProgress,
 		Closed:     counts.Closed,
 		Deferred:   counts.Deferred,
+		Withdrawn:  counts.Withdrawn,
 		Items:      buildDeltaItemProjections(deltas),
 	}
 }
@@ -481,6 +494,8 @@ func buildDeltaCounts(deltas []domain.Delta) DeltaCountsProjection {
 			counts.Closed++
 		case domain.DeltaStatusDeferred:
 			counts.Deferred++
+		case domain.DeltaStatusWithdrawn:
+			counts.Withdrawn++
 		}
 	}
 	return counts
@@ -489,7 +504,7 @@ func buildDeltaCounts(deltas []domain.Delta) DeltaCountsProjection {
 func buildOpenDeltas(deltas []domain.Delta) []OpenDeltaProjection {
 	open := make([]OpenDeltaProjection, 0)
 	for _, delta := range deltas {
-		if delta.Status == domain.DeltaStatusClosed || delta.Status == domain.DeltaStatusDeferred {
+		if delta.Status == domain.DeltaStatusClosed || delta.Status == domain.DeltaStatusDeferred || delta.Status == domain.DeltaStatusWithdrawn {
 			continue
 		}
 		open = append(open, OpenDeltaProjection{
@@ -598,6 +613,7 @@ func buildDeltaItemProjections(deltas []domain.Delta) []DeltaItemProjection {
 			Notes:               delta.Notes,
 			AffectsRequirements: append([]string{}, delta.AffectsRequirements...),
 			Updates:             updates,
+			WithdrawnReason:     delta.WithdrawnReason,
 		})
 	}
 	return items

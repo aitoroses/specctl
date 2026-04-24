@@ -62,7 +62,8 @@
       "deferred": 0,
       "in_progress": 0,
       "items": [],
-      "open": 0
+      "open": 0,
+      "withdrawn": 0
     },
     "documents": {
       "primary": "runtime/src/domain/session_execution/SPEC.md"

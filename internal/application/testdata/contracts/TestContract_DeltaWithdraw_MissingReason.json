@@ -1,0 +1,104 @@
+{
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "--reason is required"
+  },
+  "focus": {
+    "input": {
+      "missing_fields": [
+        "reason"
+      ]
+    }
+  },
+  "next": {
+    "mode": "none"
+  },
+  "state": {
+    "actionable_unverified_requirements": [],
+    "changelog": [],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "a1b2c3f",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 0,
+      "deferred": 0,
+      "in_progress": 0,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Needs explicit acceptance criteria",
+          "origin_checkpoint": "a1b2c3f",
+          "status": "open",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ]
+        }
+      ],
+      "open": 1,
+      "withdrawn": 0
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "inactive_unverified_requirements": [],
+    "last_verified_at": "2026-03-28",
+    "open_deltas": [
+      {
+        "area": "Compensation stage 4",
+        "id": "D-001",
+        "status": "open"
+      }
+    ],
+    "requirements": [],
+    "rev": 1,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "a1b2c3f",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "2026-03-28",
+      "status": "unavailable",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "ready",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "updated": "2026-03-30",
+    "validation": {
+      "findings": [
+        {
+          "code": "CHECKPOINT_UNAVAILABLE",
+          "message": "git metadata is unavailable for scope drift detection",
+          "path": ".specs/runtime/session-lifecycle.yaml",
+          "severity": "warning",
+          "target": "checkpoint"
+        }
+      ],
+      "valid": false
+    }
+  }
+}

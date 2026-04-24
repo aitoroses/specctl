@@ -1,0 +1,127 @@
+{
+  "focus": {
+    "delta": {
+      "affects_requirements": [],
+      "area": "Compensation stage 4",
+      "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+      "id": "D-001",
+      "intent": "add",
+      "notes": "Needs explicit acceptance criteria",
+      "origin_checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+      "status": "withdrawn",
+      "target": "Document ordering and verify failure cleanup",
+      "updates": [
+        "add_requirement"
+      ],
+      "withdrawn_reason": "Opened in error; replacement tracked separately"
+    }
+  },
+  "next": {
+    "mode": "sequence",
+    "steps": [
+      {
+        "action": "consider_followup_delta",
+        "choose_when": "The observable behavior change the retracted delta was meant to make still needs to happen. Open a fresh delta with specctl delta add using the correct intent; withdrawn deltas cannot be resumed.",
+        "details": {
+          "withdrawn_delta": "D-001",
+          "withdrawn_reason": "Opened in error; replacement tracked separately"
+        },
+        "kind": "guidance",
+        "priority": 1
+      }
+    ]
+  },
+  "result": {
+    "delta": {
+      "affects_requirements": [],
+      "area": "Compensation stage 4",
+      "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+      "id": "D-001",
+      "intent": "add",
+      "notes": "Needs explicit acceptance criteria",
+      "origin_checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+      "status": "withdrawn",
+      "target": "Document ordering and verify failure cleanup",
+      "updates": [
+        "add_requirement"
+      ],
+      "withdrawn_reason": "Opened in error; replacement tracked separately"
+    },
+    "kind": "delta"
+  },
+  "state": {
+    "actionable_unverified_requirements": [],
+    "changelog": [],
+    "charter": "runtime",
+    "charter_membership": {
+      "depends_on": [],
+      "group": "recovery",
+      "group_order": 20,
+      "group_title": "Recovery and Cleanup",
+      "notes": "Session FSM and cleanup behavior",
+      "order": 20
+    },
+    "checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+    "created": "2026-03-05",
+    "deltas": {
+      "closed": 0,
+      "deferred": 0,
+      "in_progress": 0,
+      "items": [
+        {
+          "affects_requirements": [],
+          "area": "Compensation stage 4",
+          "current": "Stage 4 compensation exists in code but failure ordering is unclear",
+          "id": "D-001",
+          "intent": "add",
+          "notes": "Needs explicit acceptance criteria",
+          "origin_checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+          "status": "withdrawn",
+          "target": "Document ordering and verify failure cleanup",
+          "updates": [
+            "add_requirement"
+          ],
+          "withdrawn_reason": "Opened in error; replacement tracked separately"
+        }
+      ],
+      "open": 0,
+      "withdrawn": 1
+    },
+    "documents": {
+      "primary": "runtime/src/domain/session_execution/SPEC.md"
+    },
+    "format": null,
+    "format_template": null,
+    "inactive_unverified_requirements": [],
+    "last_verified_at": "2026-03-28",
+    "open_deltas": [],
+    "requirements": [],
+    "rev": 1,
+    "scope": [
+      "runtime/src/domain/session_execution/",
+      "runtime/src/application/commands/"
+    ],
+    "scope_drift": {
+      "checkpoint": "e1ed1d3fb28370b6d606d687d43377523958387c",
+      "drift_source": null,
+      "files_changed_since_checkpoint": [],
+      "last_verified_at": "2026-03-28",
+      "status": "clean",
+      "tracked_by": []
+    },
+    "slug": "session-lifecycle",
+    "status": "draft",
+    "tags": [
+      "runtime",
+      "domain"
+    ],
+    "title": "Session Lifecycle",
+    "tracking_file": ".specs/runtime/session-lifecycle.yaml",
+    "uncommitted_changes": [],
+    "updated": "__TODAY__",
+    "validation": {
+      "findings": [],
+      "valid": true
+    }
+  }
+}

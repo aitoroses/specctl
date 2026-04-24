@@ -350,7 +350,7 @@ func trackedCoverageDeltas(repoRoot, trackingPath string, tracking *domain.Track
 }
 
 func deltaCoverageFiles(repoRoot, trackingPath string, tracking *domain.TrackingFile, delta domain.Delta, resolvedCheckpoint string, changedFiles, pathspecs []string) []string {
-	if delta.Status == domain.DeltaStatusDeferred || delta.Status == domain.DeltaStatusClosed {
+	if delta.Status == domain.DeltaStatusDeferred || delta.Status == domain.DeltaStatusClosed || delta.Status == domain.DeltaStatusWithdrawn {
 		return nil
 	}
 	resolvedOrigin, err := ResolveGitRevision(repoRoot, delta.OriginCheckpoint)

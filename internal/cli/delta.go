@@ -37,6 +37,8 @@ Output:
 		newDeltaDeferCmd(),
 		newDeltaResumeCmd(),
 		newDeltaCloseCmd(),
+		newDeltaWithdrawCmd(),
+		newDeltaRebindCmd(),
 	)
 	return cmd
 }
@@ -118,6 +120,33 @@ func newDeltaCloseCmd() *cobra.Command {
 	)
 }
 
+func newDeltaWithdrawCmd() *cobra.Command {
+	errorCodes := []string{"INVALID_INPUT", "VALIDATION_FAILED", "SPEC_NOT_FOUND", "DELTA_NOT_FOUND", "DELTA_INVALID_STATE", "DELTA_INTRODUCES_ACTIVE_REQUIREMENTS"}
+	cmd := &cobra.Command{
+		Use:   "withdraw <charter:slug> <delta-id>",
+		Short: "Retract an open|in-progress|deferred delta opened in error",
+		Args:  validateDeltaCommandArgs,
+		Long: commandLong(`Retract a delta that should never close.
+
+Stdin:
+  This command does not read stdin.
+  Required flags:
+    --reason <text>
+
+Example:
+  specctl delta withdraw runtime:session-lifecycle D-008 --reason "Wrong intent; superseded by D-009"
+
+Output:
+  JSON { state: context <spec> projection, result: { kind, delta }, next: [...] }.`,
+			errorCodes...,
+		),
+		RunE: runDeltaWithdrawCmd,
+	}
+	annotateHelpErrors(cmd, errorCodes...)
+	cmd.Flags().String("reason", "", "Auditable reason for withdrawing the delta")
+	return cmd
+}
+
 func newDeltaTransitionCmd(use, short, example string, errorCodes []string, command string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   use,
@@ -174,6 +203,82 @@ func runDeltaAddCmd(cmd *cobra.Command, args []string) error {
 		Notes:               body.Notes,
 		NotesPresent:        present["notes"],
 		AffectsRequirements: body.AffectsRequirements,
+	})
+	if err != nil {
+		return applicationError(err)
+	}
+	responseState, focus := splitResponseState(state)
+	return writeWriteEnvelope(cmd, responseState, focus, result, nextSequence(next))
+}
+
+func newDeltaRebindCmd() *cobra.Command {
+	errorCodes := []string{"INVALID_INPUT", "VALIDATION_FAILED", "SPEC_NOT_FOUND", "DELTA_NOT_FOUND", "DELTA_INVALID_STATE", "DELTA_REQUIREMENT_NOT_AFFECTED"}
+	cmd := &cobra.Command{
+		Use:   "rebind-requirements <charter:slug> <delta-id>",
+		Short: "Rebind affects_requirements for an open|in-progress|deferred delta",
+		Args:  validateDeltaCommandArgs,
+		Long: commandLong(`Explicitly update the affects_requirements list of a non-closed delta.
+
+Stdin:
+  This command does not read stdin.
+  Required flags:
+    --from <REQ-ID>
+    either --to <REQ-ID> or --remove
+
+Example:
+  specctl delta rebind-requirements runtime:session-lifecycle D-008 \
+    --from REQ-001 --to REQ-006
+  specctl delta rebind-requirements runtime:session-lifecycle D-008 \
+    --from REQ-001 --remove --reason "Scope no longer applies after REQ-006 narrowed."
+
+Output:
+  JSON { state: context <spec> projection, result: { kind, delta, rebind }, next: [...] }.`,
+			errorCodes...,
+		),
+		RunE: runDeltaRebindCmd,
+	}
+	annotateHelpErrors(cmd, errorCodes...)
+	cmd.Flags().String("from", "", "Requirement currently on the delta")
+	cmd.Flags().String("to", "", "Requirement to rebind to")
+	cmd.Flags().Bool("remove", false, "Drop the --from anchor instead of rebinding")
+	cmd.Flags().String("reason", "", "Auditable reason when using --remove")
+	return cmd
+}
+
+func runDeltaRebindCmd(cmd *cobra.Command, args []string) error {
+	from, _ := cmd.Flags().GetString("from")
+	to, _ := cmd.Flags().GetString("to")
+	remove, _ := cmd.Flags().GetBool("remove")
+	reason, _ := cmd.Flags().GetString("reason")
+	service, err := application.OpenFromWorkingDir()
+	if err != nil {
+		return err
+	}
+	state, result, next, err := service.RebindDeltaRequirements(application.DeltaRebindRequest{
+		Target:  args[0],
+		DeltaID: args[1],
+		From:    strings.TrimSpace(from),
+		To:      strings.TrimSpace(to),
+		Remove:  remove,
+		Reason:  strings.TrimSpace(reason),
+	})
+	if err != nil {
+		return applicationError(err)
+	}
+	responseState, focus := splitResponseState(state)
+	return writeWriteEnvelope(cmd, responseState, focus, result, nextSequence(next))
+}
+
+func runDeltaWithdrawCmd(cmd *cobra.Command, args []string) error {
+	reason, _ := cmd.Flags().GetString("reason")
+	service, err := application.OpenFromWorkingDir()
+	if err != nil {
+		return err
+	}
+	state, result, next, err := service.WithdrawDelta(application.DeltaWithdrawRequest{
+		Target:  args[0],
+		DeltaID: args[1],
+		Reason:  strings.TrimSpace(reason),
 	})
 	if err != nil {
 		return applicationError(err)

@@ -325,6 +325,82 @@ with Boot/Seed/Probe/Verify operations. See `references/verification-surfaces.md
 - **`warnings` in config/context:** `specctl_context` and `specctl config` emit advisory `warnings`. Config warnings cover missing `source_prefixes` entries on disk: `{"kind":"MISSING_SOURCE_PREFIX","prefix":"ui/src/","resolved_path":"/abs/path","severity":"warning"}`. Spec-context warnings can also surface governed residue such as `DEFERRED_SUPERSEDED_RESIDUE` with `delta_ids`, `requirement_ids`, and `details`. These are advisory — review them through governed specctl actions, never by hand-editing tracking YAML.
 - **Spec the test infra too.** The framework is a product — govern it like one.
 
+## Delta escape hatches: withdraw, rebind, repair validation
+
+Three agent-facing escape hatches exist for governance states that otherwise
+force misuse of `defer` and create permanent residue:
+
+- **Opened a delta in error?** Use `specctl delta withdraw <charter:slug> <D-id> --reason "<text>"`.
+  This transitions `open | in-progress | deferred → withdrawn` with an
+  auditable reason. Withdrawn deltas are inert: they do not emit
+  `DEFERRED_SUPERSEDED_RESIDUE`, do not count as live, and cannot be
+  resumed. If you change your mind, open a fresh delta. Do **not** use
+  `delta defer` to park an error — `defer` signals "not now, maybe
+  later" and keeps residue warnings firing.
+
+- **Your requirements were superseded under an open delta?** Two paths:
+  - Auto: nothing to enable. `req replace` always auto-rebinds every
+    independent `open | in-progress | deferred` delta whose
+    `affects_requirements` references the replaced REQ. Each rebind
+    emits an `AUTO_REBIND_APPLIED` entry under `result.auto_rebinds[]`
+    on the `req replace` response. Absence of `result.auto_rebinds`
+    means no open delta matched, not that rebinding was disabled.
+  - Explicit: `specctl delta rebind-requirements <charter:slug> <D-id>
+    --from REQ-X --to REQ-Y` (or `--remove REQ-X --reason "<text>"`).
+    Works on `open | in-progress | deferred` deltas only; `closed`
+    deltas keep their anchors immutable. Use this when auto-rebind
+    picked the wrong target (e.g. scope narrowed on replace) or when
+    you want a reason recorded.
+
+- **`delta add --intent repair` got `VALIDATION_FAILED` with
+  `reason: closed_delta_invariant`?** A closed delta already depends on
+  the requirement being verified, so `req stale` (the only update path
+  repair allows) is forbidden. The error payload lists the conflicting
+  closed deltas under `conflicts[]` and names the intent to use instead
+  under `suggestion.intent`. Re-run `delta add` with `--intent change`
+  and follow `req replace` to preserve closed-delta verification while
+  introducing an updated successor requirement.
+
+### Observable reason fields
+
+When you pass a reason to these verbs, inspect the response envelope to
+confirm it was recorded. The audit data lives on both the write result and
+the state projection:
+
+- `specctl delta withdraw` → `result.delta.withdrawn_reason` **and**
+  `state.deltas.items[].withdrawn_reason` **and** `focus.delta.withdrawn_reason`.
+  All three carry the same string. The state field is what survives into
+  future `specctl context` calls; the result field is what you observe
+  immediately. The diff surface also records the transition under
+  `deltas.withdrawn[]`.
+- `specctl delta rebind-requirements --to ... --reason ...` →
+  `result.rebind.reason`. `--reason` is optional on `--to` (useful for the
+  audit trail) and required on `--remove`. Both paths write to the same
+  `result.rebind.reason` field; the absence of the key in `--to` without a
+  reason is intentional, not a bug.
+- `specctl req replace ...` → `result.auto_rebinds[]`, one entry per
+  rebound delta with `code: "AUTO_REBIND_APPLIED"`, `delta`, `from`, `to`.
+  Rebinds are unconditional — there is no config gate. Absence of
+  `result.auto_rebinds` means no independent open delta referenced the
+  replaced requirement, not that rebinding was skipped.
+
+### Repair-intent validation walkthrough
+
+The `VALIDATION_FAILED` payload from `delta add --intent repair` is structured
+so the agent can retry without interaction:
+
+```
+focus.delta_add.reason                = "closed_delta_invariant"
+focus.delta_add.conflicts[]           = [ { closed_delta, requires_verified }, ... ]
+focus.delta_add.suggestion.intent     = "change"
+focus.delta_add.suggestion.rationale  = "<human-readable>"
+```
+
+Retry with the suggested intent: the same `area` and `notes`, `intent: change`
+instead of `repair`, the same `affects_requirements`. Then follow the write
+spec section guidance and `req replace` the conflict-named requirement(s)
+with updated successors so closed-delta verification evidence stays valid.
+
 ## Recommended Tools
 
 - **oh-my-claudecode** — multi-agent orchestration plugin for Claude Code. Provides ralph (persistent execution loops), and ralphplan (convergence planning) and much more. Install via `npx skills find oh-my-claudecode`.

@@ -30,13 +30,14 @@ type Documents struct {
 }
 
 type ChangelogEntry struct {
-	Rev          int      `yaml:"rev" json:"rev"`
-	Date         string   `yaml:"date" json:"date"`
-	DeltasOpened []string `yaml:"deltas_opened" json:"deltas_opened"`
-	DeltasClosed []string `yaml:"deltas_closed" json:"deltas_closed"`
-	ReqsAdded    []string `yaml:"reqs_added" json:"reqs_added"`
-	ReqsVerified []string `yaml:"reqs_verified" json:"reqs_verified"`
-	Summary      string   `yaml:"summary" json:"summary"`
+	Rev             int      `yaml:"rev" json:"rev"`
+	Date            string   `yaml:"date" json:"date"`
+	DeltasOpened    []string `yaml:"deltas_opened" json:"deltas_opened"`
+	DeltasClosed    []string `yaml:"deltas_closed" json:"deltas_closed"`
+	DeltasWithdrawn []string `yaml:"deltas_withdrawn,omitempty" json:"deltas_withdrawn,omitempty"`
+	ReqsAdded       []string `yaml:"reqs_added" json:"reqs_added"`
+	ReqsVerified    []string `yaml:"reqs_verified" json:"reqs_verified"`
+	Summary         string   `yaml:"summary" json:"summary"`
 }
 
 type TrackingFile struct {
@@ -87,9 +88,10 @@ func (t *TrackingFile) RequirementByID(id string) *Requirement {
 func (t *TrackingFile) LiveDeltas() []Delta {
 	live := make([]Delta, 0, len(t.Deltas))
 	for _, delta := range t.Deltas {
-		if delta.Status != DeltaStatusDeferred {
-			live = append(live, delta)
+		if delta.Status == DeltaStatusDeferred || delta.Status == DeltaStatusWithdrawn {
+			continue
 		}
+		live = append(live, delta)
 	}
 	return live
 }

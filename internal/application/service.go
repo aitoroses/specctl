@@ -844,17 +844,13 @@ func buildSpecContextWarnings(state SpecProjection) []SpecContextWarningProjecti
 		}
 	}
 
-	if len(warningsByKey) == 0 {
-		return []SpecContextWarningProjection{}
-	}
-
 	keys := make([]string, 0, len(warningsByKey))
 	for key := range warningsByKey {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 
-	warnings := make([]SpecContextWarningProjection, 0, len(keys))
+	warnings := make([]SpecContextWarningProjection, 0, len(keys)+1)
 	for _, key := range keys {
 		accumulator := warningsByKey[key]
 		requirementIDs := sortedKeys(accumulator.requirementIDs)
@@ -891,7 +887,46 @@ func buildSpecContextWarnings(state SpecProjection) []SpecContextWarningProjecti
 		})
 	}
 
+	if orphan := buildOrphanGherkinBlockWarning(state); orphan != nil {
+		warnings = append(warnings, *orphan)
+	}
+
 	return warnings
+}
+
+// buildOrphanGherkinBlockWarning aggregates every gherkin block parsed
+// from SPEC.md that has no tracking requirement into a single advisory
+// warning. Returns nil when no orphan blocks exist. The warning is
+// severity=advisory and never blocks writes; it exists so an agent that
+// withdrew a delta before running req add (or a human that hand-wrote a
+// block that was never registered) sees the residue on the next
+// specctl context read.
+func buildOrphanGherkinBlockWarning(state SpecProjection) *SpecContextWarningProjection {
+	if len(state.OrphanGherkinBlocks) == 0 {
+		return nil
+	}
+	blocks := make([]map[string]any, 0, len(state.OrphanGherkinBlocks))
+	titles := make([]string, 0, len(state.OrphanGherkinBlocks))
+	for _, block := range state.OrphanGherkinBlocks {
+		blocks = append(blocks, map[string]any{
+			"title":   block.Title,
+			"heading": block.Heading,
+			"gherkin": block.Gherkin,
+		})
+		titles = append(titles, block.Title)
+	}
+	return &SpecContextWarningProjection{
+		Kind:           "structural_anomaly",
+		Code:           "SPEC_ORPHAN_GHERKIN_BLOCK",
+		Severity:       "advisory",
+		Message:        "SPEC.md contains gherkin requirement blocks that are not registered in the tracking file. Remove the blocks or register them via specctl req add before the next governed write.",
+		DeltaIDs:       []string{},
+		RequirementIDs: []string{},
+		Details: map[string]any{
+			"orphan_blocks":       blocks,
+			"orphan_block_titles": titles,
+		},
+	}
 }
 
 func deferredSupersededResidueReplacement(state SpecProjection, requirementID, deferredDeltaID string) (specContextReplacementPair, bool) {
@@ -1296,7 +1331,7 @@ func trackedDeltaIDs(state SpecProjection, tracking *domain.TrackingFile) []stri
 		return ids
 	}
 	for _, delta := range tracking.Deltas {
-		if delta.Status == domain.DeltaStatusDeferred {
+		if delta.Status == domain.DeltaStatusDeferred || delta.Status == domain.DeltaStatusWithdrawn {
 			continue
 		}
 		ids = append(ids, delta.ID)

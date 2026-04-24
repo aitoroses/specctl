@@ -3166,7 +3166,13 @@ func runSpecctlShellPipeline(t *testing.T, binary, repoRoot, stdin string, args 
 		t.Fatalf("write stdin file: %v", err)
 	}
 
-	shellArgs := append([]string{"-lc", `cat "$SPECCTL_STDIN" | "$SPECCTL_BIN" "$@"`, "specctl-shell"}, args...)
+	// Use sh -c (not -lc) so the shell does not source /etc/profile and
+	// its profile.d/ chain. Some sandbox environments ship a bash_completion
+	// snippet that uses bash-only `&>` redirection under POSIX sh and leaks
+	// a "nvm" token to stdout when the login profile loads, which corrupts
+	// the JSON envelope we parse below. The test's intent is shell pipeline
+	// exec (stdin pipe, argv, exit code), not login-shell profile sourcing.
+	shellArgs := append([]string{"-c", `cat "$SPECCTL_STDIN" | "$SPECCTL_BIN" "$@"`, "specctl-shell"}, args...)
 	cmd := exec.Command("sh", shellArgs...)
 	cmd.Dir = repoRoot
 	cmd.Env = append(os.Environ(), "SPECCTL_BIN="+binary, "SPECCTL_STDIN="+stdinPath)

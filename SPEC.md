@@ -3212,6 +3212,723 @@ Scenario: specctl example requires no flags or filesystem state
 
 ---
 
+## 26. Delta Add Eager Validation of Repair Intent
+
+`delta add --intent repair` is valid only when the requirements named in
+`affects_requirements` can legally be transitioned to `stale`. The
+closed-delta invariant forbids staling a requirement that a closed
+delta depends on being `verified`, so a repair delta whose only update
+path is `req stale` against such a requirement cannot ever be closed.
+Before this surface, specctl detected the conflict only at `req stale`
+time, after a D-id had been allocated; the caller had to `defer` the
+allocated delta and re-open with `--intent change`, burning the D-id
+and leaving permanent residue in `state.deltas.deferred`. This surface
+moves the check to `delta add` and fails fast.
+
+### Invariants
+
+- A `delta add` with `--intent repair` must reject with
+  `VALIDATION_FAILED` before allocating a D-id when any entry in
+  `affects_requirements` is referenced by a closed delta requiring it
+  `verified`.
+- The rejection payload enumerates the conflicting closed deltas and
+  suggests `--intent change` as the structural alternative.
+- The check applies only to `--intent repair`; other intents retain
+  their current validation surface.
+
+### Contracts
+
+Error (`VALIDATION_FAILED`):
+
+```json
+{
+  "state": { "status": "active", ... },
+  "focus": {
+    "delta_add": {
+      "reason": "closed_delta_invariant",
+      "conflicts": [
+        { "closed_delta": "D-002", "requires_verified": "REQ-001" }
+      ],
+      "suggestion": {
+        "intent": "change",
+        "rationale": "Use --intent change with req replace to preserve closed-delta verification while introducing an updated successor requirement."
+      }
+    }
+  },
+  "next": { "mode": "none" },
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Repair intent cannot be applied to REQ-001: closed delta(s) D-002 require the requirement(s) verified; repair only allows stale, which the closed-delta invariant forbids."
+  }
+}
+```
+
+## Requirement: Delta add pre-flights repair intent against closed-delta invariants
+
+```gherkin requirement
+@specctl @lifecycle
+Feature: Delta add pre-flights repair intent against closed-delta invariants
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: Repair intent rejected when a closed delta already depends on the requirement
+  Given a spec contains REQ-X active and verified
+  And a closed delta references REQ-X in its affects_requirements
+  When the agent runs delta add --intent repair with affects_requirements including REQ-X
+  Then the response returns VALIDATION_FAILED before allocating a D-id
+  And focus.delta_add.conflicts names the closed delta and REQ-X
+  And focus.delta_add.suggestion advises --intent change
+```
+
+```gherkin scenario
+Scenario: Repair intent allowed when no closed delta depends on the requirement
+  Given a spec contains REQ-X active and verified
+  And no closed delta references REQ-X in its affects_requirements
+  When the agent runs delta add --intent repair with affects_requirements including REQ-X
+  Then the delta is allocated with status open and intent repair
+  And next guides the agent toward req stale
+```
+
+---
+
+## 27. Delta Withdraw Lifecycle Transition
+
+`delta withdraw` is a first-class retraction verb for deltas opened in
+error. Without it, the only workaround is to `defer` the delta
+permanently, which (a) burns a D-id, (b) leaves a `deferred` entry in
+the tracking YAML forever, and (c) earns `DEFERRED_SUPERSEDED_RESIDUE`
+warnings once the delta's affected requirements are superseded
+downstream, because the tool assumes a `deferred` delta still matters.
+Withdraw expresses the opposite signal: this delta will never happen
+and the tool should stop treating it as live work.
+
+### Invariants
+
+- `delta withdraw` transitions `open | in-progress | deferred` →
+  `withdrawn`; it is rejected on `closed` deltas (that concept is a
+  compensating / revert delta, not a withdraw).
+- Withdrawn deltas persist in the tracking YAML with `withdrawn_reason`
+  recorded and appear under `deltas_withdrawn` in the rev changelog
+  entry for the rev in which the transition happens.
+- Withdrawn deltas do not contribute to `DEFERRED_SUPERSEDED_RESIDUE`
+  and cannot be resumed; a change of mind requires a fresh `delta add`.
+
+### Contracts
+
+Success (`delta withdraw`) — `withdrawn_reason` appears **both** in the
+state projection and the result envelope:
+
+```json
+{
+  "state": { "status": "...", "deltas": { "withdrawn": 1, "items": [
+    { "id": "D-001", "status": "withdrawn",
+      "withdrawn_reason": "Opened in error; replacement tracked separately" }
+  ] } },
+  "focus": { "delta": { "id": "D-001", "status": "withdrawn",
+             "withdrawn_reason": "Opened in error; replacement tracked separately" } },
+  "result": { "kind": "delta", "delta": { "id": "D-001", "status": "withdrawn",
+             "withdrawn_reason": "Opened in error; replacement tracked separately" } },
+  "next": { "mode": "none" }
+}
+```
+
+Diff projection (`specctl diff`) — a transition into `withdrawn` appears in the
+new `withdrawn` bucket, parallel to `opened | closed | deferred | resumed`:
+
+```json
+{
+  "deltas": {
+    "opened": [],
+    "closed": [],
+    "deferred": [],
+    "resumed": [],
+    "withdrawn": [{ "id": "D-002", "area": "...", "status": "withdrawn" }]
+  }
+}
+```
+
+Context (`specctl context`) — withdrawn deltas are counted separately from
+deferred and do not produce `DEFERRED_SUPERSEDED_RESIDUE` warnings, even when
+their `affects_requirements` only names superseded requirements. A withdrawn
+delta is inert for residue calculation by design.
+
+Rev bump — withdrawn deltas not yet recorded in any changelog entry are listed
+under `deltas_withdrawn` in the new entry, and `rev bump` proceeds even when
+the only unbumped work is a withdrawal.
+
+Error (`INVALID_INPUT`, missing reason):
+
+```json
+{
+  "error": { "code": "INVALID_INPUT", "message": "--reason is required" },
+  "focus": { "input": { "missing_fields": ["reason"] } },
+  "next": { "mode": "none" }
+}
+```
+
+Error (`DELTA_INVALID_STATE`, closed delta):
+
+```json
+{
+  "error": {
+    "code": "DELTA_INVALID_STATE",
+    "message": "delta D-001 cannot transition from closed to withdrawn"
+  },
+  "focus": { "delta": { "id": "D-001", "status": "closed" },
+             "transition": "withdraw" },
+  "next": { "mode": "none" }
+}
+```
+
+## Requirement: Delta withdraw records an auditable reason visible across projections, diff, and residue
+
+```gherkin requirement
+@specctl @lifecycle
+Feature: Delta withdraw records an auditable reason visible across projections, diff, and residue
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: Withdraw an open delta with an auditable reason
+  Given a spec contains an open delta D-X
+  When the agent runs delta withdraw with --reason
+  Then the delta status becomes withdrawn
+  And withdrawn_reason records the supplied text
+  And the deltas.withdrawn count increments
+```
+
+```gherkin scenario
+Scenario: Withdraw is rejected on a closed delta
+  Given a spec contains a closed delta D-X
+  When the agent runs delta withdraw on D-X
+  Then the response returns DELTA_INVALID_STATE
+  And the delta remains closed
+```
+
+```gherkin scenario
+Scenario: Withdraw requires a reason
+  Given the agent runs delta withdraw without --reason
+  Then the response returns INVALID_INPUT
+  And focus.input.missing_fields lists reason
+```
+
+```gherkin scenario
+Scenario: Withdrawn deltas do not emit DEFERRED_SUPERSEDED_RESIDUE
+  Given a withdrawn delta whose affects_requirements only names superseded requirements
+  When the agent runs context on the spec
+  Then the context warnings do not include DEFERRED_SUPERSEDED_RESIDUE for the withdrawn delta
+```
+
+```gherkin scenario
+Scenario: Rev bump records withdrawn deltas in the changelog
+  Given a spec has withdrawn deltas not yet recorded in any changelog entry
+  When the agent runs rev bump
+  Then the new entry lists them under deltas_withdrawn
+  And rev bump proceeds even if no new closed deltas exist
+```
+
+```gherkin scenario
+Scenario: Withdrawn reason is visible in both the state projection and the result envelope
+  Given an open delta D-X
+  When the agent runs delta withdraw D-X --reason <text>
+  Then state.deltas.items[] entry for D-X records withdrawn_reason
+  And result.delta records withdrawn_reason
+  And focus.delta records withdrawn_reason
+```
+
+```gherkin scenario
+Scenario: Diff surfaces open-to-withdrawn transitions in the withdrawn bucket
+  Given a prior checkpoint where D-X was open|in-progress|deferred
+  And the current tracking file has D-X as withdrawn
+  When the agent runs diff
+  Then deltas.withdrawn lists D-X alongside any opened, closed, deferred, resumed buckets
+```
+
+---
+
+## 28. Requirement Rebind Across Supersession
+
+A delta's `affects_requirements` list freezes at `delta add` time.
+When a referenced requirement is later superseded through `req
+replace`, open and deferred deltas remain anchored to dead requirement
+IDs. Today specctl correctly raises `DEFERRED_SUPERSEDED_RESIDUE`
+for this case but offers no resolution path — governance forbids
+hand-editing the tracking YAML, and the only escape is to withdraw
+(or defer-forever) the entire delta, losing information the team may
+still want to track. This surface introduces two composable paths to
+keep anchors live.
+
+### Invariants
+
+- Automatic rebind: when `req replace REQ-X --delta D-new` runs, every
+  `open | in-progress | deferred` delta whose `affects_requirements`
+  contains `REQ-X` has that entry updated to the replacement ID. This
+  is unconditional — no config gate — so agents can always rely on
+  supersession keeping anchors live. Per-delta opt-out is available
+  via `specctl delta rebind-requirements --remove`. Each rebind emits
+  `AUTO_REBIND_APPLIED` under `result.auto_rebinds[]` on the `req
+  replace` response. Absence of `result.auto_rebinds` means no open
+  delta referenced the replaced requirement, not that rebinding was
+  disabled.
+- Explicit rebind: `specctl delta rebind-requirements <charter:slug>
+  <D-id> --from REQ-X --to REQ-Y` (or `--remove REQ-X --reason
+  <text>`) updates `affects_requirements` for `open | in-progress |
+  deferred` deltas. It does not change the delta's `status` or
+  `intent`, and it does not change any requirement's lifecycle or
+  verification.
+- Closed-delta invariant: `affects_requirements` of `closed` deltas is
+  immutable. Neither the automatic nor the explicit path may modify
+  it.
+
+### Contracts
+
+Success (`req replace`) — the result envelope always gains an
+`auto_rebinds` list when at least one independent open/in-progress/deferred
+delta referenced the replaced requirement:
+
+```json
+{
+  "result": {
+    "kind": "requirement",
+    "requirement": { "id": "REQ-002", ... },
+    "allocation": { "previous_max": 1, "allocated": "REQ-002" },
+    "auto_rebinds": [
+      { "code": "AUTO_REBIND_APPLIED", "delta": "D-003",
+        "from": "REQ-001", "to": "REQ-002" }
+    ]
+  }
+}
+```
+
+Success (`delta rebind-requirements --from REQ-X --to REQ-Y`) — the optional
+`--reason` carries through to `result.rebind.reason` for audit parity with
+`--remove` (which requires one) and with `delta withdraw`:
+
+```json
+{
+  "result": {
+    "kind": "delta",
+    "delta": { "id": "D-003", "status": "open",
+               "affects_requirements": ["REQ-002"] },
+    "rebind": { "from": "REQ-001", "to": "REQ-002",
+                "reason": "Scope preserved; anchor rebound after supersession landed." }
+  },
+  "next": { "mode": "none" }
+}
+```
+
+When `--reason` is omitted on the `--to` path the rebind still succeeds; the
+`reason` key is simply absent from `result.rebind`.
+
+Error (`DELTA_INVALID_STATE`, rebinding a closed delta):
+
+```json
+{
+  "error": {
+    "code": "DELTA_INVALID_STATE",
+    "message": "delta D-002 cannot be rebound while status is closed"
+  },
+  "focus": { "delta": { "id": "D-002", "status": "closed" },
+             "transition": "rebind" }
+}
+```
+
+## Requirement: Requirement rebind keeps open-delta anchors live across supersession unconditionally with audit parity
+
+```gherkin requirement
+@specctl @write
+Feature: Requirement rebind keeps open-delta anchors live across supersession unconditionally with audit parity
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: req replace auto-rebinds every independent open delta that referenced the replaced requirement
+  Given delta D-A is the parent of the replace
+  And delta D-B is open|in-progress|deferred with REQ-X in its affects_requirements
+  When the agent runs req replace REQ-X --delta D-A
+  Then REQ-X is superseded by REQ-Y
+  And delta D-B's affects_requirements is rebound to REQ-Y
+  And the result envelope carries an auto_rebinds entry with code AUTO_REBIND_APPLIED
+  And the parent delta D-A keeps REQ-X as its historical anchor
+```
+
+```gherkin scenario
+Scenario: req replace omits auto_rebinds when no open delta referenced the replaced requirement
+  Given no open|in-progress|deferred delta (other than the parent) references REQ-X
+  When the agent runs req replace REQ-X --delta D-A
+  Then the result envelope does not include an auto_rebinds field
+```
+
+```gherkin scenario
+Scenario: Explicit delta rebind-requirements moves an open delta's anchor
+  Given delta D-B is open|in-progress|deferred with REQ-X in its affects_requirements
+  When the agent runs delta rebind-requirements D-B --from REQ-X --to REQ-Y
+  Then D-B's affects_requirements replaces REQ-X with REQ-Y
+  And the delta's status and intent are unchanged
+```
+
+```gherkin scenario
+Scenario: Explicit delta rebind-requirements --remove drops an anchor with a reason
+  Given delta D-B is open with REQ-X in its affects_requirements
+  When the agent runs delta rebind-requirements D-B --from REQ-X --remove --reason <text>
+  Then D-B's affects_requirements no longer contains REQ-X
+  And the result records the reason in the rebind detail
+```
+
+```gherkin scenario
+Scenario: Rebinding a closed delta is rejected
+  Given delta D-B has status closed
+  When the agent runs delta rebind-requirements on D-B
+  Then the response returns DELTA_INVALID_STATE
+  And D-B's affects_requirements is unchanged
+```
+
+```gherkin scenario
+Scenario: Rebinding requires --from to currently anchor the delta
+  Given delta D-B is open and does not reference REQ-X in affects_requirements
+  When the agent runs delta rebind-requirements D-B --from REQ-X --to REQ-Y
+  Then the response returns DELTA_REQUIREMENT_NOT_AFFECTED
+```
+
+```gherkin scenario
+Scenario: Explicit rebind --to records an optional reason for audit parity
+  Given delta D-B is open with REQ-X in affects_requirements
+  When the agent runs delta rebind-requirements D-B --from REQ-X --to REQ-Y --reason <text>
+  Then result.rebind.reason records the supplied text
+  And the rebind is otherwise identical to the no-reason form
+```
+
+
+---
+
+## 29. Post-Write Guidance After Retract, Rebind, and Replace
+
+Three write verbs now emit advisory `next.steps` of kind `guidance` so the
+agent is nominated toward the natural follow-up instead of hitting
+`next.mode: "none"` and guessing. The guidance is advisory — the skill's
+general rule that `kind: "guidance"` steps are optional continues to hold —
+but naming the follow-up makes the cycle legible.
+
+### Data Model
+
+Each guidance step carries:
+
+- `priority` (int, 1-indexed within the sequence)
+- `action` (string, kebab_case verb naming the suggested follow-up)
+- `kind: "guidance"`
+- `choose_when` (string, the condition under which the agent should act)
+- `details` (map, references to the subject of the guidance: delta IDs,
+  requirement IDs, rebind from/to)
+
+### Contracts
+
+After `specctl delta withdraw`:
+
+```json
+{
+  "next": { "mode": "sequence", "steps": [
+    {
+      "priority": 1,
+      "action": "consider_followup_delta",
+      "kind": "guidance",
+      "choose_when": "The observable behavior change the retracted delta was meant to make still needs to happen...",
+      "details": { "withdrawn_delta": "D-001", "withdrawn_reason": "..." }
+    }
+  ] }
+}
+```
+
+After `specctl delta rebind-requirements`:
+
+```json
+{
+  "next": { "mode": "sequence", "steps": [
+    {
+      "priority": 1,
+      "action": "review_delta_scenarios",
+      "kind": "guidance",
+      "choose_when": "The delta's affects_requirements changed. Read the delta's scenarios in SPEC.md and confirm they still match the rebound requirement's scope...",
+      "details": { "delta": "D-003", "from": "REQ-001", "to": "REQ-002" }
+    }
+  ] }
+}
+```
+
+After `specctl req replace` when `result.auto_rebinds[]` is non-empty, an
+additional `review_rebound_deltas` step is appended to the existing
+`implement_and_verify` sequence:
+
+```json
+{
+  "next": { "mode": "sequence", "steps": [
+    { "priority": 1, "action": "implement_behavior", ... },
+    { "priority": 2, "action": "verify_requirement", ... },
+    {
+      "priority": 3,
+      "action": "review_rebound_deltas",
+      "kind": "guidance",
+      "choose_when": "auto-rebind updated one or more open deltas' affects_requirements as part of this replace...",
+      "details": { "rebinds": [ { "delta": "D-003", "from": "REQ-001", "to": "REQ-002" } ] }
+    }
+  ] }
+}
+```
+
+### Invariants
+
+- Withdraw and explicit rebind always emit exactly one priority-1 guidance
+  step; they never return `next.mode: "none"` on success.
+- The req replace review step is only appended when at least one rebind
+  actually occurred; a replace with no rebinds keeps the legacy sequence.
+- Guidance steps carry `details` referencing the concrete IDs so the
+  follow-up action is unambiguous — an agent can feed the `delta`,
+  `from`, and `to` fields back into the next command without re-parsing
+  the state projection.
+
+## Requirement: Write surface emits guidance after retract, rebind, and replace with rebinds
+
+```gherkin requirement
+@specctl @write
+Feature: Write surface emits guidance after retract, rebind, and replace with rebinds
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: Withdraw emits consider_followup_delta guidance
+  Given an open delta D-X
+  When the agent runs delta withdraw D-X --reason "<text>"
+  Then next.steps contains one kind=guidance action consider_followup_delta
+  And the step details record withdrawn_delta=D-X and withdrawn_reason
+```
+
+```gherkin scenario
+Scenario: Explicit rebind emits review_delta_scenarios guidance
+  Given a non-closed delta D-X with REQ-A in affects_requirements
+  When the agent runs delta rebind-requirements D-X --from REQ-A --to REQ-B
+  Then next.steps contains one kind=guidance action review_delta_scenarios
+  And the step details record delta=D-X, from=REQ-A, to=REQ-B
+```
+
+```gherkin scenario
+Scenario: req replace appends review_rebound_deltas after implement_and_verify when rebinds occurred
+  Given req replace triggered one or more auto-rebinds
+  When the response envelope is returned
+  Then next.steps ends with one kind=guidance action review_rebound_deltas
+  And the step details.rebinds list matches result.auto_rebinds
+```
+
+```gherkin scenario
+Scenario: req replace without rebinds keeps the legacy next sequence
+  Given req replace triggered zero auto-rebinds
+  When the response envelope is returned
+  Then next.steps does not contain a review_rebound_deltas action
+```
+
+---
+
+## 30. Orphan Gherkin Block Detection
+
+`MatchRequirementContexts` matches every tracked REQ to a gherkin block in
+SPEC.md and flags missing/duplicate/drifted shapes. The inverse direction
+was a blind spot: a `## Requirement:` heading plus `gherkin requirement`
+block written to SPEC.md with no REQ registered against it in the tracking
+YAML used to be silently discarded. This section names the inverse direction
+as a first-class advisory: every parsed gherkin block without a tracking
+counterpart is surfaced as `SPEC_ORPHAN_GHERKIN_BLOCK` on `specctl context`.
+
+The motivating footgun: an agent writes `write_spec_section` content, then
+retracts the delta via `delta withdraw` before `req add` ever runs. The
+gherkin block stays in SPEC.md, orphaned. Historically specctl had no signal
+for this; now the next `context` call names the orphan by heading, title,
+and gherkin so the agent can grep/remove it or register it.
+
+### Contracts
+
+Advisory warning on `specctl context`:
+
+```json
+{
+  "state": {
+    "warnings": [
+      {
+        "kind": "structural_anomaly",
+        "code": "SPEC_ORPHAN_GHERKIN_BLOCK",
+        "severity": "advisory",
+        "message": "SPEC.md contains gherkin requirement blocks that are not registered in the tracking file...",
+        "delta_ids": [],
+        "requirement_ids": [],
+        "details": {
+          "orphan_block_titles": ["Orphan block written before req add"],
+          "orphan_blocks": [
+            {
+              "title": "Orphan block written before req add",
+              "heading": "Requirement: Orphan block written before req add",
+              "gherkin": "@runtime @e2e\nFeature: Orphan block written before req add"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+### Invariants
+
+- A gherkin block whose exact `gherkin` matches any REQ's stored gherkin
+  is **not** an orphan, regardless of that REQ's lifecycle (active,
+  superseded, or withdrawn). Supersession keeps the historical body in
+  place; withdraw conventionally removes it but is not enforced here.
+- A gherkin block whose `title` matches any REQ's title is **not** an
+  orphan even if the gherkin body drifted — that is the `no_exact_match`
+  shape handled by `MatchRequirementContexts`, not by this warning.
+- The warning never blocks writes. Severity is `advisory`. `rev bump`,
+  `sync`, `req verify`, and `delta close` keep their current contracts.
+- Orphan detection is computed every time `specctl context` is called; it
+  has no persisted state and does not enter the changelog.
+
+## Requirement: Spec context detects gherkin blocks without a tracking requirement
+
+```gherkin requirement
+@specctl @read
+Feature: Spec context detects gherkin blocks without a tracking requirement
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: Orphan gherkin block surfaces as an advisory warning
+  Given SPEC.md contains a Requirement block whose gherkin has no REQ in tracking
+  When the agent runs specctl context on the spec
+  Then state.warnings lists a SPEC_ORPHAN_GHERKIN_BLOCK entry
+  And details.orphan_blocks records the heading, title, and gherkin of the block
+  And no write command is blocked by the warning
+```
+
+```gherkin scenario
+Scenario: Clean spec emits no orphan warning
+  Given every gherkin block in SPEC.md matches a tracked requirement by gherkin or title
+  When the agent runs specctl context
+  Then state.warnings does not include SPEC_ORPHAN_GHERKIN_BLOCK
+```
+
+```gherkin scenario
+Scenario: Superseded requirement blocks are not flagged as orphans
+  Given REQ-X is lifecycle=superseded but its gherkin still appears in SPEC.md
+  When the agent runs specctl context
+  Then SPEC_ORPHAN_GHERKIN_BLOCK is not raised for REQ-X
+```
+
+---
+
+## 31. Delta Withdraw Rejects Deltas That Introduced Active Requirements
+
+`delta withdraw` today validates only status (open | in-progress | deferred)
+and a non-empty `--reason`. It does not look at whether the delta introduced
+requirements that are still active. Retracting such a delta leaves those
+REQs alive with an `introduced_by` field pointing at a withdrawn delta —
+a semantic inconsistency that had no guardrail.
+
+This section makes the precondition explicit: before a delta can be
+withdrawn, every requirement it introduced must already be in a non-active
+lifecycle (superseded or withdrawn). The error payload enumerates the
+blocking requirements and emits one `run_command` next step per REQ so the
+agent can follow the chain: `specctl req withdraw <target> REQ-X --delta D-X`
+for each, then retry the delta withdraw.
+
+### Contracts
+
+Error (`DELTA_INTRODUCES_ACTIVE_REQUIREMENTS`) — blocking REQs enumerated with
+remediation commands:
+
+```json
+{
+  "error": {
+    "code": "DELTA_INTRODUCES_ACTIVE_REQUIREMENTS",
+    "message": "Cannot withdraw D-001: 1 active requirement(s) introduced by this delta must be withdrawn first"
+  },
+  "focus": {
+    "delta": { "id": "D-001", ... },
+    "blocking_requirements": [
+      { "id": "REQ-001", "title": "...", "introduced_by": "D-001" }
+    ]
+  },
+  "next": {
+    "mode": "sequence",
+    "steps": [
+      {
+        "priority": 1,
+        "action": "req_withdraw",
+        "kind": "run_command",
+        "why": "Requirement REQ-001 is active and was introduced by D-001. Withdraw it explicitly before retrying delta withdraw.",
+        "template": {
+          "argv": ["specctl", "req", "withdraw", "runtime:session-lifecycle", "REQ-001", "--delta", "D-001"],
+          "required_fields": []
+        }
+      }
+    ]
+  }
+}
+```
+
+### Invariants
+
+- A delta with **no** REQs introduced (common intent=repair case) is
+  unaffected — the check sees an empty list and falls through to the
+  existing withdraw path.
+- A delta whose introduced REQs are all **superseded or withdrawn** is
+  allowed to withdraw — those REQs already left active lifecycle through
+  a governed path (req replace, req withdraw) and the withdraw of the
+  introducing delta is a safe cleanup.
+- A delta with at least **one active REQ** introduced rejects with
+  `DELTA_INTRODUCES_ACTIVE_REQUIREMENTS`. `next.steps` names each blocker
+  in priority order.
+- The check is read-only; no state is mutated when the error fires.
+- BLOCK (not CASCADE): specctl never implicitly flips REQ lifecycle as
+  part of delta withdraw. Changing lifecycle must go through the explicit
+  `req withdraw` verb with its own tracking delta.
+
+## Requirement: Delta withdraw rejects deltas that introduced active requirements
+
+```gherkin requirement
+@specctl @lifecycle
+Feature: Delta withdraw rejects deltas that introduced active requirements
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: Withdraw is rejected while an introduced requirement is still active
+  Given delta D-X is open and introduced REQ-Y with lifecycle=active
+  When the agent runs delta withdraw D-X --reason "<text>"
+  Then the response returns DELTA_INTRODUCES_ACTIVE_REQUIREMENTS
+  And focus.blocking_requirements lists REQ-Y
+  And next.steps contains a req_withdraw command naming REQ-Y and D-X
+  And D-X status remains unchanged
+```
+
+```gherkin scenario
+Scenario: Withdraw succeeds after the introduced requirement is withdrawn
+  Given delta D-X introduced REQ-Y and REQ-Y is now lifecycle=withdrawn
+  When the agent runs delta withdraw D-X --reason "<text>"
+  Then the delta status becomes withdrawn
+  And withdrawn_reason records the supplied text
+```
+
+```gherkin scenario
+Scenario: Withdraw without introduced requirements is unaffected
+  Given delta D-X is open and introduced no requirements
+  When the agent runs delta withdraw D-X --reason "<text>"
+  Then the delta status becomes withdrawn without any active-requirement check firing
+```
+
+---
+
 ## Appendix A: YAML Schemas
 
 Reference schemas for the three specctl-managed stores. Sourced from SPEC.md section 3.
