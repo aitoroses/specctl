@@ -273,6 +273,32 @@ deltas:
         having the write surface nominate the follow-up itself.
       updates:
         - add_requirement
+    - id: D-015
+      area: Spec context detects gherkin blocks in SPEC.md without a tracking requirement
+      intent: add
+      status: closed
+      origin_checkpoint: f22aac7e0a7f6c5e6830722b29e027983929c014
+      current: |-
+        MatchRequirementContexts in internal/infrastructure/design_doc_reader.go
+        iterates only from tracking toward SPEC.md. A ## Requirement: heading
+        plus gherkin requirement block written to SPEC.md that is not tracked
+        by any REQ in the YAML is silently discarded. This is the typical
+        write_spec_section-then-withdraw-delta residue and today specctl
+        provides no warning, match issue, or linting signal.
+      target: |-
+        Spec context emits an advisory warning SPEC_ORPHAN_GHERKIN_BLOCK in
+        state.warnings[] enumerating each SPEC.md block with no tracking
+        counterpart. Severity advisory, kind structural_anomaly. Never
+        blocks writes. Details carry heading, title, and gherkin so the
+        agent can grep/remove the block without line-number tooling.
+      notes: |
+        Review-discussion follow-up from PR #10 on the bi-directional gap
+        in SPEC.md validation. Detects the orphan case that delta withdraw,
+        req withdraw, or premature write_spec_section can create. Paired
+        with D-016 which blocks the semantic inconsistency on the tracking
+        side.
+      updates:
+        - add_requirement
 requirements:
     - id: REQ-001
       title: Context reports spec status and drift state
@@ -929,6 +955,19 @@ requirements:
       lifecycle: active
       verification: verified
       introduced_by: D-014
+    - id: REQ-036
+      title: Spec context detects gherkin blocks without a tracking requirement
+      tags:
+        - specctl
+        - read
+      test_files:
+        - internal/application/testdata/contracts/TestContract_Context_OrphanGherkinBlockWarning.json
+      gherkin: |-
+        @specctl @read
+        Feature: Spec context detects gherkin blocks without a tracking requirement
+      lifecycle: active
+      verification: verified
+      introduced_by: D-015
 changelog:
     - rev: 2
       date: "2026-04-02"

@@ -123,6 +123,7 @@ func (s *RepoReadStore) ResolveSpecProjectionInputs(tracking *domain.TrackingFil
 	contexts, err := ReadRequirementContexts(s.workspace.RepoRoot(), tracking.Documents.Primary)
 	if err == nil {
 		inputs.Requirements = MatchRequirementContexts(tracking.Requirements, contexts)
+		inputs.OrphanGherkinBlocks = orphanGherkinBlocks(tracking.Requirements, contexts)
 	}
 
 	frontmatter, err := ReadDesignDocFrontmatterWithConfig(s.workspace.RepoRoot(), tracking.Documents.Primary, config)

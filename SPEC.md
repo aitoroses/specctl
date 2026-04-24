@@ -3731,6 +3731,101 @@ Scenario: req replace without rebinds keeps the legacy next sequence
 
 ---
 
+## 30. Orphan Gherkin Block Detection
+
+`MatchRequirementContexts` matches every tracked REQ to a gherkin block in
+SPEC.md and flags missing/duplicate/drifted shapes. The inverse direction
+was a blind spot: a `## Requirement:` heading plus `gherkin requirement`
+block written to SPEC.md with no REQ registered against it in the tracking
+YAML used to be silently discarded. This section names the inverse direction
+as a first-class advisory: every parsed gherkin block without a tracking
+counterpart is surfaced as `SPEC_ORPHAN_GHERKIN_BLOCK` on `specctl context`.
+
+The motivating footgun: an agent writes `write_spec_section` content, then
+retracts the delta via `delta withdraw` before `req add` ever runs. The
+gherkin block stays in SPEC.md, orphaned. Historically specctl had no signal
+for this; now the next `context` call names the orphan by heading, title,
+and gherkin so the agent can grep/remove it or register it.
+
+### Contracts
+
+Advisory warning on `specctl context`:
+
+```json
+{
+  "state": {
+    "warnings": [
+      {
+        "kind": "structural_anomaly",
+        "code": "SPEC_ORPHAN_GHERKIN_BLOCK",
+        "severity": "advisory",
+        "message": "SPEC.md contains gherkin requirement blocks that are not registered in the tracking file...",
+        "delta_ids": [],
+        "requirement_ids": [],
+        "details": {
+          "orphan_block_titles": ["Orphan block written before req add"],
+          "orphan_blocks": [
+            {
+              "title": "Orphan block written before req add",
+              "heading": "Requirement: Orphan block written before req add",
+              "gherkin": "@runtime @e2e\nFeature: Orphan block written before req add"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+### Invariants
+
+- A gherkin block whose exact `gherkin` matches any REQ's stored gherkin
+  is **not** an orphan, regardless of that REQ's lifecycle (active,
+  superseded, or withdrawn). Supersession keeps the historical body in
+  place; withdraw conventionally removes it but is not enforced here.
+- A gherkin block whose `title` matches any REQ's title is **not** an
+  orphan even if the gherkin body drifted — that is the `no_exact_match`
+  shape handled by `MatchRequirementContexts`, not by this warning.
+- The warning never blocks writes. Severity is `advisory`. `rev bump`,
+  `sync`, `req verify`, and `delta close` keep their current contracts.
+- Orphan detection is computed every time `specctl context` is called; it
+  has no persisted state and does not enter the changelog.
+
+## Requirement: Spec context detects gherkin blocks without a tracking requirement
+
+```gherkin requirement
+@specctl @read
+Feature: Spec context detects gherkin blocks without a tracking requirement
+```
+
+### Scenarios
+
+```gherkin scenario
+Scenario: Orphan gherkin block surfaces as an advisory warning
+  Given SPEC.md contains a Requirement block whose gherkin has no REQ in tracking
+  When the agent runs specctl context on the spec
+  Then state.warnings lists a SPEC_ORPHAN_GHERKIN_BLOCK entry
+  And details.orphan_blocks records the heading, title, and gherkin of the block
+  And no write command is blocked by the warning
+```
+
+```gherkin scenario
+Scenario: Clean spec emits no orphan warning
+  Given every gherkin block in SPEC.md matches a tracked requirement by gherkin or title
+  When the agent runs specctl context
+  Then state.warnings does not include SPEC_ORPHAN_GHERKIN_BLOCK
+```
+
+```gherkin scenario
+Scenario: Superseded requirement blocks are not flagged as orphans
+  Given REQ-X is lifecycle=superseded but its gherkin still appears in SPEC.md
+  When the agent runs specctl context
+  Then SPEC_ORPHAN_GHERKIN_BLOCK is not raised for REQ-X
+```
+
+---
+
 ## Appendix A: YAML Schemas
 
 Reference schemas for the three specctl-managed stores. Sourced from SPEC.md section 3.

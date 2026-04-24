@@ -185,6 +185,39 @@ func parseRequirementContexts(data []byte) ([]RequirementContext, error) {
 	return contexts, nil
 }
 
+// orphanGherkinBlocks returns every RequirementContext parsed from SPEC.md
+// that does not match any tracked requirement by gherkin or title. An
+// orphan is the inverse of a missing_in_spec REQ: a gherkin block written
+// to the design doc with no counterpart in the tracking YAML. This is
+// typically residue from write_spec_section followed by delta withdraw
+// before req add, or a manual block that was never registered.
+//
+// The match rule mirrors MatchRequirementContexts: a context is claimed
+// by any REQ if its gherkin is an exact match, or (failing that) its
+// title matches. Unclaimed contexts are returned in parse order.
+func orphanGherkinBlocks(requirements []domain.Requirement, contexts []RequirementContext) []RequirementContext {
+	if len(contexts) == 0 {
+		return nil
+	}
+	claimedGherkins := make(map[string]struct{}, len(requirements))
+	claimedTitles := make(map[string]struct{}, len(requirements))
+	for _, req := range requirements {
+		claimedGherkins[req.Gherkin] = struct{}{}
+		claimedTitles[req.Title] = struct{}{}
+	}
+	orphans := make([]RequirementContext, 0)
+	for _, ctx := range contexts {
+		if _, ok := claimedGherkins[ctx.Gherkin]; ok {
+			continue
+		}
+		if _, ok := claimedTitles[ctx.Title]; ok {
+			continue
+		}
+		orphans = append(orphans, ctx)
+	}
+	return orphans
+}
+
 func MatchRequirementContexts(requirements []domain.Requirement, contexts []RequirementContext) map[string]RequirementDocContext {
 	matches := make(map[string]RequirementDocContext, len(requirements))
 	for _, requirement := range requirements {
