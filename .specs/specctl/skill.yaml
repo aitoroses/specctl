@@ -2,11 +2,11 @@ slug: skill
 charter: specctl
 title: specctl Packaged Skill
 status: verified
-rev: 7
+rev: 8
 created: "2026-04-17"
 updated: "2026-04-24"
 last_verified_at: "2026-04-24"
-checkpoint: f1b40e017ff9bfdaf2579bda1190750765e7e75a
+checkpoint: 236d89154249d7ed77f5b88300a602c9b7167a50
 tags: []
 documents:
     primary: skills/specctl/SPEC.md
@@ -304,3 +304,14 @@ changelog:
       reqs_added: []
       reqs_verified: []
       summary: Withdraw legacy D-002 residue to demonstrate the new delta withdraw verb clearing its own footgun.
+    - rev: 8
+      date: "2026-04-24"
+      deltas_opened:
+        - D-007
+      deltas_closed:
+        - D-007
+      reqs_added:
+        - REQ-007
+      reqs_verified:
+        - REQ-007
+      summary: 'Warn about rev-bump ordering and post-bump sync to prevent future instances of the footgun hit during #10 merge.'
