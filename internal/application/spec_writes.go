@@ -750,6 +750,9 @@ func (s *Service) RebindDeltaRequirements(request DeltaRebindRequest) (SpecProje
 		detail["reason"] = strings.TrimSpace(request.Reason)
 	} else {
 		detail["to"] = to
+		if reason := strings.TrimSpace(request.Reason); reason != "" {
+			detail["reason"] = reason
+		}
 	}
 	return s.finalizeSpecMutation(loaded, updated, map[string]any{
 		"kind":   "delta",

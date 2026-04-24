@@ -187,6 +187,32 @@ deltas:
         the second governance cycle on this branch.
       affects_requirements:
         - REQ-030
+    - id: D-012
+      area: Rebind --to records reason for audit parity and auto-rebind-off is contract-pinned
+      intent: change
+      status: closed
+      origin_checkpoint: 4dbc6a4afb1364affa5def754826cdd4f103fbbc
+      current: |-
+        Rebind asymmetrically records its reason: --remove includes reason
+        in result.rebind, --to does not, even when the CLI accepts --reason
+        on both paths. Auto-rebind-off (the default for existing installs)
+        is not pinned by any contract golden; regressions would go
+        unnoticed. The rebind verb's audit trail is therefore weaker than
+        delta withdraw's and relies on implicit test coverage.
+      target: |-
+        RebindDeltaRequirements includes reason in result.rebind on both
+        --to and --remove paths when the caller supplies one. A new
+        contract golden locks auto-rebind-off behavior on req replace:
+        with the default config (auto_rebind_on_replace absent or false),
+        independent open deltas keep their anchors and result.auto_rebinds
+        is not emitted.
+      notes: |
+        Review feedback on PR #10. Strengthens REQ-031 without altering
+        rebind semantics for open/in-progress/deferred deltas or the
+        closed-delta immutability invariant. Pairs with D-011 in the
+        review-feedback cycle.
+      affects_requirements:
+        - REQ-031
 requirements:
     - id: REQ-001
       title: Context reports spec status and drift state
@@ -774,9 +800,10 @@ requirements:
       gherkin: |-
         @specctl @write
         Feature: Requirement rebind keeps open-delta anchors live across supersession
-      lifecycle: active
+      lifecycle: superseded
       verification: verified
       introduced_by: D-010
+      superseded_by: REQ-033
     - id: REQ-032
       title: Delta withdraw records an auditable reason visible across projections, diff, and residue
       tags:
@@ -793,6 +820,22 @@ requirements:
       verification: verified
       introduced_by: D-011
       supersedes: REQ-030
+    - id: REQ-033
+      title: Requirement rebind keeps open-delta anchors live across supersession with audit parity
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_AutoRebindDisabledByDefault.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_AutoRebindOtherDeltas.json
+      gherkin: |-
+        @specctl @write
+        Feature: Requirement rebind keeps open-delta anchors live across supersession with audit parity
+      lifecycle: active
+      verification: verified
+      introduced_by: D-012
+      supersedes: REQ-031
 changelog:
     - rev: 2
       date: "2026-04-02"

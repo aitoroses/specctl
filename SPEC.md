@@ -3499,7 +3499,9 @@ envelope gains an `auto_rebinds` list:
 }
 ```
 
-Success (`delta rebind-requirements --from REQ-X --to REQ-Y`):
+Success (`delta rebind-requirements --from REQ-X --to REQ-Y`) — the optional
+`--reason` carries through to `result.rebind.reason` for audit parity with
+`--remove` (which requires one) and with `delta withdraw`:
 
 ```json
 {
@@ -3507,11 +3509,15 @@ Success (`delta rebind-requirements --from REQ-X --to REQ-Y`):
     "kind": "delta",
     "delta": { "id": "D-003", "status": "open",
                "affects_requirements": ["REQ-002"] },
-    "rebind": { "from": "REQ-001", "to": "REQ-002" }
+    "rebind": { "from": "REQ-001", "to": "REQ-002",
+                "reason": "Scope preserved; anchor rebound after supersession landed." }
   },
   "next": { "mode": "none" }
 }
 ```
+
+When `--reason` is omitted on the `--to` path the rebind still succeeds; the
+`reason` key is simply absent from `result.rebind`.
 
 Error (`DELTA_INVALID_STATE`, rebinding a closed delta):
 
@@ -3526,11 +3532,11 @@ Error (`DELTA_INVALID_STATE`, rebinding a closed delta):
 }
 ```
 
-## Requirement: Requirement rebind keeps open-delta anchors live across supersession
+## Requirement: Requirement rebind keeps open-delta anchors live across supersession with audit parity
 
 ```gherkin requirement
 @specctl @write
-Feature: Requirement rebind keeps open-delta anchors live across supersession
+Feature: Requirement rebind keeps open-delta anchors live across supersession with audit parity
 ```
 
 ### Scenarios
@@ -3584,6 +3590,23 @@ Scenario: Rebinding requires --from to currently anchor the delta
   Given delta D-B is open and does not reference REQ-X in affects_requirements
   When the agent runs delta rebind-requirements D-B --from REQ-X --to REQ-Y
   Then the response returns DELTA_REQUIREMENT_NOT_AFFECTED
+```
+
+```gherkin scenario
+Scenario: Explicit rebind --to records an optional reason for audit parity
+  Given delta D-B is open with REQ-X in affects_requirements
+  When the agent runs delta rebind-requirements D-B --from REQ-X --to REQ-Y --reason <text>
+  Then result.rebind.reason records the supplied text
+  And the rebind is otherwise identical to the no-reason form
+```
+
+```gherkin scenario
+Scenario: auto_rebind_on_replace absent or false keeps anchors untouched on req replace
+  Given specctl.yaml does not set auto_rebind_on_replace or sets it to false
+  And delta D-B is open with REQ-X in affects_requirements
+  When the agent runs req replace REQ-X --delta D-A (parent)
+  Then D-B's affects_requirements still contains REQ-X
+  And result.auto_rebinds is absent from the response envelope
 ```
 
 ---
