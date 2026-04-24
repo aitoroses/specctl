@@ -339,16 +339,18 @@ force misuse of `defer` and create permanent residue:
   later" and keeps residue warnings firing.
 
 - **Your requirements were superseded under an open delta?** Two paths:
-  - Auto: enable `auto_rebind_on_replace: true` in `.specs/specctl.yaml`.
-    On `req replace`, independent open deltas whose `affects_requirements`
-    references the replaced REQ get rebound to the new REQ. Each rebind
-    emits an `AUTO_REBIND_APPLIED` advisory in the response envelope.
-    New installs (`specctl init`) default this to `true`; existing
-    installs default to `false`.
+  - Auto: nothing to enable. `req replace` always auto-rebinds every
+    independent `open | in-progress | deferred` delta whose
+    `affects_requirements` references the replaced REQ. Each rebind
+    emits an `AUTO_REBIND_APPLIED` entry under `result.auto_rebinds[]`
+    on the `req replace` response. Absence of `result.auto_rebinds`
+    means no open delta matched, not that rebinding was disabled.
   - Explicit: `specctl delta rebind-requirements <charter:slug> <D-id>
     --from REQ-X --to REQ-Y` (or `--remove REQ-X --reason "<text>"`).
     Works on `open | in-progress | deferred` deltas only; `closed`
-    deltas keep their anchors immutable.
+    deltas keep their anchors immutable. Use this when auto-rebind
+    picked the wrong target (e.g. scope narrowed on replace) or when
+    you want a reason recorded.
 
 - **`delta add --intent repair` got `VALIDATION_FAILED` with
   `reason: closed_delta_invariant`?** A closed delta already depends on
@@ -376,26 +378,11 @@ the state projection:
   audit trail) and required on `--remove`. Both paths write to the same
   `result.rebind.reason` field; the absence of the key in `--to` without a
   reason is intentional, not a bug.
-- `specctl req replace ...` with `auto_rebind_on_replace: true` →
-  `result.auto_rebinds[]`, one entry per rebound delta with
-  `code: "AUTO_REBIND_APPLIED"`, `delta`, `from`, `to`. When the config is
-  off or absent, `result.auto_rebinds` is **not emitted at all** — its
-  absence is the signal that rebinding was skipped.
-
-### Config divergence (upgrade callout)
-
-`auto_rebind_on_replace` defaults **differently** by install path:
-
-- Fresh `specctl init` writes the key as `true` in `.specs/specctl.yaml`.
-- Existing repos whose `specctl.yaml` predates the key get `false` at load
-  time (backwards-compatible).
-
-Before running `req replace` in an existing repo where you expect
-auto-rebind to fire, `grep auto_rebind_on_replace .specs/specctl.yaml` and
-either flip the flag explicitly or use `specctl delta rebind-requirements`
-for each affected delta. Absence of `result.auto_rebinds` after a replace
-is the confirmation that the flag is off; flip it and retry, or go the
-explicit route.
+- `specctl req replace ...` → `result.auto_rebinds[]`, one entry per
+  rebound delta with `code: "AUTO_REBIND_APPLIED"`, `delta`, `from`, `to`.
+  Rebinds are unconditional — there is no config gate. Absence of
+  `result.auto_rebinds` means no independent open delta referenced the
+  replaced requirement, not that rebinding was skipped.
 
 ### Repair-intent validation walkthrough
 

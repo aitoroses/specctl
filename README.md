@@ -210,29 +210,6 @@ Key rule:
 
 Do **not** hand-edit `.specs/*.yaml`.
 
-### Upgrading existing repos
-
-Some config keys default differently depending on whether the repo was
-initialized with the current `specctl init` or pre-dates the key.
-
-- `auto_rebind_on_replace` — controls whether `specctl req replace` updates
-  independent open/in-progress/deferred deltas whose `affects_requirements`
-  lists the replaced requirement. Fresh `specctl init` writes this as
-  `true`. Existing `.specs/specctl.yaml` files that omit the key get
-  `false` at load time (backwards-compatible).
-
-If you want auto-rebind in an existing repo, add the key explicitly:
-
-```yaml
-# .specs/specctl.yaml
-auto_rebind_on_replace: true
-```
-
-When the flag is off (or absent), the absence of `result.auto_rebinds` in a
-`req replace` response is the signal that rebinding was skipped. Use
-`specctl delta rebind-requirements --from REQ-X --to REQ-Y` per delta if
-you prefer the explicit path.
-
 ## For agents vs humans
 
 ### Agents

@@ -17,7 +17,19 @@
     }
   },
   "next": {
-    "mode": "none"
+    "mode": "sequence",
+    "steps": [
+      {
+        "action": "consider_followup_delta",
+        "choose_when": "The observable behavior change the retracted delta was meant to make still needs to happen. Open a fresh delta with specctl delta add using the correct intent; withdrawn deltas cannot be resumed.",
+        "details": {
+          "withdrawn_delta": "D-001",
+          "withdrawn_reason": "Opened in error; supersession planned in a separate delta."
+        },
+        "kind": "guidance",
+        "priority": 1
+      }
+    ]
   },
   "result": {
     "delta": {

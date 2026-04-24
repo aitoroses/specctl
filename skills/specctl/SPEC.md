@@ -126,14 +126,15 @@ Feature: Skill guides retraction rebind and repair-intent validation
 ```
 
 
-## Observable Reason Fields and Config Defaults
+## Observable Reason Fields and Repair-Intent Walkthrough
 
 The skill's high-level escape-hatch guidance (REQ-004) tells agents when to
 use withdraw, rebind, and repair-intent validation. This requirement
 layers on top of it: it pins the exact observable shape of the reason
-fields for each verb, documents the `auto_rebind_on_replace` default
-divergence between `specctl init` and pre-existing repos, and gives a
-concrete retry walkthrough for the closed-delta-invariant rejection.
+fields for each verb and gives a concrete retry walkthrough for the
+closed-delta-invariant rejection. Auto-rebind is always on, so the
+skill simply explains how to read `result.auto_rebinds` rather than how
+to configure a flag.
 
 ### Invariants
 
@@ -143,17 +144,14 @@ concrete retry walkthrough for the closed-delta-invariant rejection.
   `--to` and `--remove` paths when a reason is supplied, and that its
   absence on `--to` without a reason is intentional.
 - The skill tells the agent that the absence of `result.auto_rebinds`
-  after `req replace` is the signal that `auto_rebind_on_replace` is
-  off.
-- The skill documents the `auto_rebind_on_replace` default divergence
-  (`specctl init` → `true`, pre-existing repos → `false`) with an
-  inspection-and-flip recipe.
+  after `req replace` means no open delta matched the replaced
+  requirement, not that rebinding was disabled.
 - The skill includes a concrete retry walkthrough for the repair-intent
   `VALIDATION_FAILED` payload, naming the exact `focus.delta_add` keys.
 
-## Requirement: Skill documents observable reason fields and config defaults for governance verbs
+## Requirement: Skill documents observable reason fields and repair-intent retry walkthrough
 
 ```gherkin requirement
 @specctl @manual
-Feature: Skill documents observable reason fields and config defaults for governance verbs
+Feature: Skill documents observable reason fields and repair-intent retry walkthrough
 ```

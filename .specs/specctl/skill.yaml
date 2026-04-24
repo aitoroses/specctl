@@ -2,11 +2,11 @@ slug: skill
 charter: specctl
 title: specctl Packaged Skill
 status: verified
-rev: 5
+rev: 6
 created: "2026-04-17"
 updated: "2026-04-24"
 last_verified_at: "2026-04-24"
-checkpoint: 2b27d56ff5b69b5537eada95c47d558f9cda511a
+checkpoint: f22aac7e0a7f6c5e6830722b29e027983929c014
 tags: []
 documents:
     primary: skills/specctl/SPEC.md
@@ -97,6 +97,28 @@ deltas:
         details REQ covering observability.
       updates:
         - add_requirement
+    - id: D-006
+      area: Skill drops config divergence callout; auto-rebind is always on
+      intent: change
+      status: closed
+      origin_checkpoint: 2b27d56ff5b69b5537eada95c47d558f9cda511a
+      current: |-
+        Skill REQ-005 documents the auto_rebind_on_replace config key and a
+        default-divergence callout that tells agents to grep the config and
+        flip the flag. With the cli removing the flag in D-013, this
+        guidance becomes wrong and actively misleads agents into looking
+        for a key that no longer exists.
+      target: |-
+        Skill keeps the observable-reason-fields and repair-intent-retry
+        walkthrough subsections but drops the config-divergence callout.
+        Presence of result.auto_rebinds[] in a req replace response is now
+        the only signal that rebinding happened; absence means no delta
+        matched the replaced REQ.
+      notes: |
+        Companion to cli D-013; both land in the same commit to keep the
+        agent-facing story coherent.
+      affects_requirements:
+        - REQ-005
 requirements:
     - id: REQ-001
       title: Packaged skill teaches the agent-first governance workflow
@@ -157,9 +179,23 @@ requirements:
       gherkin: |-
         @specctl @manual
         Feature: Skill documents observable reason fields and config defaults for governance verbs
-      lifecycle: active
+      lifecycle: superseded
       verification: verified
       introduced_by: D-005
+      superseded_by: REQ-006
+    - id: REQ-006
+      title: Skill documents observable reason fields and repair-intent retry walkthrough
+      tags:
+        - specctl
+        - manual
+      test_files: []
+      gherkin: |-
+        @specctl @manual
+        Feature: Skill documents observable reason fields and repair-intent retry walkthrough
+      lifecycle: active
+      verification: verified
+      introduced_by: D-006
+      supersedes: REQ-005
 changelog:
     - rev: 2
       date: "2026-04-17"
@@ -208,3 +244,14 @@ changelog:
       reqs_verified:
         - REQ-005
       summary: Document observable reason fields and the auto_rebind_on_replace config default divergence.
+    - rev: 6
+      date: "2026-04-24"
+      deltas_opened:
+        - D-006
+      deltas_closed:
+        - D-006
+      reqs_added:
+        - REQ-006
+      reqs_verified:
+        - REQ-006
+      summary: Drop the auto_rebind_on_replace config callout now that auto-rebind is unconditional.

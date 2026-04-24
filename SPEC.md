@@ -3463,13 +3463,16 @@ keep anchors live.
 
 ### Invariants
 
-- Automatic rebind: when `req replace REQ-X --delta D-new` runs with a
-  scope-preserving replacement, every `open | in-progress | deferred`
-  delta whose `affects_requirements` contains `REQ-X` has that entry
-  updated to the replacement ID. Gated by a new config key
-  `auto_rebind_on_replace` (default `false` for existing installs,
-  `true` for `specctl init`). Each rebind emits `AUTO_REBIND_APPLIED`
-  in context warnings and is recorded in the rev changelog.
+- Automatic rebind: when `req replace REQ-X --delta D-new` runs, every
+  `open | in-progress | deferred` delta whose `affects_requirements`
+  contains `REQ-X` has that entry updated to the replacement ID. This
+  is unconditional — no config gate — so agents can always rely on
+  supersession keeping anchors live. Per-delta opt-out is available
+  via `specctl delta rebind-requirements --remove`. Each rebind emits
+  `AUTO_REBIND_APPLIED` under `result.auto_rebinds[]` on the `req
+  replace` response. Absence of `result.auto_rebinds` means no open
+  delta referenced the replaced requirement, not that rebinding was
+  disabled.
 - Explicit rebind: `specctl delta rebind-requirements <charter:slug>
   <D-id> --from REQ-X --to REQ-Y` (or `--remove REQ-X --reason
   <text>`) updates `affects_requirements` for `open | in-progress |
@@ -3482,8 +3485,9 @@ keep anchors live.
 
 ### Contracts
 
-Success (`req replace` with `auto_rebind_on_replace: true`) — the result
-envelope gains an `auto_rebinds` list:
+Success (`req replace`) — the result envelope always gains an
+`auto_rebinds` list when at least one independent open/in-progress/deferred
+delta referenced the replaced requirement:
 
 ```json
 {
@@ -3532,20 +3536,19 @@ Error (`DELTA_INVALID_STATE`, rebinding a closed delta):
 }
 ```
 
-## Requirement: Requirement rebind keeps open-delta anchors live across supersession with audit parity
+## Requirement: Requirement rebind keeps open-delta anchors live across supersession unconditionally with audit parity
 
 ```gherkin requirement
 @specctl @write
-Feature: Requirement rebind keeps open-delta anchors live across supersession with audit parity
+Feature: Requirement rebind keeps open-delta anchors live across supersession unconditionally with audit parity
 ```
 
 ### Scenarios
 
 ```gherkin scenario
-Scenario: req replace auto-rebinds independent open deltas when the config is enabled
-  Given auto_rebind_on_replace is true in specctl.yaml
-  And delta D-A is the parent of the replace
-  And delta D-B is open with REQ-X in its affects_requirements
+Scenario: req replace auto-rebinds every independent open delta that referenced the replaced requirement
+  Given delta D-A is the parent of the replace
+  And delta D-B is open|in-progress|deferred with REQ-X in its affects_requirements
   When the agent runs req replace REQ-X --delta D-A
   Then REQ-X is superseded by REQ-Y
   And delta D-B's affects_requirements is rebound to REQ-Y
@@ -3554,11 +3557,10 @@ Scenario: req replace auto-rebinds independent open deltas when the config is en
 ```
 
 ```gherkin scenario
-Scenario: req replace does not rebind when the config is disabled
-  Given auto_rebind_on_replace is absent or false in specctl.yaml
+Scenario: req replace omits auto_rebinds when no open delta referenced the replaced requirement
+  Given no open|in-progress|deferred delta (other than the parent) references REQ-X
   When the agent runs req replace REQ-X --delta D-A
-  Then no other delta's affects_requirements is modified
-  And the result envelope does not include an auto_rebinds field
+  Then the result envelope does not include an auto_rebinds field
 ```
 
 ```gherkin scenario
@@ -3600,13 +3602,131 @@ Scenario: Explicit rebind --to records an optional reason for audit parity
   And the rebind is otherwise identical to the no-reason form
 ```
 
+
+---
+
+## 29. Post-Write Guidance After Retract, Rebind, and Replace
+
+Three write verbs now emit advisory `next.steps` of kind `guidance` so the
+agent is nominated toward the natural follow-up instead of hitting
+`next.mode: "none"` and guessing. The guidance is advisory — the skill's
+general rule that `kind: "guidance"` steps are optional continues to hold —
+but naming the follow-up makes the cycle legible.
+
+### Data Model
+
+Each guidance step carries:
+
+- `priority` (int, 1-indexed within the sequence)
+- `action` (string, kebab_case verb naming the suggested follow-up)
+- `kind: "guidance"`
+- `choose_when` (string, the condition under which the agent should act)
+- `details` (map, references to the subject of the guidance: delta IDs,
+  requirement IDs, rebind from/to)
+
+### Contracts
+
+After `specctl delta withdraw`:
+
+```json
+{
+  "next": { "mode": "sequence", "steps": [
+    {
+      "priority": 1,
+      "action": "consider_followup_delta",
+      "kind": "guidance",
+      "choose_when": "The observable behavior change the retracted delta was meant to make still needs to happen...",
+      "details": { "withdrawn_delta": "D-001", "withdrawn_reason": "..." }
+    }
+  ] }
+}
+```
+
+After `specctl delta rebind-requirements`:
+
+```json
+{
+  "next": { "mode": "sequence", "steps": [
+    {
+      "priority": 1,
+      "action": "review_delta_scenarios",
+      "kind": "guidance",
+      "choose_when": "The delta's affects_requirements changed. Read the delta's scenarios in SPEC.md and confirm they still match the rebound requirement's scope...",
+      "details": { "delta": "D-003", "from": "REQ-001", "to": "REQ-002" }
+    }
+  ] }
+}
+```
+
+After `specctl req replace` when `result.auto_rebinds[]` is non-empty, an
+additional `review_rebound_deltas` step is appended to the existing
+`implement_and_verify` sequence:
+
+```json
+{
+  "next": { "mode": "sequence", "steps": [
+    { "priority": 1, "action": "implement_behavior", ... },
+    { "priority": 2, "action": "verify_requirement", ... },
+    {
+      "priority": 3,
+      "action": "review_rebound_deltas",
+      "kind": "guidance",
+      "choose_when": "auto-rebind updated one or more open deltas' affects_requirements as part of this replace...",
+      "details": { "rebinds": [ { "delta": "D-003", "from": "REQ-001", "to": "REQ-002" } ] }
+    }
+  ] }
+}
+```
+
+### Invariants
+
+- Withdraw and explicit rebind always emit exactly one priority-1 guidance
+  step; they never return `next.mode: "none"` on success.
+- The req replace review step is only appended when at least one rebind
+  actually occurred; a replace with no rebinds keeps the legacy sequence.
+- Guidance steps carry `details` referencing the concrete IDs so the
+  follow-up action is unambiguous — an agent can feed the `delta`,
+  `from`, and `to` fields back into the next command without re-parsing
+  the state projection.
+
+## Requirement: Write surface emits guidance after retract, rebind, and replace with rebinds
+
+```gherkin requirement
+@specctl @write
+Feature: Write surface emits guidance after retract, rebind, and replace with rebinds
+```
+
+### Scenarios
+
 ```gherkin scenario
-Scenario: auto_rebind_on_replace absent or false keeps anchors untouched on req replace
-  Given specctl.yaml does not set auto_rebind_on_replace or sets it to false
-  And delta D-B is open with REQ-X in affects_requirements
-  When the agent runs req replace REQ-X --delta D-A (parent)
-  Then D-B's affects_requirements still contains REQ-X
-  And result.auto_rebinds is absent from the response envelope
+Scenario: Withdraw emits consider_followup_delta guidance
+  Given an open delta D-X
+  When the agent runs delta withdraw D-X --reason "<text>"
+  Then next.steps contains one kind=guidance action consider_followup_delta
+  And the step details record withdrawn_delta=D-X and withdrawn_reason
+```
+
+```gherkin scenario
+Scenario: Explicit rebind emits review_delta_scenarios guidance
+  Given a non-closed delta D-X with REQ-A in affects_requirements
+  When the agent runs delta rebind-requirements D-X --from REQ-A --to REQ-B
+  Then next.steps contains one kind=guidance action review_delta_scenarios
+  And the step details record delta=D-X, from=REQ-A, to=REQ-B
+```
+
+```gherkin scenario
+Scenario: req replace appends review_rebound_deltas after implement_and_verify when rebinds occurred
+  Given req replace triggered one or more auto-rebinds
+  When the response envelope is returned
+  Then next.steps ends with one kind=guidance action review_rebound_deltas
+  And the step details.rebinds list matches result.auto_rebinds
+```
+
+```gherkin scenario
+Scenario: req replace without rebinds keeps the legacy next sequence
+  Given req replace triggered zero auto-rebinds
+  When the response envelope is returned
+  Then next.steps does not contain a review_rebound_deltas action
 ```
 
 ---

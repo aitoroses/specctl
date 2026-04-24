@@ -96,6 +96,21 @@
           "required_fields": []
         },
         "why": "Write an E2E journey test from the Gherkin scenarios and then verify the requirement."
+      },
+      {
+        "action": "review_rebound_deltas",
+        "choose_when": "auto-rebind updated one or more open deltas' affects_requirements as part of this replace. Review each rebound delta's scenarios in SPEC.md to confirm the new requirement still matches its intended scope; use specctl delta rebind-requirements --remove with a reason to drop anchors whose scope genuinely narrowed.",
+        "details": {
+          "rebinds": [
+            {
+              "delta": "D-003",
+              "from": "REQ-001",
+              "to": "REQ-002"
+            }
+          ]
+        },
+        "kind": "guidance",
+        "priority": 3
       }
     ]
   },

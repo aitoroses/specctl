@@ -759,7 +759,7 @@ func (s *Service) RebindDeltaRequirements(request DeltaRebindRequest) (SpecProje
 		"delta":  projectDelta(*mutated),
 		"rebind": detail,
 	}, map[string]any{"delta": projectDelta(*mutated)}, func(_ SpecProjection) []any {
-		return []any{}
+		return buildDeltaRebindNext(*mutated, from, to, request.Remove)
 	})
 }
 
@@ -809,7 +809,7 @@ func (s *Service) WithdrawDelta(request DeltaWithdrawRequest) (SpecProjection, m
 		"kind":  "delta",
 		"delta": projectDelta(*mutated),
 	}, map[string]any{"delta": projectDelta(*mutated)}, func(_ SpecProjection) []any {
-		return []any{}
+		return buildDeltaWithdrawNext(request.Target, *mutated)
 	})
 }
 
@@ -1003,7 +1003,7 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 		mutatedDelta.Updates = nil
 	}
 
-	rebinds := autoRebindAffectsRequirements(updated, delta.ID, request.RequirementID, newRequirement.ID, loaded.config)
+	rebinds := autoRebindAffectsRequirements(updated, delta.ID, request.RequirementID, newRequirement.ID)
 
 	updated.SyncComputedStatus()
 	updated.Updated = s.todayUTC()
@@ -1026,7 +1026,7 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 			"new_requirement":      resultRequirement,
 		},
 		func(_ SpecProjection) []any {
-			return buildImplementAndVerifyNext(
+			next := buildImplementAndVerifyNext(
 				request.Target,
 				updated,
 				newRequirement,
@@ -1034,6 +1034,10 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 				"Replacement requirement is registered but not yet verified. Implement the changed behavior and write tests before verifying.",
 				"Update the implementation and tests to match the new requirement. Each scenario maps to a test case.",
 			)
+			if review := buildRebindReviewNext(request.Target, rebinds, len(next)+1); review != nil {
+				next = append(next, review)
+			}
+			return next
 		},
 	)
 }
@@ -1043,8 +1047,10 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 // superseded requirement, replacing it with the new requirement id.
 // Closed and withdrawn deltas are never touched. The parent delta of the
 // replace is skipped — it keeps the old id so its trace survives.
-// Gated by config.AutoRebindOnReplace; returns the list of rebinds made
-// for inclusion in the response.
+// Returns the list of rebinds made for inclusion in the response;
+// absence of a return value means no matching delta existed, not that
+// rebinding was disabled. Per-delta opt-out is available through
+// specctl delta rebind-requirements --remove.
 //
 // Scope-preservation note: the D-010 proposal scoped auto-rebind to
 // "scope-preserving replacements (same charter, same slug, same match
@@ -1055,10 +1061,7 @@ func (s *Service) ReplaceRequirement(request RequirementReplaceRequest) (SpecPro
 // override per-delta via `specctl delta rebind-requirements` when the
 // replace genuinely narrowed scope. Revisit if a future requirement
 // demands stricter gating.
-func autoRebindAffectsRequirements(tracking *domain.TrackingFile, parentDeltaID, fromReq, toReq string, config *infrastructure.ProjectConfig) []map[string]any {
-	if config == nil || !config.AutoRebindOnReplace {
-		return nil
-	}
+func autoRebindAffectsRequirements(tracking *domain.TrackingFile, parentDeltaID, fromReq, toReq string) []map[string]any {
 	rebinds := make([]map[string]any, 0)
 	for i := range tracking.Deltas {
 		d := &tracking.Deltas[i]
@@ -2135,6 +2138,78 @@ func buildDeltaTransitionNext(target string, delta domain.Delta) []any {
 				"argv":            []string{"specctl", "delta", "start", target, delta.ID},
 				"required_fields": []map[string]any{},
 			},
+		},
+	}
+}
+
+// buildDeltaWithdrawNext nominates the follow-up action after a withdraw:
+// either open a fresh delta if the observable behavior still needs
+// changing, or stop. Withdrawn deltas cannot be resumed — the guidance
+// exists so the agent does not leave the cycle thinking the retraction
+// is the last step when the actual work was never done.
+func buildDeltaWithdrawNext(target string, delta domain.Delta) []any {
+	return []any{
+		map[string]any{
+			"priority":    1,
+			"action":      "consider_followup_delta",
+			"kind":        "guidance",
+			"choose_when": "The observable behavior change the retracted delta was meant to make still needs to happen. Open a fresh delta with specctl delta add using the correct intent; withdrawn deltas cannot be resumed.",
+			"details": map[string]any{
+				"withdrawn_delta":  delta.ID,
+				"withdrawn_reason": delta.WithdrawnReason,
+			},
+		},
+	}
+}
+
+// buildDeltaRebindNext tells the agent the anchor shifted and nominates a
+// scenario-review step. The new anchor may narrow or widen scope, so the
+// delta's SPEC.md scenarios may drift relative to the rebound requirement
+// — the guidance names the exact rebind to make the review concrete.
+func buildDeltaRebindNext(delta domain.Delta, from, to string, removed bool) []any {
+	details := map[string]any{
+		"delta": delta.ID,
+		"from":  from,
+	}
+	if removed {
+		details["removed"] = true
+	} else {
+		details["to"] = to
+	}
+	return []any{
+		map[string]any{
+			"priority":    1,
+			"action":      "review_delta_scenarios",
+			"kind":        "guidance",
+			"choose_when": "The delta's affects_requirements changed. Read the delta's scenarios in SPEC.md and confirm they still match the rebound requirement's scope; rebind or remove further anchors if the scope drifted.",
+			"details":     details,
+		},
+	}
+}
+
+// buildRebindReviewNext appends a review-step to the req replace next
+// sequence when auto-rebind rewrote at least one independent delta's
+// affects_requirements. Returns nil when nothing was rebound so the
+// caller can cheaply skip appending.
+func buildRebindReviewNext(target string, rebinds []map[string]any, priority int) any {
+	if len(rebinds) == 0 {
+		return nil
+	}
+	summaries := make([]map[string]any, 0, len(rebinds))
+	for _, r := range rebinds {
+		summaries = append(summaries, map[string]any{
+			"delta": r["delta"],
+			"from":  r["from"],
+			"to":    r["to"],
+		})
+	}
+	return map[string]any{
+		"priority":    priority,
+		"action":      "review_rebound_deltas",
+		"kind":        "guidance",
+		"choose_when": "auto-rebind updated one or more open deltas' affects_requirements as part of this replace. Review each rebound delta's scenarios in SPEC.md to confirm the new requirement still matches its intended scope; use specctl delta rebind-requirements --remove with a reason to drop anchors whose scope genuinely narrowed.",
+		"details": map[string]any{
+			"rebinds": summaries,
 		},
 	}
 }

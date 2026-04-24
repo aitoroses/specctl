@@ -876,7 +876,6 @@ func TestContract_ReqReplace_AutoRebindOtherDeltas(t *testing.T) {
     updates:
       - stale_requirement
 `)
-	replaceFileText(t, filepath.Join(repoRoot, ".specs", "specctl.yaml"), "source_prefixes:", "auto_rebind_on_replace: true\nsource_prefixes:")
 	service := newApplicationContractService(repoRoot)
 
 	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
@@ -891,29 +890,26 @@ func TestContract_ReqReplace_AutoRebindOtherDeltas(t *testing.T) {
 }
 
 func TestContract_DeltaRebind_Success(t *testing.T) {
-	repoRoot := contractReplaceFlowRepo(t)
+	// Post-supersession state: REQ-001 is already superseded by REQ-002
+	// (via a previously-closed replace). An independent deferred delta
+	// D-004 predates the supersession and still anchors on REQ-001 — the
+	// case the explicit rebind verb exists for when auto-rebind no
+	// longer applies.
+	repoRoot := contractInactiveSupersededRequirementRepo(t)
 	appendDeltaBeforeRequirements(t, repoRoot, `  - id: D-003
     area: Downstream cleanup follow-up
     intent: repair
-    status: open
+    status: deferred
     origin_checkpoint: a1b2c3f
     current: Evidence is soft
     target: Firm up evidence after the replacement lands
-    notes: Rebinds to REQ-002 once the replacement lands
+    notes: Legacy deferred delta still anchored to the superseded REQ-001
     affects_requirements:
       - REQ-001
     updates:
       - stale_requirement
 `)
 	service := newApplicationContractService(repoRoot)
-	if _, _, _, err := service.ReplaceRequirement(RequirementReplaceRequest{
-		Target:        "runtime:session-lifecycle",
-		RequirementID: "REQ-001",
-		DeltaID:       "D-002",
-		Gherkin:       contractReplacementRequirementBlock(),
-	}); err != nil {
-		t.Fatalf("ReplaceRequirement: %v", err)
-	}
 
 	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
 		return service.RebindDeltaRequirements(DeltaRebindRequest{
@@ -921,35 +917,7 @@ func TestContract_DeltaRebind_Success(t *testing.T) {
 			DeltaID: "D-003",
 			From:    "REQ-001",
 			To:      "REQ-002",
-			Reason:  "Scope preserved; anchor rebound after supersession landed.",
-		})
-	})
-	assertContractFixture(t, output, contractPlaceholders())
-}
-
-func TestContract_ReqReplace_AutoRebindDisabledByDefault(t *testing.T) {
-	repoRoot := contractReplaceFlowRepo(t)
-	appendDeltaBeforeRequirements(t, repoRoot, `  - id: D-003
-    area: Downstream cleanup follow-up
-    intent: repair
-    status: open
-    origin_checkpoint: a1b2c3f
-    current: Evidence is soft
-    target: Firm up evidence after the replacement lands
-    notes: Should NOT be auto-rebound because auto_rebind_on_replace is off by default
-    affects_requirements:
-      - REQ-001
-    updates:
-      - stale_requirement
-`)
-	service := newApplicationContractService(repoRoot)
-
-	output := marshalSpecWriteContractCall(t, func() (SpecProjection, map[string]any, []any, error) {
-		return service.ReplaceRequirement(RequirementReplaceRequest{
-			Target:        "runtime:session-lifecycle",
-			RequirementID: "REQ-001",
-			DeltaID:       "D-002",
-			Gherkin:       contractReplacementRequirementBlock(),
+			Reason:  "Scope preserved; anchor rebound explicitly because auto-rebind had already missed this delta.",
 		})
 	})
 	assertContractFixture(t, output, contractPlaceholders())

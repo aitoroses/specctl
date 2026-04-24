@@ -8,9 +8,9 @@
       "current": "Evidence is soft",
       "id": "D-003",
       "intent": "repair",
-      "notes": "Rebinds to REQ-002 once the replacement lands",
+      "notes": "Legacy deferred delta still anchored to the superseded REQ-001",
       "origin_checkpoint": "a1b2c3f",
-      "status": "open",
+      "status": "deferred",
       "target": "Firm up evidence after the replacement lands",
       "updates": [
         "stale_requirement"
@@ -18,7 +18,20 @@
     }
   },
   "next": {
-    "mode": "none"
+    "mode": "sequence",
+    "steps": [
+      {
+        "action": "review_delta_scenarios",
+        "choose_when": "The delta's affects_requirements changed. Read the delta's scenarios in SPEC.md and confirm they still match the rebound requirement's scope; rebind or remove further anchors if the scope drifted.",
+        "details": {
+          "delta": "D-003",
+          "from": "REQ-001",
+          "to": "REQ-002"
+        },
+        "kind": "guidance",
+        "priority": 1
+      }
+    ]
   },
   "result": {
     "delta": {
@@ -29,9 +42,9 @@
       "current": "Evidence is soft",
       "id": "D-003",
       "intent": "repair",
-      "notes": "Rebinds to REQ-002 once the replacement lands",
+      "notes": "Legacy deferred delta still anchored to the superseded REQ-001",
       "origin_checkpoint": "a1b2c3f",
-      "status": "open",
+      "status": "deferred",
       "target": "Firm up evidence after the replacement lands",
       "updates": [
         "stale_requirement"
@@ -40,38 +53,46 @@
     "kind": "delta",
     "rebind": {
       "from": "REQ-001",
-      "reason": "Scope preserved; anchor rebound after supersession landed.",
+      "reason": "Scope preserved; anchor rebound explicitly because auto-rebind had already missed this delta.",
       "to": "REQ-002"
     }
   },
   "state": {
-    "actionable_unverified_requirements": [
-      {
-        "id": "REQ-002",
-        "introduced_by": "D-002",
-        "lifecycle": "active",
-        "tags": [
-          "runtime",
-          "e2e"
-        ],
-        "test_files": [],
-        "title": "Compensation stage 4 failure cleanup replacement",
-        "verification": "unverified"
-      }
-    ],
+    "actionable_unverified_requirements": [],
     "changelog": [
       {
         "date": "2026-03-28",
-        "deltas_closed": [],
+        "deltas_closed": [
+          "D-001"
+        ],
         "deltas_opened": [
           "D-001"
         ],
         "reqs_added": [
           "REQ-001"
         ],
-        "reqs_verified": [],
-        "rev": 1,
-        "summary": "Opened the compensation cleanup work"
+        "reqs_verified": [
+          "REQ-001"
+        ],
+        "rev": 2,
+        "summary": "Closed the compensation cleanup work"
+      },
+      {
+        "date": "2026-03-30",
+        "deltas_closed": [
+          "D-002"
+        ],
+        "deltas_opened": [
+          "D-002"
+        ],
+        "reqs_added": [
+          "REQ-002"
+        ],
+        "reqs_verified": [
+          "REQ-002"
+        ],
+        "rev": 3,
+        "summary": "Verified the replacement cleanup requirement while preserving the superseded predecessor as history"
       }
     ],
     "charter": "runtime",
@@ -86,9 +107,9 @@
     "checkpoint": "a1b2c3f",
     "created": "2026-03-05",
     "deltas": {
-      "closed": 0,
-      "deferred": 0,
-      "in_progress": 1,
+      "closed": 2,
+      "deferred": 1,
+      "in_progress": 0,
       "items": [
         {
           "affects_requirements": [],
@@ -98,7 +119,7 @@
           "intent": "add",
           "notes": "Multi-agent implementation split between runtime and workflow work",
           "origin_checkpoint": "a1b2c3f",
-          "status": "in-progress",
+          "status": "closed",
           "target": "Document ordering and verify failure cleanup",
           "updates": [
             "add_requirement"
@@ -112,9 +133,9 @@
           "current": "Cleanup wording is outdated",
           "id": "D-002",
           "intent": "change",
-          "notes": "Match the new requirement block exactly",
+          "notes": "Replacement requirement is verified; superseded predecessor remains historical only",
           "origin_checkpoint": "a1b2c3f",
-          "status": "open",
+          "status": "closed",
           "target": "Replace the tracked cleanup contract",
           "updates": [
             "replace_requirement"
@@ -128,16 +149,16 @@
           "current": "Evidence is soft",
           "id": "D-003",
           "intent": "repair",
-          "notes": "Rebinds to REQ-002 once the replacement lands",
+          "notes": "Legacy deferred delta still anchored to the superseded REQ-001",
           "origin_checkpoint": "a1b2c3f",
-          "status": "open",
+          "status": "deferred",
           "target": "Firm up evidence after the replacement lands",
           "updates": [
             "stale_requirement"
           ]
         }
       ],
-      "open": 2,
+      "open": 0,
       "withdrawn": 0
     },
     "documents": {
@@ -159,24 +180,8 @@
         "verification": "unverified"
       }
     ],
-    "last_verified_at": "2026-03-28",
-    "open_deltas": [
-      {
-        "area": "Compensation stage 4",
-        "id": "D-001",
-        "status": "in-progress"
-      },
-      {
-        "area": "Compensation cleanup rewrite",
-        "id": "D-002",
-        "status": "open"
-      },
-      {
-        "area": "Downstream cleanup follow-up",
-        "id": "D-003",
-        "status": "open"
-      }
-    ],
+    "last_verified_at": "2026-03-30",
+    "open_deltas": [],
     "requirements": [
       {
         "gherkin": "@runtime @e2e\nFeature: Compensation stage 4 failure cleanup",
@@ -222,12 +227,14 @@
           "runtime",
           "e2e"
         ],
-        "test_files": [],
+        "test_files": [
+          "runtime/tests/domain/test_compensation_cleanup_replacement.py"
+        ],
         "title": "Compensation stage 4 failure cleanup replacement",
-        "verification": "unverified"
+        "verification": "verified"
       }
     ],
-    "rev": 2,
+    "rev": 4,
     "scope": [
       "runtime/src/domain/session_execution/",
       "runtime/src/application/commands/"
@@ -236,12 +243,12 @@
       "checkpoint": "a1b2c3f",
       "drift_source": null,
       "files_changed_since_checkpoint": [],
-      "last_verified_at": "2026-03-28",
+      "last_verified_at": "2026-03-30",
       "status": "unavailable",
       "tracked_by": []
     },
     "slug": "session-lifecycle",
-    "status": "ready",
+    "status": "verified",
     "tags": [
       "runtime",
       "domain"

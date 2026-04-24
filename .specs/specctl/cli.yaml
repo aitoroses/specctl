@@ -2,11 +2,11 @@ slug: cli
 charter: specctl
 title: specctl CLI Behavioral Spec
 status: verified
-rev: 8
+rev: 9
 created: "2026-04-01"
 updated: "2026-04-24"
 last_verified_at: "2026-04-24"
-checkpoint: 2b27d56ff5b69b5537eada95c47d558f9cda511a
+checkpoint: f22aac7e0a7f6c5e6830722b29e027983929c014
 tags: []
 documents:
     primary: SPEC.md
@@ -213,6 +213,66 @@ deltas:
         review-feedback cycle.
       affects_requirements:
         - REQ-031
+    - id: D-013
+      area: Auto-rebind on req replace is always on; remove the auto_rebind_on_replace config gate
+      intent: change
+      status: closed
+      origin_checkpoint: 2b27d56ff5b69b5537eada95c47d558f9cda511a
+      current: |-
+        req replace auto-rebind is gated by auto_rebind_on_replace in
+        specctl.yaml with divergent defaults (specctl init writes true,
+        pre-existing configs read false). The flag was added to preserve
+        backwards compatibility for any repo that wanted to keep the old
+        behavior, but the feature is new, no production repos depend on the
+        old behavior, and the flag adds documentation surface (README
+        upgrade note, SKILL config callout) plus per-cohort behavior that
+        exceeds the value it provides.
+      target: |-
+        req replace auto-rebinds independent open/in-progress/deferred
+        deltas unconditionally whenever the replaced REQ matches an
+        affects_requirements entry. The AutoRebindOnReplace config key is
+        removed from ProjectConfig. InitWorkspace no longer writes the key.
+        The README "Upgrading existing repos" section and the SKILL.md
+        "Config divergence" callout are removed. Rebinds remain observable
+        via result.auto_rebinds[] and per-delta opt-out is still possible
+        via specctl delta rebind-requirements --remove.
+      notes: |
+        Breaking change for any repo that had auto_rebind_on_replace set
+        explicitly; no such repo exists in the wild. runtime-v2 is the only
+        known existing consumer and its config has no auto-rebind key, so
+        this is a no-op for it. Preferred over the divergent-defaults
+        pattern now while the user base is us.
+      affects_requirements:
+        - REQ-033
+    - id: D-014
+      area: Write surface emits guidance next steps after withdraw, rebind, and auto-rebinding replace
+      intent: add
+      status: closed
+      origin_checkpoint: 2b27d56ff5b69b5537eada95c47d558f9cda511a
+      current: |-
+        Three write verbs return an empty or terminal-sync next envelope
+        even when follow-up guidance would help the agent: delta withdraw
+        leaves the caller without a hint to open a fresh delta if the work
+        still matters; delta rebind-requirements leaves no hint to review
+        the delta's scenarios against the new anchor; req replace with a
+        non-empty auto_rebinds list points the caller at the new
+        requirement's verification but says nothing about the rebound
+        deltas that may now need scenario review.
+      target: |-
+        Each of the three verbs emits a priority-appropriate next step of
+        kind guidance (for withdraw and rebind) or adds a review step to
+        the existing next sequence (for req replace when rebinds occurred).
+        The guidance names the exact follow-up action, the affected delta
+        IDs where applicable, and the choose_when condition for when the
+        agent should act on it. Steps are advisory — the skill already
+        teaches agents to treat guidance kinds as optional by convention.
+      notes: |
+        Review-feedback follow-up surfaced during the Option D audit. The
+        skill guidance already tells agents to follow result.auto_rebinds
+        and to read withdraw/rebind result fields; this closes the loop by
+        having the write surface nominate the follow-up itself.
+      updates:
+        - add_requirement
 requirements:
     - id: REQ-001
       title: Context reports spec status and drift state
@@ -832,10 +892,43 @@ requirements:
       gherkin: |-
         @specctl @write
         Feature: Requirement rebind keeps open-delta anchors live across supersession with audit parity
-      lifecycle: active
+      lifecycle: superseded
       verification: verified
       introduced_by: D-012
       supersedes: REQ-031
+      superseded_by: REQ-034
+    - id: REQ-034
+      title: Requirement rebind keeps open-delta anchors live across supersession unconditionally with audit parity
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_ClosedRejected.json
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_AutoRebindOtherDeltas.json
+      gherkin: |-
+        @specctl @write
+        Feature: Requirement rebind keeps open-delta anchors live across supersession unconditionally with audit parity
+      lifecycle: active
+      verification: verified
+      introduced_by: D-013
+      supersedes: REQ-033
+    - id: REQ-035
+      title: Write surface emits guidance after retract, rebind, and replace with rebinds
+      tags:
+        - specctl
+        - write
+      test_files:
+        - internal/application/testdata/contracts/TestContract_DeltaRebind_Success.json
+        - internal/application/testdata/contracts/TestContract_DeltaWithdraw_Success.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_AutoRebindOtherDeltas.json
+        - internal/application/testdata/contracts/TestContract_ReqReplace_RequirementNotInSpec.json
+      gherkin: |-
+        @specctl @write
+        Feature: Write surface emits guidance after retract, rebind, and replace with rebinds
+      lifecycle: active
+      verification: verified
+      introduced_by: D-014
 changelog:
     - rev: 2
       date: "2026-04-02"
@@ -976,3 +1069,18 @@ changelog:
         - REQ-032
         - REQ-033
       summary: Harden withdraw projections and rebind audit trail with contract-pinned regressions and diff coverage.
+    - rev: 9
+      date: "2026-04-24"
+      deltas_opened:
+        - D-013
+        - D-014
+      deltas_closed:
+        - D-013
+        - D-014
+      reqs_added:
+        - REQ-034
+        - REQ-035
+      reqs_verified:
+        - REQ-034
+        - REQ-035
+      summary: Make auto-rebind unconditional and emit guidance next steps after withdraw, rebind, and replace-with-rebinds.

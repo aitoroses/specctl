@@ -27,17 +27,15 @@ type warningCacheDocument struct {
 
 // ProjectConfig holds project-level specctl configuration.
 type ProjectConfig struct {
-	GherkinTags         []string                `yaml:"gherkin_tags"`
-	SourcePrefixes      []string                `yaml:"source_prefixes"`
-	Formats             map[string]FormatConfig `yaml:"formats"`
-	AutoRebindOnReplace bool                    `yaml:"auto_rebind_on_replace"`
+	GherkinTags    []string                `yaml:"gherkin_tags"`
+	SourcePrefixes []string                `yaml:"source_prefixes"`
+	Formats        map[string]FormatConfig `yaml:"formats"`
 }
 
 type projectConfigDocument struct {
-	GherkinTags         *[]string               `yaml:"gherkin_tags"`
-	SourcePrefixes      *[]string               `yaml:"source_prefixes"`
-	Formats             map[string]FormatConfig `yaml:"formats"`
-	AutoRebindOnReplace *bool                   `yaml:"auto_rebind_on_replace"`
+	GherkinTags    *[]string               `yaml:"gherkin_tags"`
+	SourcePrefixes *[]string               `yaml:"source_prefixes"`
+	Formats        map[string]FormatConfig `yaml:"formats"`
 }
 
 type FormatConfig struct {
@@ -162,9 +160,6 @@ func configFromDocument(document *projectConfigDocument) *ProjectConfig {
 	}
 	if document.Formats != nil {
 		config.Formats = cloneFormats(document.Formats)
-	}
-	if document.AutoRebindOnReplace != nil {
-		config.AutoRebindOnReplace = *document.AutoRebindOnReplace
 	}
 	return config
 }
