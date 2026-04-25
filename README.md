@@ -210,6 +210,14 @@ Key rule:
 
 Do **not** hand-edit `.specs/*.yaml`.
 
+## Architecture extension ideas
+
+If you want a concrete proposal for architecture-aware governance and low-entropy system design tracking, see:
+
+- [`docs/architecture-governance-extensions.md`](./docs/architecture-governance-extensions.md)
+- [`docs/architecture-dogfood-plan.md`](./docs/architecture-dogfood-plan.md)
+- [`docs/architecture-linting-and-conventions.md`](./docs/architecture-linting-and-conventions.md)
+
 ## For agents vs humans
 
 ### Agents
