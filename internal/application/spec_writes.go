@@ -1627,7 +1627,7 @@ func (s *Service) Sync(request SyncRequest) (SpecProjection, map[string]any, []a
 		}), "sync is blocked by requirement match issues", "match_blocking")
 	}
 	for _, delta := range loaded.tracking.Deltas {
-		if delta.Status == domain.DeltaStatusClosed || delta.Status == domain.DeltaStatusDeferred {
+		if delta.Status == domain.DeltaStatusClosed || delta.Status == domain.DeltaStatusDeferred || delta.Status == domain.DeltaStatusWithdrawn {
 			continue
 		}
 		return SpecProjection{}, nil, nil, syncInvalidInputFailure(withSpecFocus(loaded.state, map[string]any{
