@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 
 	"github.com/aitoroses/specctl/internal/presenter"
 	"github.com/spf13/cobra"
@@ -14,13 +16,39 @@ func Execute(args []string, stdout, stderr io.Writer) int {
 	return executeWithIO(args, os.Stdin, stdout, stderr)
 }
 
-func executeWithIO(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+func executeWithIO(args []string, stdin io.Reader, stdout, stderr io.Writer) (code int) {
+	isMCP := len(args) > 0 && args[0] == "mcp"
+	cmdName := commandNameFromArgs(args)
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		stack := string(debug.Stack())
+		fmt.Fprintf(stderr, "specctl panic in %s: %v\n%s\n", cmdName, r, stack)
+		envelope := presenter.UnexpectedErrorEnvelope(
+			fmt.Errorf("panic: %v", r),
+			presenter.UnexpectedContext{
+				Tool:       cmdName,
+				Input:      args,
+				PanicValue: r,
+				Stack:      stack,
+			},
+		)
+		if isMCP {
+			fmt.Fprintf(stderr, "%s\n%s\n", envelope.Error.Message, issueHintBlock(envelope))
+		} else {
+			_ = presenter.WriteJSON(stdout, envelope)
+		}
+		code = 1
+	}()
+
 	rootCmd := NewRootCmd()
 	rootCmd.SetIn(stdin)
 	rootCmd.SetOut(stdout)
 	rootCmd.SetErr(stderr)
 	rootCmd.SetArgs(args)
-	isMCP := len(args) > 0 && args[0] == "mcp"
 
 	if err := rootCmd.Execute(); err != nil {
 		if isMCP {
@@ -32,6 +60,33 @@ func executeWithIO(args []string, stdin io.Reader, stdout, stderr io.Writer) int
 	}
 
 	return 0
+}
+
+func commandNameFromArgs(args []string) string {
+	if len(args) == 0 {
+		return "specctl"
+	}
+	return "specctl " + args[0]
+}
+
+// issueHintBlock formats the report_issue step from an unexpected envelope
+// into a plain-text block suitable for stderr (used on the MCP path where
+// we don't emit a JSON envelope).
+func issueHintBlock(env presenter.Envelope) string {
+	if len(env.Next.Steps) == 0 {
+		return ""
+	}
+	step, ok := env.Next.Steps[0].(map[string]any)
+	if !ok {
+		return ""
+	}
+	tmpl, ok := step["template"].(map[string]any)
+	if !ok {
+		return ""
+	}
+	url, _ := tmpl["url"].(string)
+	body, _ := tmpl["body"].(string)
+	return fmt.Sprintf("This looks like a bug in specctl. Please open an issue:\n  %s\n\nInclude this context:\n---\n%s---", url, body)
 }
 
 func writeReadEnvelope(cmd *cobra.Command, state, focus any, next nextDirective) error {

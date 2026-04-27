@@ -395,7 +395,11 @@ func recommendedAdvisoryTarget(targets []advisoryTarget) *advisoryTarget {
 func (s *Service) readSpecContext(target string) (any, []any, error) {
 	charterName, slug, ok := strings.Cut(target, ":")
 	if !ok {
-		return nil, nil, fmt.Errorf("invalid spec target %q", target)
+		return nil, nil, &Failure{
+			Code:    "INVALID_INPUT",
+			Message: fmt.Sprintf("invalid spec target %q (expected charter:slug)", target),
+			State:   map[string]any{"target": target},
+		}
 	}
 
 	trackingExists, err := s.pathAdapter().TrackingExists(charterName, slug)

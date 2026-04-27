@@ -82,7 +82,11 @@ func (s *Service) canonicalCharterProjection(name string) (CharterProjection, er
 func (s *Service) charterProjectionFromRepoState(repoState *repoReadState, name string) (CharterProjection, error) {
 	charterState := repoState.charterState(name)
 	if charterState == nil {
-		return CharterProjection{}, fmt.Errorf("charter %q does not exist", name)
+		return CharterProjection{}, &Failure{
+			Code:    "CHARTER_NOT_FOUND",
+			Message: fmt.Sprintf("charter %q does not exist", name),
+			State:   map[string]any{"charter": name},
+		}
 	}
 
 	trackingBySlug := repoState.trackingBySlug(name)
@@ -103,7 +107,11 @@ func (s *Service) charterProjectionFromRepoState(repoState *repoReadState, name 
 func (s *Service) specProjectionFromRepoState(repoState *repoReadState, target string) (SpecProjection, error) {
 	trackingState := repoState.specTracking(target)
 	if trackingState == nil {
-		return SpecProjection{}, fmt.Errorf("spec %q does not exist", target)
+		return SpecProjection{}, &Failure{
+			Code:    "SPEC_NOT_FOUND",
+			Message: fmt.Sprintf("spec %q does not exist", target),
+			State:   map[string]any{"spec": target},
+		}
 	}
 	charterName, _, _ := strings.Cut(target, ":")
 	var charter *domain.Charter

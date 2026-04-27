@@ -2,10 +2,33 @@ package presenter
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"strings"
 
 	"github.com/aitoroses/specctl/internal/application"
 )
+
+// IssueRepoURL is the destination for unexpected-error reports.
+const IssueRepoURL = "https://github.com/aitoroses/specctl/issues/new"
+
+// BuildVersion is overridable at link time (-ldflags "-X ...BuildVersion=v1.2.3").
+var BuildVersion = "dev"
+
+const (
+	codeInternalError = "INTERNAL_ERROR"
+	codeInternalPanic = "INTERNAL_PANIC"
+	codeMarshalFailed = "ENVELOPE_ENCODE_FAILED"
+)
+
+// UnexpectedContext carries the call-site information bundled into a
+// report_issue hint so the agent can paste a complete bug report.
+type UnexpectedContext struct {
+	Tool       string
+	Input      any
+	PanicValue any
+	Stack      string
+}
 
 type Envelope struct {
 	State  any       `json:"state"`
@@ -203,6 +226,171 @@ func DirectiveForReadMode(mode string, next []any) Directive {
 	default:
 		return Sequence(next)
 	}
+}
+
+// UnexpectedErrorEnvelope produces an envelope for errors that look like
+// bugs in specctl rather than user input problems. It embeds a report_issue
+// step so MCP clients (or CLI consumers) can prompt the user to file a bug
+// with the captured tool/input/error context.
+func UnexpectedErrorEnvelope(err error, ctx UnexpectedContext) Envelope {
+	code := codeInternalError
+	if ctx.PanicValue != nil {
+		code = codeInternalPanic
+	}
+
+	tool := ctx.Tool
+	if tool == "" {
+		tool = "specctl"
+	}
+
+	message := err.Error()
+	if message == "" {
+		message = "unexpected error"
+	}
+	summary := fmt.Sprintf("unexpected error in %s: %s", tool, message)
+
+	step := map[string]any{
+		"action": "report_issue",
+		"kind":   "report",
+		"why":    "This looks like a bug in specctl. Open an issue with the details below so it can be fixed.",
+		"template": map[string]any{
+			"url":   IssueRepoURL,
+			"title": fmt.Sprintf("[bug] %s: %s", tool, truncate(message, 80)),
+			"body":  buildIssueBody(tool, ctx.Input, code, message, ctx.Stack),
+		},
+	}
+
+	return Envelope{
+		State: map[string]any{},
+		Focus: map[string]any{},
+		Next:  Sequence([]any{step}),
+		Error: &Error{
+			Code:    code,
+			Message: summary,
+		},
+	}
+}
+
+// ClassifyError returns an envelope for any error coming out of the
+// application layer. *Failure values keep their tipified codes; anything
+// else is treated as unexpected and gets the report_issue hint.
+func ClassifyError(err error, ctx UnexpectedContext) Envelope {
+	if err == nil {
+		return Envelope{State: map[string]any{}, Focus: map[string]any{}, Next: None()}
+	}
+	classified := ApplicationError(err)
+	if _, ok := classified.(*Failure); ok {
+		return ErrorEnvelope(classified)
+	}
+	return UnexpectedErrorEnvelope(classified, ctx)
+}
+
+func buildIssueBody(tool string, input any, code, message, stack string) string {
+	stackBlock := "n/a"
+	if strings.TrimSpace(stack) != "" {
+		stackBlock = "```\n" + stack + "\n```"
+	}
+	inputJSON := redactedInputJSON(input)
+	return fmt.Sprintf(`## What I was trying to do
+<describe the goal here>
+
+## Tool / args
+- tool: %s
+- input:
+%s
+
+## Error
+- code: %s
+- message: %s
+
+## Stack (if panic)
+%s
+
+## Environment
+- specctl version: %s
+`,
+		tool,
+		"```json\n"+inputJSON+"\n```",
+		code,
+		message,
+		stackBlock,
+		BuildVersion,
+	)
+}
+
+// redactedInputJSON serialises the input for the issue body and truncates
+// long strings so we never paste a 50KB Gherkin block (or a leaked secret)
+// into a public issue.
+func redactedInputJSON(input any) string {
+	if input == nil {
+		return "null"
+	}
+	raw, err := json.Marshal(input)
+	if err != nil {
+		return fmt.Sprintf("(unserialisable: %v)", err)
+	}
+	var decoded any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		return string(raw)
+	}
+	redacted := redactValue(decoded)
+	out, err := json.MarshalIndent(redacted, "", "  ")
+	if err != nil {
+		return string(raw)
+	}
+	return string(out)
+}
+
+func redactValue(value any) any {
+	switch typed := value.(type) {
+	case string:
+		return truncate(typed, 500)
+	case []any:
+		out := make([]any, len(typed))
+		for i, item := range typed {
+			out[i] = redactValue(item)
+		}
+		return out
+	case map[string]any:
+		out := make(map[string]any, len(typed))
+		for key, item := range typed {
+			out[key] = redactValue(item)
+		}
+		return out
+	default:
+		return typed
+	}
+}
+
+func truncate(s string, max int) string {
+	if max <= 0 || len(s) <= max {
+		return s
+	}
+	return s[:max] + fmt.Sprintf("…(+%d chars)", len(s)-max)
+}
+
+// MarshalEnvelope encodes an envelope to JSON, returning a fixed fallback
+// payload (and a non-nil error) when encoding fails. Callers should always
+// be able to write the returned bytes to the wire, even on failure.
+func MarshalEnvelope(envelope Envelope) ([]byte, error) {
+	data, err := json.Marshal(envelope)
+	if err != nil {
+		fallback := Envelope{
+			State: map[string]any{},
+			Focus: map[string]any{},
+			Next:  None(),
+			Error: &Error{
+				Code:    codeMarshalFailed,
+				Message: "failed to encode response: " + err.Error(),
+			},
+		}
+		fallbackBytes, marshalErr := json.Marshal(fallback)
+		if marshalErr != nil {
+			return []byte(`{"state":{},"focus":{},"next":{"mode":"none"},"error":{"code":"ENVELOPE_ENCODE_FAILED","message":"failed to encode response"}}`), err
+		}
+		return fallbackBytes, err
+	}
+	return data, nil
 }
 
 func SplitStateFocus(state any) (any, any) {

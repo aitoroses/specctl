@@ -1,8 +1,11 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +16,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/aitoroses/specctl/internal/application"
+	"github.com/aitoroses/specctl/internal/presenter"
 )
 
 func TestListTools(t *testing.T) {
@@ -482,4 +486,256 @@ func requireSlice(t *testing.T, value any) []any {
 		t.Fatalf("value = %#v, want []any", value)
 	}
 	return s
+}
+
+func TestWrapHandlerRecoversPanic(t *testing.T) {
+	var stderrBuf bytes.Buffer
+	restore := SetPanicLogger(&stderrBuf)
+	defer restore()
+
+	s := &Server{}
+	wrapped := wrapHandler(
+		"specctl_test_panic",
+		s,
+		func(ctx context.Context, req *sdk.CallToolRequest, in struct{}) (*sdk.CallToolResult, any, error) {
+			panic("boom")
+		},
+	)
+
+	result, _, err := wrapped(context.Background(), nil, struct{}{})
+	if err != nil {
+		t.Fatalf("wrapped handler should swallow panic, got err = %v", err)
+	}
+	if result == nil || !result.IsError {
+		t.Fatalf("expected IsError result, got %#v", result)
+	}
+	text, ok := result.Content[0].(*sdk.TextContent)
+	if !ok {
+		t.Fatalf("result content[0] = %T, want *TextContent", result.Content[0])
+	}
+	var envelope map[string]any
+	if jsonErr := json.Unmarshal([]byte(text.Text), &envelope); jsonErr != nil {
+		t.Fatalf("unmarshal envelope: %v\n%s", jsonErr, text.Text)
+	}
+	errField := requireMap(t, envelope["error"])
+	if errField["code"] != "INTERNAL_PANIC" {
+		t.Fatalf("error.code = %v, want INTERNAL_PANIC", errField["code"])
+	}
+	next := requireMap(t, envelope["next"])
+	if next["mode"] != "sequence" {
+		t.Fatalf("next.mode = %v, want sequence", next["mode"])
+	}
+	steps := requireSlice(t, next["steps"])
+	if len(steps) != 1 {
+		t.Fatalf("expected 1 step, got %d", len(steps))
+	}
+	step := requireMap(t, steps[0])
+	if step["action"] != "report_issue" {
+		t.Fatalf("step.action = %v, want report_issue", step["action"])
+	}
+	tmpl := requireMap(t, step["template"])
+	if tmpl["url"] != presenter.IssueRepoURL {
+		t.Fatalf("template.url = %v, want %s", tmpl["url"], presenter.IssueRepoURL)
+	}
+	if !strings.Contains(stderrBuf.String(), "specctl mcp panic in specctl_test_panic") {
+		t.Fatalf("expected stderr panic log, got %q", stderrBuf.String())
+	}
+	mcpField := requireMap(t, step["mcp"])
+	if mcpField["available"] != true {
+		t.Fatalf("report_issue mcp.available = %#v, want true (must survive adaptEnvelopeForMCP intact)", mcpField["available"])
+	}
+	if mcpField["kind"] != "external_link" {
+		t.Fatalf("report_issue mcp.kind = %#v, want external_link", mcpField["kind"])
+	}
+}
+
+func TestWrapHandlerHandlesNilPanic(t *testing.T) {
+	var stderrBuf bytes.Buffer
+	restore := SetPanicLogger(&stderrBuf)
+	defer restore()
+
+	s := &Server{}
+	wrapped := wrapHandler(
+		"specctl_nil_panic",
+		s,
+		func(ctx context.Context, req *sdk.CallToolRequest, in struct{}) (*sdk.CallToolResult, any, error) {
+			panic(nil)
+		},
+	)
+	result, _, err := wrapped(context.Background(), nil, struct{}{})
+	if err != nil {
+		t.Fatalf("wrapped should swallow nil panic, got %v", err)
+	}
+	if result == nil || !result.IsError {
+		t.Fatalf("expected error envelope from nil panic, got %#v", result)
+	}
+	envelope := decodeEnvelope(t, result)
+	if requireMap(t, envelope["error"])["code"] != "INTERNAL_PANIC" {
+		t.Fatalf("nil panic should still surface as INTERNAL_PANIC, got %#v", envelope["error"])
+	}
+}
+
+func TestWrapHandlerSurvivesConsecutivePanics(t *testing.T) {
+	var stderrBuf bytes.Buffer
+	restore := SetPanicLogger(&stderrBuf)
+	defer restore()
+
+	s := &Server{}
+	count := 0
+	wrapped := wrapHandler(
+		"specctl_repeat_panic",
+		s,
+		func(ctx context.Context, req *sdk.CallToolRequest, in struct{}) (*sdk.CallToolResult, any, error) {
+			count++
+			panic(fmt.Sprintf("boom %d", count))
+		},
+	)
+	for i := 0; i < 5; i++ {
+		result, _, err := wrapped(context.Background(), nil, struct{}{})
+		if err != nil {
+			t.Fatalf("iter %d: err = %v, want nil", i, err)
+		}
+		if !result.IsError {
+			t.Fatalf("iter %d: expected IsError=true", i)
+		}
+	}
+	if count != 5 {
+		t.Fatalf("count = %d, want 5", count)
+	}
+}
+
+func TestWrapHandlerCapsLargeStack(t *testing.T) {
+	long := strings.Repeat("Z", maxStackBytes*3)
+	truncated := truncateStack(long, maxStackBytes)
+	if len(truncated) > maxStackBytes+128 {
+		t.Fatalf("truncated stack length = %d, want <= %d", len(truncated), maxStackBytes+128)
+	}
+	if !strings.Contains(truncated, "stack truncated") {
+		t.Fatalf("expected truncation marker in stack, got tail = %q", truncated[len(truncated)-80:])
+	}
+}
+
+func TestToolErrorAddsIssueHintForUntypedError(t *testing.T) {
+	s := &Server{}
+	req := &sdk.CallToolRequest{Params: &sdk.CallToolParamsRaw{Name: "specctl_test_unknown"}}
+
+	result, _, err := s.toolError(req, map[string]any{"spec": "x:y"}, errors.New("git failed"))
+	if err != nil {
+		t.Fatalf("toolError must return nil err, got %v", err)
+	}
+	if !result.IsError {
+		t.Fatal("expected IsError=true")
+	}
+	envelope := decodeEnvelope(t, result)
+	errField := requireMap(t, envelope["error"])
+	if errField["code"] != "INTERNAL_ERROR" {
+		t.Fatalf("error.code = %v, want INTERNAL_ERROR", errField["code"])
+	}
+	steps := requireSlice(t, requireMap(t, envelope["next"])["steps"])
+	if len(steps) == 0 {
+		t.Fatal("expected report_issue step for untyped error")
+	}
+	step := requireMap(t, steps[0])
+	if step["action"] != "report_issue" {
+		t.Fatalf("step.action = %v, want report_issue", step["action"])
+	}
+}
+
+func TestToolErrorKnownFailureHasNoIssueHint(t *testing.T) {
+	s := &Server{}
+	req := &sdk.CallToolRequest{Params: &sdk.CallToolParamsRaw{Name: "specctl_config_add_tag"}}
+
+	failure := &application.Failure{Code: "TAG_EXISTS", Message: "tag already registered"}
+	result, _, _ := s.toolError(req, map[string]any{"tag": "webhook"}, failure)
+	envelope := decodeEnvelope(t, result)
+
+	errField := requireMap(t, envelope["error"])
+	if errField["code"] != "TAG_EXISTS" {
+		t.Fatalf("error.code = %v, want TAG_EXISTS", errField["code"])
+	}
+	next := requireMap(t, envelope["next"])
+	for _, raw := range append(requireSliceOrEmpty(next["steps"]), requireSliceOrEmpty(next["options"])...) {
+		step, _ := raw.(map[string]any)
+		if step["action"] == "report_issue" {
+			t.Fatalf("typed failure should not carry report_issue hint: %#v", step)
+		}
+	}
+}
+
+func TestPanickingHandlerKeepsSessionAlive(t *testing.T) {
+	repoRoot := tempSpecRepo(t)
+	var server *Server
+	withWorkingDir(t, repoRoot, func() {
+		service, err := application.OpenFromWorkingDir()
+		if err != nil {
+			t.Fatalf("OpenFromWorkingDir: %v", err)
+		}
+		server = NewServer(service)
+	})
+
+	var stderrBuf bytes.Buffer
+	restore := SetPanicLogger(&stderrBuf)
+	defer restore()
+
+	addTool(server, &sdk.Tool{
+		Name:        "specctl_panic_probe",
+		Description: "Test-only tool that panics on call.",
+	}, func(ctx context.Context, req *sdk.CallToolRequest, in struct{}) (*sdk.CallToolResult, any, error) {
+		panic("test panic")
+	})
+
+	clientTransport, serverTransport := sdk.NewInMemoryTransports()
+	serverSession, err := server.server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { serverSession.Close() })
+
+	client := sdk.NewClient(&sdk.Implementation{Name: "test-client", Version: "v1"}, nil)
+	clientSession, err := client.Connect(context.Background(), clientTransport, nil)
+	if err != nil {
+		t.Fatalf("client.Connect: %v", err)
+	}
+	defer clientSession.Close()
+
+	envelope := callToolEnvelope(t, clientSession, "specctl_panic_probe", map[string]any{})
+	errField := requireMap(t, envelope["error"])
+	if errField["code"] != "INTERNAL_PANIC" {
+		t.Fatalf("error.code = %v, want INTERNAL_PANIC", errField["code"])
+	}
+
+	// Session must still be usable after a panic.
+	tools, listErr := clientSession.ListTools(context.Background(), nil)
+	if listErr != nil {
+		t.Fatalf("ListTools after panic failed: %v", listErr)
+	}
+	if len(tools.Tools) == 0 {
+		t.Fatal("ListTools returned no tools after panic")
+	}
+}
+
+func decodeEnvelope(t *testing.T, result *sdk.CallToolResult) map[string]any {
+	t.Helper()
+	if len(result.Content) == 0 {
+		t.Fatal("CallToolResult has no content")
+	}
+	text, ok := result.Content[0].(*sdk.TextContent)
+	if !ok {
+		t.Fatalf("content[0] = %T, want *TextContent", result.Content[0])
+	}
+	var envelope map[string]any
+	if err := json.Unmarshal([]byte(text.Text), &envelope); err != nil {
+		t.Fatalf("unmarshal envelope: %v\n%s", err, text.Text)
+	}
+	return envelope
+}
+
+func requireSliceOrEmpty(value any) []any {
+	if value == nil {
+		return nil
+	}
+	if slice, ok := value.([]any); ok {
+		return slice
+	}
+	return nil
 }

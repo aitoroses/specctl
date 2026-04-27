@@ -2,9 +2,11 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"os"
+	"runtime/debug"
 	"strings"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -13,6 +15,21 @@ import (
 	"github.com/aitoroses/specctl/internal/domain"
 	"github.com/aitoroses/specctl/internal/presenter"
 )
+
+// panicLogger captures panic stderr output. Defaults to os.Stderr but
+// tests swap it via SetPanicLogger to assert on the captured output.
+var panicLogger io.Writer = os.Stderr
+
+// SetPanicLogger replaces the destination for recovered-panic stack traces.
+// It is intended for tests; callers must restore the previous value.
+func SetPanicLogger(w io.Writer) (restore func()) {
+	prev := panicLogger
+	if w == nil {
+		w = os.Stderr
+	}
+	panicLogger = w
+	return func() { panicLogger = prev }
+}
 
 type Server struct {
 	service *application.Service
@@ -84,15 +101,11 @@ func (s *Server) registerUninitializedTools() {
 				Message: "No .specs/ directory found. Call specctl_init to initialize specctl governance in this repository.",
 			},
 		}
-		data, _ := json.Marshal(envelope)
-		return &sdk.CallToolResult{
-			Content: []sdk.Content{&sdk.TextContent{Text: string(data)}},
-			IsError: true,
-		}, nil, nil
+		return s.toolResult(envelope), nil, nil
 	}
 
 	// specctl_init is the one tool that works without initialization.
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_init", Description: "Initialize specctl governance in this repository."}, s.handleInit)
+	addTool(s, &sdk.Tool{Name: "specctl_init", Description: "Initialize specctl governance in this repository."}, s.handleInit)
 
 	// All other tools return NOT_INITIALIZED with guidance to call specctl_init.
 	toolNames := []struct{ name, desc string }{
@@ -126,7 +139,7 @@ func (s *Server) registerUninitializedTools() {
 		{"specctl_charter_remove_spec", "Remove one charter membership entry without deleting the tracking file."},
 	}
 	for _, t := range toolNames {
-		sdk.AddTool(s.server, &sdk.Tool{Name: t.name, Description: t.desc}, uninit)
+		addTool(s, &sdk.Tool{Name: t.name, Description: t.desc}, uninit)
 	}
 }
 
@@ -279,41 +292,41 @@ type charterRemoveSpecInput struct {
 }
 
 func (s *Server) registerTools() {
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_init", Description: "Initialize specctl governance in this repository."}, s.handleInit)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_context", Description: "Read registry, charter, spec, or file ownership context."}, s.handleContext)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_diff", Description: "Return a semantic diff against the stored checkpoint."}, s.handleDiff)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_charter_create", Description: "Create a charter directory and CHARTER.yaml."}, s.handleCharterCreate)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_spec_create", Description: "Create a tracking file and charter membership."}, s.handleSpecCreate)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_add", Description: "Add a tracked delta."}, s.handleDeltaAdd)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_start", Description: "Move open delta to in-progress."}, s.handleDeltaStart)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_defer", Description: "Move open or in-progress delta to deferred."}, s.handleDeltaDefer)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_resume", Description: "Move deferred delta back to open."}, s.handleDeltaResume)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_close", Description: "Close a delta when its obligations are satisfied."}, s.handleDeltaClose)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_withdraw", Description: "Retract an open, in-progress, or deferred delta with an auditable reason."}, s.handleDeltaWithdraw)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_delta_rebind_requirements", Description: "Rebind affects_requirements of an open, in-progress, or deferred delta."}, s.handleDeltaRebind)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_requirement_add", Description: "Add a tracked requirement from Gherkin."}, s.handleRequirementAdd)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_requirement_replace", Description: "Replace one tracked requirement with a new active requirement."}, s.handleRequirementReplace)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_requirement_refresh", Description: "Refresh the stored requirement block in place."}, s.handleRequirementRefresh)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_requirement_withdraw", Description: "Withdraw one active requirement."}, s.handleRequirementWithdraw)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_requirement_stale", Description: "Mark one active requirement stale."}, s.handleRequirementStale)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_requirement_verify", Description: "Mark one requirement as verified."}, s.handleRequirementVerify)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_revision_bump", Description: "Advance rev, checkpoint, and changelog."}, s.handleRevisionBump)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_sync", Description: "Re-anchor checkpoint drift without bumping rev."}, s.handleSync)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_doc_add", Description: "Add a secondary document reference to a spec."}, s.handleDocAdd)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_doc_remove", Description: "Remove a secondary document reference from a spec."}, s.handleDocRemove)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_config", Description: "Read project config (gherkin tags, source prefixes)."}, s.handleConfig)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_config_add_tag", Description: "Register a gherkin tag so @tag is accepted in requirement blocks."}, s.handleConfigAddTag)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_config_remove_tag", Description: "Remove a gherkin tag if no requirement uses it."}, s.handleConfigRemoveTag)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_config_add_prefix", Description: "Add one source prefix if the directory exists."}, s.handleConfigAddPrefix)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_config_remove_prefix", Description: "Remove one source prefix."}, s.handleConfigRemovePrefix)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_charter_add_spec", Description: "Create or replace one charter membership entry."}, s.handleCharterAddSpec)
-	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_charter_remove_spec", Description: "Remove one charter membership entry without deleting the tracking file."}, s.handleCharterRemoveSpec)
+	addTool(s, &sdk.Tool{Name: "specctl_init", Description: "Initialize specctl governance in this repository."}, s.handleInit)
+	addTool(s, &sdk.Tool{Name: "specctl_context", Description: "Read registry, charter, spec, or file ownership context."}, s.handleContext)
+	addTool(s, &sdk.Tool{Name: "specctl_diff", Description: "Return a semantic diff against the stored checkpoint."}, s.handleDiff)
+	addTool(s, &sdk.Tool{Name: "specctl_charter_create", Description: "Create a charter directory and CHARTER.yaml."}, s.handleCharterCreate)
+	addTool(s, &sdk.Tool{Name: "specctl_spec_create", Description: "Create a tracking file and charter membership."}, s.handleSpecCreate)
+	addTool(s, &sdk.Tool{Name: "specctl_delta_add", Description: "Add a tracked delta."}, s.handleDeltaAdd)
+	addTool(s, &sdk.Tool{Name: "specctl_delta_start", Description: "Move open delta to in-progress."}, s.handleDeltaStart)
+	addTool(s, &sdk.Tool{Name: "specctl_delta_defer", Description: "Move open or in-progress delta to deferred."}, s.handleDeltaDefer)
+	addTool(s, &sdk.Tool{Name: "specctl_delta_resume", Description: "Move deferred delta back to open."}, s.handleDeltaResume)
+	addTool(s, &sdk.Tool{Name: "specctl_delta_close", Description: "Close a delta when its obligations are satisfied."}, s.handleDeltaClose)
+	addTool(s, &sdk.Tool{Name: "specctl_delta_withdraw", Description: "Retract an open, in-progress, or deferred delta with an auditable reason."}, s.handleDeltaWithdraw)
+	addTool(s, &sdk.Tool{Name: "specctl_delta_rebind_requirements", Description: "Rebind affects_requirements of an open, in-progress, or deferred delta."}, s.handleDeltaRebind)
+	addTool(s, &sdk.Tool{Name: "specctl_requirement_add", Description: "Add a tracked requirement from Gherkin."}, s.handleRequirementAdd)
+	addTool(s, &sdk.Tool{Name: "specctl_requirement_replace", Description: "Replace one tracked requirement with a new active requirement."}, s.handleRequirementReplace)
+	addTool(s, &sdk.Tool{Name: "specctl_requirement_refresh", Description: "Refresh the stored requirement block in place."}, s.handleRequirementRefresh)
+	addTool(s, &sdk.Tool{Name: "specctl_requirement_withdraw", Description: "Withdraw one active requirement."}, s.handleRequirementWithdraw)
+	addTool(s, &sdk.Tool{Name: "specctl_requirement_stale", Description: "Mark one active requirement stale."}, s.handleRequirementStale)
+	addTool(s, &sdk.Tool{Name: "specctl_requirement_verify", Description: "Mark one requirement as verified."}, s.handleRequirementVerify)
+	addTool(s, &sdk.Tool{Name: "specctl_revision_bump", Description: "Advance rev, checkpoint, and changelog."}, s.handleRevisionBump)
+	addTool(s, &sdk.Tool{Name: "specctl_sync", Description: "Re-anchor checkpoint drift without bumping rev."}, s.handleSync)
+	addTool(s, &sdk.Tool{Name: "specctl_doc_add", Description: "Add a secondary document reference to a spec."}, s.handleDocAdd)
+	addTool(s, &sdk.Tool{Name: "specctl_doc_remove", Description: "Remove a secondary document reference from a spec."}, s.handleDocRemove)
+	addTool(s, &sdk.Tool{Name: "specctl_config", Description: "Read project config (gherkin tags, source prefixes)."}, s.handleConfig)
+	addTool(s, &sdk.Tool{Name: "specctl_config_add_tag", Description: "Register a gherkin tag so @tag is accepted in requirement blocks."}, s.handleConfigAddTag)
+	addTool(s, &sdk.Tool{Name: "specctl_config_remove_tag", Description: "Remove a gherkin tag if no requirement uses it."}, s.handleConfigRemoveTag)
+	addTool(s, &sdk.Tool{Name: "specctl_config_add_prefix", Description: "Add one source prefix if the directory exists."}, s.handleConfigAddPrefix)
+	addTool(s, &sdk.Tool{Name: "specctl_config_remove_prefix", Description: "Remove one source prefix."}, s.handleConfigRemovePrefix)
+	addTool(s, &sdk.Tool{Name: "specctl_charter_add_spec", Description: "Create or replace one charter membership entry."}, s.handleCharterAddSpec)
+	addTool(s, &sdk.Tool{Name: "specctl_charter_remove_spec", Description: "Remove one charter membership entry without deleting the tracking file."}, s.handleCharterRemoveSpec)
 }
 
 func (s *Server) handleContext(ctx context.Context, req *sdk.CallToolRequest, in contextInput) (*sdk.CallToolResult, any, error) {
 	state, next, err := s.service.ReadContext(in.Target, in.File)
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.ReadEnvelope(
@@ -327,7 +340,7 @@ func (s *Server) handleContext(ctx context.Context, req *sdk.CallToolRequest, in
 func (s *Server) handleDiff(ctx context.Context, req *sdk.CallToolRequest, in diffInput) (*sdk.CallToolResult, any, error) {
 	state, next, err := s.service.ReadDiff(in.Target, in.Charter)
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	mode := presenter.DirectiveForReadMode(application.ReadSurfaceNextMode(state, next), next)
@@ -362,7 +375,7 @@ func (s *Server) handleCharterCreate(ctx context.Context, req *sdk.CallToolReque
 				Next:  presenter.None(),
 			})), nil, nil
 		}
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -384,7 +397,7 @@ func (s *Server) handleSpecCreate(ctx context.Context, req *sdk.CallToolRequest,
 		Tags:         append([]string{}, in.Tags...),
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -405,7 +418,7 @@ func (s *Server) handleDeltaAdd(ctx context.Context, req *sdk.CallToolRequest, i
 		AffectsRequirements: append([]string{}, in.AffectsRequirements...),
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -413,19 +426,19 @@ func (s *Server) handleDeltaAdd(ctx context.Context, req *sdk.CallToolRequest, i
 }
 
 func (s *Server) handleDeltaStart(ctx context.Context, req *sdk.CallToolRequest, in deltaTransitionInput) (*sdk.CallToolResult, any, error) {
-	return s.handleDeltaTransition(s.service.StartDelta, in)
+	return s.handleDeltaTransition(req, s.service.StartDelta, in)
 }
 
 func (s *Server) handleDeltaDefer(ctx context.Context, req *sdk.CallToolRequest, in deltaTransitionInput) (*sdk.CallToolResult, any, error) {
-	return s.handleDeltaTransition(s.service.DeferDelta, in)
+	return s.handleDeltaTransition(req, s.service.DeferDelta, in)
 }
 
 func (s *Server) handleDeltaResume(ctx context.Context, req *sdk.CallToolRequest, in deltaTransitionInput) (*sdk.CallToolResult, any, error) {
-	return s.handleDeltaTransition(s.service.ResumeDelta, in)
+	return s.handleDeltaTransition(req, s.service.ResumeDelta, in)
 }
 
 func (s *Server) handleDeltaClose(ctx context.Context, req *sdk.CallToolRequest, in deltaTransitionInput) (*sdk.CallToolResult, any, error) {
-	return s.handleDeltaTransition(s.service.CloseDelta, in)
+	return s.handleDeltaTransition(req, s.service.CloseDelta, in)
 }
 
 func (s *Server) handleDeltaWithdraw(ctx context.Context, req *sdk.CallToolRequest, in deltaWithdrawInput) (*sdk.CallToolResult, any, error) {
@@ -435,7 +448,7 @@ func (s *Server) handleDeltaWithdraw(ctx context.Context, req *sdk.CallToolReque
 		Reason:  in.Reason,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -452,20 +465,20 @@ func (s *Server) handleDeltaRebind(ctx context.Context, req *sdk.CallToolRequest
 		Reason:  in.Reason,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
 	return s.toolResult(envelope), nil, nil
 }
 
-func (s *Server) handleDeltaTransition(fn func(application.DeltaTransitionRequest) (application.SpecProjection, map[string]any, []any, error), in deltaTransitionInput) (*sdk.CallToolResult, any, error) {
+func (s *Server) handleDeltaTransition(req *sdk.CallToolRequest, fn func(application.DeltaTransitionRequest) (application.SpecProjection, map[string]any, []any, error), in deltaTransitionInput) (*sdk.CallToolResult, any, error) {
 	state, result, next, err := fn(application.DeltaTransitionRequest{
 		Target:  in.Spec,
 		DeltaID: in.DeltaID,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -479,7 +492,7 @@ func (s *Server) handleRequirementAdd(ctx context.Context, req *sdk.CallToolRequ
 		Gherkin: in.Gherkin,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -494,7 +507,7 @@ func (s *Server) handleRequirementReplace(ctx context.Context, req *sdk.CallTool
 		Gherkin:       in.Gherkin,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -508,7 +521,7 @@ func (s *Server) handleRequirementRefresh(ctx context.Context, req *sdk.CallTool
 		Gherkin:       in.Gherkin,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -522,7 +535,7 @@ func (s *Server) handleRequirementWithdraw(ctx context.Context, req *sdk.CallToo
 		DeltaID:       in.DeltaID,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -536,7 +549,7 @@ func (s *Server) handleRequirementStale(ctx context.Context, req *sdk.CallToolRe
 		DeltaID:       in.DeltaID,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -550,7 +563,7 @@ func (s *Server) handleRequirementVerify(ctx context.Context, req *sdk.CallToolR
 		TestFiles:     append([]string{}, in.TestFiles...),
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -564,7 +577,7 @@ func (s *Server) handleRevisionBump(ctx context.Context, req *sdk.CallToolReques
 		Summary:    in.Summary,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -577,7 +590,7 @@ func (s *Server) handleDocAdd(ctx context.Context, req *sdk.CallToolRequest, in 
 		Doc:    in.Doc,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -590,7 +603,7 @@ func (s *Server) handleDocRemove(ctx context.Context, req *sdk.CallToolRequest, 
 		Doc:    in.Doc,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -604,7 +617,7 @@ func (s *Server) handleSync(ctx context.Context, req *sdk.CallToolRequest, in sy
 		Summary:    in.Summary,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -614,7 +627,7 @@ func (s *Server) handleSync(ctx context.Context, req *sdk.CallToolRequest, in sy
 func (s *Server) handleConfig(ctx context.Context, req *sdk.CallToolRequest, in struct{}) (*sdk.CallToolResult, any, error) {
 	state, err := s.service.ReadConfig()
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.ReadEnvelope(responseState, focus, presenter.None())
@@ -624,7 +637,7 @@ func (s *Server) handleConfig(ctx context.Context, req *sdk.CallToolRequest, in 
 func (s *Server) handleConfigAddTag(ctx context.Context, req *sdk.CallToolRequest, in configTagInput) (*sdk.CallToolResult, any, error) {
 	state, result, next, err := s.service.AddConfigTag(in.Tag)
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -634,7 +647,7 @@ func (s *Server) handleConfigAddTag(ctx context.Context, req *sdk.CallToolReques
 func (s *Server) handleConfigRemoveTag(ctx context.Context, req *sdk.CallToolRequest, in configTagInput) (*sdk.CallToolResult, any, error) {
 	state, result, next, err := s.service.RemoveConfigTag(in.Tag)
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -644,7 +657,7 @@ func (s *Server) handleConfigRemoveTag(ctx context.Context, req *sdk.CallToolReq
 func (s *Server) handleConfigAddPrefix(ctx context.Context, req *sdk.CallToolRequest, in configPrefixInput) (*sdk.CallToolResult, any, error) {
 	state, result, next, err := s.service.AddConfigPrefix(in.Prefix)
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -654,7 +667,7 @@ func (s *Server) handleConfigAddPrefix(ctx context.Context, req *sdk.CallToolReq
 func (s *Server) handleConfigRemovePrefix(ctx context.Context, req *sdk.CallToolRequest, in configPrefixInput) (*sdk.CallToolResult, any, error) {
 	state, result, next, err := s.service.RemoveConfigPrefix(in.Prefix)
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -677,7 +690,7 @@ func (s *Server) handleCharterAddSpec(ctx context.Context, req *sdk.CallToolRequ
 		Notes:      in.Notes,
 	})
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -687,7 +700,7 @@ func (s *Server) handleCharterAddSpec(ctx context.Context, req *sdk.CallToolRequ
 func (s *Server) handleCharterRemoveSpec(ctx context.Context, req *sdk.CallToolRequest, in charterRemoveSpecInput) (*sdk.CallToolResult, any, error) {
 	state, result, next, err := s.service.RemoveSpecFromCharter(in.Charter, in.Slug)
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	responseState, focus := presenter.SplitStateFocus(state)
 	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
@@ -697,7 +710,7 @@ func (s *Server) handleCharterRemoveSpec(ctx context.Context, req *sdk.CallToolR
 func (s *Server) handleInit(ctx context.Context, req *sdk.CallToolRequest, in struct{}) (*sdk.CallToolResult, any, error) {
 	result, err := application.Init()
 	if err != nil {
-		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+		return s.toolError(req, in, err)
 	}
 	state := result["state"]
 	delete(result, "state")
@@ -717,13 +730,110 @@ func (s *Server) handleInit(ctx context.Context, req *sdk.CallToolRequest, in st
 
 func (s *Server) toolResult(envelope presenter.Envelope) *sdk.CallToolResult {
 	envelope = adaptEnvelopeForMCP(envelope)
-	data, _ := json.Marshal(envelope)
+	data, encodeErr := presenter.MarshalEnvelope(envelope)
+	if encodeErr != nil {
+		fmt.Fprintf(panicLogger, "specctl mcp envelope encode failed: %v\n", encodeErr)
+	}
 	return &sdk.CallToolResult{
 		Content: []sdk.Content{
 			&sdk.TextContent{Text: string(data)},
 		},
-		IsError: envelope.Error != nil,
+		IsError: envelope.Error != nil || encodeErr != nil,
 	}
+}
+
+// toolError converts an error from the application layer into the standard
+// MCP tool result envelope. *Failure errors keep their tipified codes;
+// anything else gets the report_issue hint via UnexpectedErrorEnvelope.
+func (s *Server) toolError(req *sdk.CallToolRequest, in any, err error) (*sdk.CallToolResult, any, error) {
+	envelope := presenter.ClassifyError(err, presenter.UnexpectedContext{
+		Tool:  toolNameFromRequest(req),
+		Input: in,
+	})
+	return s.toolResult(envelope), nil, nil
+}
+
+func toolNameFromRequest(req *sdk.CallToolRequest) string {
+	if req == nil || req.Params == nil {
+		return ""
+	}
+	return req.Params.Name
+}
+
+// maxStackBytes caps the captured stack trace so the report_issue body
+// stays under GitHub's 65536-char issue body limit even after redaction.
+const maxStackBytes = 8 * 1024
+
+// wrapHandler decorates a typed tool handler with a panic recover that
+// converts the panic into a structured envelope (with the report_issue hint)
+// instead of crashing the stdio process. The recovered panic is logged to
+// stderr with the full stack trace. Re-panics inside the recovery path are
+// swallowed (logged) so the stdio session never dies.
+func wrapHandler[In any](
+	toolName string,
+	s *Server,
+	h func(context.Context, *sdk.CallToolRequest, In) (*sdk.CallToolResult, any, error),
+) func(context.Context, *sdk.CallToolRequest, In) (*sdk.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdk.CallToolRequest, in In) (result *sdk.CallToolResult, meta any, err error) {
+		// completed flips to true only if h returns normally. Any path
+		// where the deferred function fires without completed=true means
+		// a panic happened — including panic(nil) on older toolchains.
+		completed := false
+		defer func() {
+			r := recover()
+			if completed && r == nil {
+				return
+			}
+			panicVal := r
+			if panicVal == nil {
+				panicVal = "panic(nil)"
+			}
+			defer func() {
+				// Belt-and-suspenders: a re-panic inside the recovery
+				// envelope construction must not escape this goroutine.
+				if rr := recover(); rr != nil {
+					fmt.Fprintf(panicLogger, "specctl mcp double-panic in %s: %v\n", toolName, rr)
+					result = nil
+					meta = nil
+					err = fmt.Errorf("specctl internal error: %v", rr)
+				}
+			}()
+			stack := truncateStack(string(debug.Stack()), maxStackBytes)
+			fmt.Fprintf(panicLogger, "specctl mcp panic in %s: %v\n%s\n", toolName, panicVal, stack)
+			envelope := presenter.UnexpectedErrorEnvelope(
+				fmt.Errorf("panic: %v", panicVal),
+				presenter.UnexpectedContext{
+					Tool:       toolName,
+					Input:      in,
+					PanicValue: panicVal,
+					Stack:      stack,
+				},
+			)
+			result = s.toolResult(envelope)
+			meta = nil
+			err = nil
+		}()
+		result, meta, err = h(ctx, req, in)
+		completed = true
+		return
+	}
+}
+
+func truncateStack(stack string, max int) string {
+	if max <= 0 || len(stack) <= max {
+		return stack
+	}
+	return stack[:max] + fmt.Sprintf("\n…(stack truncated, %d more bytes)\n", len(stack)-max)
+}
+
+// addTool registers a typed handler with the SDK after wrapping it with
+// the panic-recover middleware.
+func addTool[In any](
+	s *Server,
+	tool *sdk.Tool,
+	h func(context.Context, *sdk.CallToolRequest, In) (*sdk.CallToolResult, any, error),
+) {
+	sdk.AddTool(s.server, tool, wrapHandler(tool.Name, s, h))
 }
 
 func adaptEnvelopeForMCP(envelope presenter.Envelope) presenter.Envelope {
@@ -814,6 +924,10 @@ func mcpHintForAction(action map[string]any) (map[string]any, bool) {
 		tool = "specctl_doc_add"
 	case "doc_remove":
 		tool = "specctl_doc_remove"
+	case "report_issue":
+		// External link step (URL in template); the agent surfaces it
+		// to the user instead of calling an MCP tool.
+		return map[string]any{"available": true, "kind": "external_link"}, true
 	default:
 		return nil, false
 	}

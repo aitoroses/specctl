@@ -1,14 +1,20 @@
 .PHONY: all build build-all install test test-go dashboard-install dashboard-build dashboard-typecheck dashboard-dev clean
 
+# VERSION is embedded into the binary via -ldflags so unexpected-error
+# envelopes (and the report_issue hint) include the actual build, not "dev".
+# Override at the command line: `make build VERSION=v1.2.3`.
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+LDFLAGS := -X github.com/aitoroses/specctl/internal/presenter.BuildVersion=$(VERSION)
+
 all: build
 
 build-all: build dashboard-build
 
 build:
-	go build -o specctl ./cmd/specctl
+	go build -ldflags "$(LDFLAGS)" -o specctl ./cmd/specctl
 
 install:
-	go install ./cmd/specctl
+	go install -ldflags "$(LDFLAGS)" ./cmd/specctl
 
 test: test-go dashboard-typecheck
 
