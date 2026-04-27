@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strings"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -116,6 +117,13 @@ func (s *Server) registerUninitializedTools() {
 		{"specctl_sync", "Re-anchor checkpoint drift without bumping rev."},
 		{"specctl_doc_add", "Add a secondary document reference to a spec."},
 		{"specctl_doc_remove", "Remove a secondary document reference from a spec."},
+		{"specctl_config", "Read project config (gherkin tags, source prefixes)."},
+		{"specctl_config_add_tag", "Register a gherkin tag so @tag is accepted in requirement blocks."},
+		{"specctl_config_remove_tag", "Remove a gherkin tag if no requirement uses it."},
+		{"specctl_config_add_prefix", "Add one source prefix if the directory exists."},
+		{"specctl_config_remove_prefix", "Remove one source prefix."},
+		{"specctl_charter_add_spec", "Create or replace one charter membership entry."},
+		{"specctl_charter_remove_spec", "Remove one charter membership entry without deleting the tracking file."},
 	}
 	for _, t := range toolNames {
 		sdk.AddTool(s.server, &sdk.Tool{Name: t.name, Description: t.desc}, uninit)
@@ -246,6 +254,30 @@ type docRemoveInput struct {
 	Doc  string `json:"doc" jsonschema:"repo-relative path to secondary document"`
 }
 
+type configTagInput struct {
+	Tag string `json:"tag" jsonschema:"gherkin tag to register or remove (without leading @)"`
+}
+
+type configPrefixInput struct {
+	Prefix string `json:"prefix" jsonschema:"repo-relative source prefix path"`
+}
+
+type charterAddSpecInput struct {
+	Charter    string   `json:"charter" jsonschema:"charter name"`
+	Slug       string   `json:"slug" jsonschema:"spec slug"`
+	Group      string   `json:"group" jsonschema:"charter group key"`
+	GroupTitle string   `json:"group_title,omitempty" jsonschema:"optional new group title"`
+	GroupOrder *int     `json:"group_order,omitempty" jsonschema:"optional new group order"`
+	Order      int      `json:"order" jsonschema:"order inside the charter group"`
+	DependsOn  []string `json:"depends_on,omitempty" jsonschema:"dependency slugs in the same charter"`
+	Notes      string   `json:"notes" jsonschema:"charter planning note"`
+}
+
+type charterRemoveSpecInput struct {
+	Charter string `json:"charter" jsonschema:"charter name"`
+	Slug    string `json:"slug" jsonschema:"spec slug"`
+}
+
 func (s *Server) registerTools() {
 	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_init", Description: "Initialize specctl governance in this repository."}, s.handleInit)
 	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_context", Description: "Read registry, charter, spec, or file ownership context."}, s.handleContext)
@@ -269,6 +301,13 @@ func (s *Server) registerTools() {
 	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_sync", Description: "Re-anchor checkpoint drift without bumping rev."}, s.handleSync)
 	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_doc_add", Description: "Add a secondary document reference to a spec."}, s.handleDocAdd)
 	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_doc_remove", Description: "Remove a secondary document reference from a spec."}, s.handleDocRemove)
+	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_config", Description: "Read project config (gherkin tags, source prefixes)."}, s.handleConfig)
+	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_config_add_tag", Description: "Register a gherkin tag so @tag is accepted in requirement blocks."}, s.handleConfigAddTag)
+	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_config_remove_tag", Description: "Remove a gherkin tag if no requirement uses it."}, s.handleConfigRemoveTag)
+	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_config_add_prefix", Description: "Add one source prefix if the directory exists."}, s.handleConfigAddPrefix)
+	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_config_remove_prefix", Description: "Remove one source prefix."}, s.handleConfigRemovePrefix)
+	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_charter_add_spec", Description: "Create or replace one charter membership entry."}, s.handleCharterAddSpec)
+	sdk.AddTool(s.server, &sdk.Tool{Name: "specctl_charter_remove_spec", Description: "Remove one charter membership entry without deleting the tracking file."}, s.handleCharterRemoveSpec)
 }
 
 func (s *Server) handleContext(ctx context.Context, req *sdk.CallToolRequest, in contextInput) (*sdk.CallToolResult, any, error) {
@@ -564,6 +603,89 @@ func (s *Server) handleSync(ctx context.Context, req *sdk.CallToolRequest, in sy
 		Checkpoint: in.Checkpoint,
 		Summary:    in.Summary,
 	})
+	if err != nil {
+		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+	}
+	responseState, focus := presenter.SplitStateFocus(state)
+	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
+	return s.toolResult(envelope), nil, nil
+}
+
+func (s *Server) handleConfig(ctx context.Context, req *sdk.CallToolRequest, in struct{}) (*sdk.CallToolResult, any, error) {
+	state, err := s.service.ReadConfig()
+	if err != nil {
+		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+	}
+	responseState, focus := presenter.SplitStateFocus(state)
+	envelope := presenter.ReadEnvelope(responseState, focus, presenter.None())
+	return s.toolResult(envelope), nil, nil
+}
+
+func (s *Server) handleConfigAddTag(ctx context.Context, req *sdk.CallToolRequest, in configTagInput) (*sdk.CallToolResult, any, error) {
+	state, result, next, err := s.service.AddConfigTag(in.Tag)
+	if err != nil {
+		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+	}
+	responseState, focus := presenter.SplitStateFocus(state)
+	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
+	return s.toolResult(envelope), nil, nil
+}
+
+func (s *Server) handleConfigRemoveTag(ctx context.Context, req *sdk.CallToolRequest, in configTagInput) (*sdk.CallToolResult, any, error) {
+	state, result, next, err := s.service.RemoveConfigTag(in.Tag)
+	if err != nil {
+		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+	}
+	responseState, focus := presenter.SplitStateFocus(state)
+	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
+	return s.toolResult(envelope), nil, nil
+}
+
+func (s *Server) handleConfigAddPrefix(ctx context.Context, req *sdk.CallToolRequest, in configPrefixInput) (*sdk.CallToolResult, any, error) {
+	state, result, next, err := s.service.AddConfigPrefix(in.Prefix)
+	if err != nil {
+		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+	}
+	responseState, focus := presenter.SplitStateFocus(state)
+	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
+	return s.toolResult(envelope), nil, nil
+}
+
+func (s *Server) handleConfigRemovePrefix(ctx context.Context, req *sdk.CallToolRequest, in configPrefixInput) (*sdk.CallToolResult, any, error) {
+	state, result, next, err := s.service.RemoveConfigPrefix(in.Prefix)
+	if err != nil {
+		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+	}
+	responseState, focus := presenter.SplitStateFocus(state)
+	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
+	return s.toolResult(envelope), nil, nil
+}
+
+func (s *Server) handleCharterAddSpec(ctx context.Context, req *sdk.CallToolRequest, in charterAddSpecInput) (*sdk.CallToolResult, any, error) {
+	var groupTitle *string
+	if trimmed := strings.TrimSpace(in.GroupTitle); trimmed != "" {
+		groupTitle = &trimmed
+	}
+	state, result, next, err := s.service.AddSpecToCharter(application.CharterAddSpecRequest{
+		Charter:    in.Charter,
+		Slug:       in.Slug,
+		Group:      in.Group,
+		GroupTitle: groupTitle,
+		GroupOrder: in.GroupOrder,
+		Order:      in.Order,
+		DependsOn:  append([]string{}, in.DependsOn...),
+		Notes:      in.Notes,
+	})
+	if err != nil {
+		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
+	}
+	responseState, focus := presenter.SplitStateFocus(state)
+	envelope := presenter.WriteEnvelope(responseState, focus, result, presenter.Sequence(next))
+	return s.toolResult(envelope), nil, nil
+}
+
+func (s *Server) handleCharterRemoveSpec(ctx context.Context, req *sdk.CallToolRequest, in charterRemoveSpecInput) (*sdk.CallToolResult, any, error) {
+	state, result, next, err := s.service.RemoveSpecFromCharter(in.Charter, in.Slug)
 	if err != nil {
 		return s.toolResult(presenter.ErrorEnvelope(presenter.ApplicationError(err))), nil, nil
 	}

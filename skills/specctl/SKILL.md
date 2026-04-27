@@ -84,9 +84,12 @@ invariants, Gherkin), then call the next MCP tool in the sequence
 (typically `specctl_requirement_add`). Never skip this step — specs
 are documents, not inventories.
 
-**Config operations require CLI.** Commands like `config add-tag` and
-`config add-prefix` are not available via MCP in v1. When `next`
-suggests a config operation, use the Bash tool: `specctl config add-tag <tag>`.
+**Config operations are also available via MCP.** Use `specctl_config`
+(read), `specctl_config_add_tag` / `remove_tag`, and
+`specctl_config_add_prefix` / `remove_prefix` to manage gherkin tags
+and source prefixes without dropping to a shell. Charter membership
+is similarly exposed via `specctl_charter_add_spec` and
+`specctl_charter_remove_spec`.
 
 For any tool's parameters and error codes, use `specctl <cmd> --help`.
 
@@ -318,7 +321,7 @@ with Boot/Seed/Probe/Verify operations. See `references/verification-surfaces.md
 - **Never skip `write_spec_section`.** Write behavioral prose BEFORE formalizing with Gherkin.
 - **Requirement = observable behavior.** External surface, not implementation internals.
 - **`@manual` for non-automated verification.** Inspection-verified requirements.
-- **Unregistered Gherkin tags:** `INVALID_GHERKIN_TAG` → use Bash: `specctl config add-tag <tag>` (CLI-only, not available via MCP), then retry the MCP tool call.
+- **Unregistered Gherkin tags:** `INVALID_GHERKIN_TAG` → call `specctl_config_add_tag` with `{"tag": "<tag>"}`, then retry the failing tool call.
 - **Delta close blocked:** all requirements must be verified first.
 - **Sync vs delta add:** for review-required drift, start with `review_diff`. Use `sync` only when that review concludes the drift is clarification-only or the checkpoint just needs re-anchoring; otherwise open the appropriate delta.
 - **In-scope commit after `rev bump`?** The bump captures `HEAD` at call time; any later commit that touches a scope path (e.g. a last-minute test-infra fix) is real drift on the next `context` call. Either fold it into a new delta cycle so its own bump captures it, or run `specctl sync --checkpoint HEAD` before push to re-anchor. Treating a change as "just test infra, no governance" is the common trap — specctl's drift is content-based and doesn't care about your classification.

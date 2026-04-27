@@ -31,7 +31,14 @@ func TestListTools(t *testing.T) {
 	}
 	slices.Sort(names)
 	want := []string{
+		"specctl_charter_add_spec",
 		"specctl_charter_create",
+		"specctl_charter_remove_spec",
+		"specctl_config",
+		"specctl_config_add_prefix",
+		"specctl_config_add_tag",
+		"specctl_config_remove_prefix",
+		"specctl_config_remove_tag",
 		"specctl_context",
 		"specctl_delta_add",
 		"specctl_delta_close",
@@ -163,6 +170,168 @@ func TestRequirementVerifyHintCarriesSuggestedTestFiles(t *testing.T) {
 	files := stringSlice(input["test_files"])
 	if len(files) != 1 || files[0] != "runtime/tests/domain/test_compensation_cleanup.py" {
 		t.Fatalf("input.test_files = %#v", files)
+	}
+}
+
+func TestConfigAddTagThenReadShowsRegisteredTag(t *testing.T) {
+	repoRoot := tempSpecRepo(t)
+	clientSession := connectTestClient(t, repoRoot)
+	defer clientSession.Close()
+
+	addEnv := callToolEnvelope(t, clientSession, "specctl_config_add_tag", map[string]any{
+		"tag": "webhook",
+	})
+	if errField, ok := addEnv["error"]; ok && errField != nil {
+		t.Fatalf("unexpected error: %#v", errField)
+	}
+	result := requireMap(t, addEnv["result"])
+	if result["kind"] != "config" {
+		t.Fatalf("result.kind = %#v, want config", result["kind"])
+	}
+	if result["tag"] != "webhook" {
+		t.Fatalf("result.tag = %#v, want webhook", result["tag"])
+	}
+
+	readEnv := callToolEnvelope(t, clientSession, "specctl_config", map[string]any{})
+	state := requireMap(t, readEnv["state"])
+	tags := stringSlice(state["gherkin_tags"])
+	if !slices.Contains(tags, "webhook") {
+		t.Fatalf("gherkin_tags = %#v, want to contain webhook", tags)
+	}
+}
+
+func TestConfigAddTagSemanticReserved(t *testing.T) {
+	repoRoot := tempSpecRepo(t)
+	clientSession := connectTestClient(t, repoRoot)
+	defer clientSession.Close()
+
+	envelope := callToolEnvelope(t, clientSession, "specctl_config_add_tag", map[string]any{
+		"tag": "e2e",
+	})
+	errField := requireMap(t, envelope["error"])
+	if errField["code"] != "SEMANTIC_TAG_RESERVED" {
+		t.Fatalf("error.code = %#v, want SEMANTIC_TAG_RESERVED", errField["code"])
+	}
+}
+
+func TestConfigAddTagDuplicateReturnsTagExists(t *testing.T) {
+	repoRoot := tempSpecRepo(t)
+	clientSession := connectTestClient(t, repoRoot)
+	defer clientSession.Close()
+
+	if envelope := callToolEnvelope(t, clientSession, "specctl_config_add_tag", map[string]any{
+		"tag": "webhook",
+	}); envelope["error"] != nil {
+		t.Fatalf("first add failed: %#v", envelope["error"])
+	}
+
+	envelope := callToolEnvelope(t, clientSession, "specctl_config_add_tag", map[string]any{
+		"tag": "webhook",
+	})
+	errField := requireMap(t, envelope["error"])
+	if errField["code"] != "TAG_EXISTS" {
+		t.Fatalf("error.code = %#v, want TAG_EXISTS", errField["code"])
+	}
+}
+
+func TestConfigAddPrefixInvalidPath(t *testing.T) {
+	repoRoot := tempSpecRepo(t)
+	clientSession := connectTestClient(t, repoRoot)
+	defer clientSession.Close()
+
+	envelope := callToolEnvelope(t, clientSession, "specctl_config_add_prefix", map[string]any{
+		"prefix": "does-not-exist/",
+	})
+	errField := requireMap(t, envelope["error"])
+	if errField["code"] != "INVALID_PATH" {
+		t.Fatalf("error.code = %#v, want INVALID_PATH", errField["code"])
+	}
+}
+
+func TestCharterRemoveSpecRemovesMembership(t *testing.T) {
+	repoRoot := charterOnlyRepo(t)
+	clientSession := connectTestClient(t, repoRoot)
+	defer clientSession.Close()
+
+	if envelope := callToolEnvelope(t, clientSession, "specctl_spec_create", map[string]any{
+		"spec":          "runtime:session-lifecycle",
+		"title":         "Session Lifecycle",
+		"doc":           "runtime/src/domain/session_execution/SPEC.md",
+		"scope":         []string{"runtime/src/domain/session_execution/"},
+		"group":         "recovery",
+		"order":         20,
+		"charter_notes": "Session FSM and cleanup behavior",
+	}); envelope["error"] != nil {
+		t.Fatalf("spec_create failed: %#v", envelope["error"])
+	}
+
+	envelope := callToolEnvelope(t, clientSession, "specctl_charter_remove_spec", map[string]any{
+		"charter": "runtime",
+		"slug":    "session-lifecycle",
+	})
+	if envelope["error"] != nil {
+		t.Fatalf("charter_remove_spec failed: %#v", envelope["error"])
+	}
+	result := requireMap(t, envelope["result"])
+	if result["removed_slug"] != "session-lifecycle" {
+		t.Fatalf("result.removed_slug = %#v, want session-lifecycle", result["removed_slug"])
+	}
+}
+
+func TestCharterAddSpecMissingCharter(t *testing.T) {
+	repoRoot := tempSpecRepo(t)
+	clientSession := connectTestClient(t, repoRoot)
+	defer clientSession.Close()
+
+	envelope := callToolEnvelope(t, clientSession, "specctl_charter_add_spec", map[string]any{
+		"charter": "runtime",
+		"slug":    "session-lifecycle",
+		"group":   "recovery",
+		"order":   20,
+		"notes":   "Session FSM and cleanup behavior",
+	})
+	errField := requireMap(t, envelope["error"])
+	if errField["code"] != "CHARTER_NOT_FOUND" {
+		t.Fatalf("error.code = %#v, want CHARTER_NOT_FOUND", errField["code"])
+	}
+}
+
+func TestCharterAddSpecRoundtripAfterRemove(t *testing.T) {
+	repoRoot := charterOnlyRepo(t)
+	clientSession := connectTestClient(t, repoRoot)
+	defer clientSession.Close()
+
+	if envelope := callToolEnvelope(t, clientSession, "specctl_spec_create", map[string]any{
+		"spec":          "runtime:session-lifecycle",
+		"title":         "Session Lifecycle",
+		"doc":           "runtime/src/domain/session_execution/SPEC.md",
+		"scope":         []string{"runtime/src/domain/session_execution/"},
+		"group":         "recovery",
+		"order":         20,
+		"charter_notes": "Session FSM and cleanup behavior",
+	}); envelope["error"] != nil {
+		t.Fatalf("spec_create failed: %#v", envelope["error"])
+	}
+	if envelope := callToolEnvelope(t, clientSession, "specctl_charter_remove_spec", map[string]any{
+		"charter": "runtime",
+		"slug":    "session-lifecycle",
+	}); envelope["error"] != nil {
+		t.Fatalf("charter_remove_spec failed: %#v", envelope["error"])
+	}
+
+	envelope := callToolEnvelope(t, clientSession, "specctl_charter_add_spec", map[string]any{
+		"charter": "runtime",
+		"slug":    "session-lifecycle",
+		"group":   "recovery",
+		"order":   20,
+		"notes":   "Re-added after remove",
+	})
+	if envelope["error"] != nil {
+		t.Fatalf("charter_add_spec failed: %#v", envelope["error"])
+	}
+	result := requireMap(t, envelope["result"])
+	if result["kind"] != "charter_entry" {
+		t.Fatalf("result.kind = %#v, want charter_entry", result["kind"])
 	}
 }
 
